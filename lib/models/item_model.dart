@@ -62,7 +62,7 @@ final List<ItemModel> commonItemList = [
     id: 'bomb',
     name: 'Bom',
     icon: '💣',
-    description: 'Bom.',
+    description: 'Phá huỷ chướng ngại vậy và gây sát thương lên kẻ địch trong 3 ô.',
     price: 10,
   ),
   const ItemModel(
