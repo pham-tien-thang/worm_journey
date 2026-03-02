@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'game/game_screen.dart';
+import 'game/levels/game_level_1_screen.dart';
+import 'game/levels/game_level_2_screen.dart';
+import 'game/levels/game_level_3_screen.dart';
 import 'game/menu_screen.dart';
 import 'main_menu/main_menu_screen.dart';
 import 'settings/settings_screen.dart';
 
-/// Router: / = MainMenuScreen, /play = chọn level, /play/game/:level = GameScreen, /settings = Settings.
+/// Router: / = MainMenuScreen, /play = chọn level, /play/game/1|2|3 = màn level riêng, /settings = Settings.
 GoRouter createAppRouter() {
   return GoRouter(
     routes: [
@@ -21,12 +23,16 @@ GoRouter createAppRouter() {
                 const MenuScreen(key: ValueKey('level selection')),
             routes: [
               GoRoute(
-                path: 'game/:level',
-                builder: (context, state) {
-                  final level =
-                      int.tryParse(state.pathParameters['level'] ?? '1') ?? 1;
-                  return GameScreen(level: level);
-                },
+                path: 'game/1',
+                builder: (_, __) => const GameLevel1Screen(),
+              ),
+              GoRoute(
+                path: 'game/2',
+                builder: (_, __) => const GameLevel2Screen(),
+              ),
+              GoRoute(
+                path: 'game/3',
+                builder: (_, __) => const GameLevel3Screen(),
               ),
             ],
           ),
