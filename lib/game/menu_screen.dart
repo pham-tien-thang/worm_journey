@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import 'game_screen.dart';
-
-/// Màn menu: chọn level (LV 1, LV 2, LV 3) rồi vào game.
+/// Màn menu: chọn level (LV 1, LV 2, LV 3) rồi vào game. Dùng GoRouter /play/game/:level.
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
 
@@ -42,13 +41,7 @@ class _LevelButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FilledButton(
-      onPressed: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (context) => GameScreen(level: level),
-          ),
-        );
-      },
+      onPressed: () => context.go('/play/game/$level'),
       style: FilledButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
         textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),

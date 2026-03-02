@@ -1,16 +1,24 @@
-# worm_journey
+# Worm Journey
 
-tập làm game
+Tập làm game (Flutter + Flame). Có main menu, chọn level, âm thanh, settings.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+```bash
+flutter pub get
+flutter run
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Cấu trúc lib (gộp từ basic toolkit)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- `app_lifecycle` – lifecycle app (audio pause/resume)
+- `audio` – AudioController, SFX, nhạc
+- `main_menu` – màn menu chính (Play, Settings)
+- `settings` – SettingsController, màn Settings
+- `style` – Palette, ResponsiveScreen, MyButton
+- `game` – WormJourneyGame, GameScreen, MenuScreen (chọn level)
+- `core` – app, buff, services
+- `components` – snake, prey, grid, obstacles
+- `widgets` – joystick, dialogs
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Tài nguyên: `assets/images/`, `assets/sfx/`, `assets/music/`, `assets/fonts/`.
