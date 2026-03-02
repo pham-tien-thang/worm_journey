@@ -69,7 +69,7 @@ final List<ItemModel> commonItemList = [
     id: 'seed',
     name: 'Hạt giống',
     icon: '🌱',
-    description: 'Tạo thêm 3 lá cây.',
+    description: 'Tạo thêm 3 lá cây .',
     price: 2,
   ),
 ];
