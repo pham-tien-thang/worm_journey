@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../game/game_screen.dart';
+import '../game/menu_screen.dart';
 
-/// App chỉ mở màn game; DirectionButtons được gọi trong GameScreen (overlay).
+/// App mở màn menu; chọn LV 1/2/3 để vào game.
 class WormJourneyApp extends StatelessWidget {
   const WormJourneyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const GameScreen();
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: const MenuScreen(),
+    );
   }
 }

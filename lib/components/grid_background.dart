@@ -3,14 +3,33 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
-/// Nền lưới ô vuông, xen kẽ hai màu nâu nhạt cho dễ nhìn.
+/// Màu mặc định cho lưới (nâu nhạt xen kẽ).
+class GridBackgroundColors {
+  const GridBackgroundColors({
+    this.colorLight = const Color(0xFFE8DED5),
+    this.colorLighter = const Color(0xFFD7CCC8),
+  });
+
+  final Color colorLight;
+  final Color colorLighter;
+
+  static const brown = GridBackgroundColors(
+    colorLight: Color(0xFFE8DED5),
+    colorLighter: Color(0xFFD7CCC8),
+  );
+}
+
+/// Nền lưới ô vuông, xen kẽ hai màu cho dễ nhìn. Các màn truyền [colors] khác nhau.
 class GridBackground extends PositionComponent {
   GridBackground({
     required this.segmentSize,
     required this.gridColumns,
     required this.gridRows,
+    GridBackgroundColors colors = GridBackgroundColors.brown,
     Vector2? position,
-  }) : super(
+  })  : colorLight = colors.colorLight,
+        colorLighter = colors.colorLighter,
+        super(
           position: position ?? Vector2.zero(),
           size: Vector2(
             segmentSize * gridColumns,
@@ -21,10 +40,8 @@ class GridBackground extends PositionComponent {
   double segmentSize;
   int gridColumns;
   int gridRows;
-
-  /// Màu nâu nhạt xen kẽ (dễ nhìn).
-  static const Color _brownLight = Color(0xFFE8DED5);
-  static const Color _brownLighter = Color(0xFFD7CCC8);
+  final Color colorLight;
+  final Color colorLighter;
 
   void updateGrid(double segSize, int cols, int rows) {
     segmentSize = segSize;
@@ -38,7 +55,7 @@ class GridBackground extends PositionComponent {
     for (var row = 0; row < gridRows; row++) {
       for (var col = 0; col < gridColumns; col++) {
         final isEven = (row + col) % 2 == 0;
-        final color = isEven ? _brownLight : _brownLighter;
+        final color = isEven ? colorLight : colorLighter;
         final left = col * segmentSize;
         final top = row * segmentSize;
         canvas.drawRect(

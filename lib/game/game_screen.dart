@@ -10,7 +10,9 @@ import 'worm_journey_game.dart';
 
 /// Màn game: GameWidget full màn + overlay GameJoystick (điều khiển rắn).
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  const GameScreen({super.key, this.level = 1});
+
+  final int level;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -23,13 +25,20 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
-    _game = WormJourneyGame();
+    _game = WormJourneyGame(level: widget.level);
     _loadQuantities();
   }
 
   Future<void> _loadQuantities() async {
-    final ids = commonItemList.map((e) => e.id);
+    final ids = commonItemList.map((e) => e.id).toList();
     final map = await SharedPrefsService.getItemQuantities(ids);
+    for (final id in ids) {
+      final hasKey = await SharedPrefsService.hasItemQuantityKey(id);
+      if (!hasKey) {
+        map[id] = 10;
+        await SharedPrefsService.setItemQuantity(id, 10);
+      }
+    }
     if (mounted) setState(() => _itemQuantities = map);
   }
 
@@ -58,63 +67,62 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: GameWidget(game: _game),
-              ),
-              Container(
-                width: double.infinity,
-                color: Colors.grey.shade300,
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                child: SafeArea(
-                  top: false,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 100),
-                          child: SingleChildScrollView(
-                            child: Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: commonItemList.map((item) => _ItemSlot(
-                                item: item,
-                                quantity: _itemQuantities[item.id] ?? 0,
-                                game: _game,
-                                onUse: () => _onUseItem(item),
-                                onBuy: () => _onBuyItem(item),
-                                onOpenDialog: () => _openItemDialog(item),
-                              )).toList(),
-                            ),
+    return Builder(
+      builder: (dialogContext) {
+        return Scaffold(
+          body: SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: GameWidget(game: _game),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    color: Colors.grey.shade300,
+                    padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                    child: SafeArea(
+                      top: false,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: SingleChildScrollView(
+                                child: Padding(padding: EdgeInsets.only(top: 12),child: Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: commonItemList.map((item) => _ItemSlot(
+                                    item: item,
+                                    quantity: _itemQuantities[item.id] ?? 0,
+                                    game: _game,
+                                    onUse: () => _onUseItem(item),
+                                    onBuy: () => _onBuyItem(item),
+                                    onOpenDialog: () => _openItemDialog(dialogContext, item),
+                                  )).toList(),
+                                ),)
+                            )
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          GameJoystick(
+                            game: _game,
+                            size: 160,
+                            baseRadius: 64,
+                          )
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      GameJoystick(
-                        game: _game,
-                        size: 160,
-                        baseRadius: 64,
-                      )
-                    ],
-                  )
-                ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
+          );
+        },
     );
   }
 
-  void _openItemDialog(ItemModel item) {
+  void _openItemDialog(BuildContext dialogContext, ItemModel item) {
     _game.setPaused(true);
     ItemInfoDialog.show(
-      context,
+      dialogContext,
       item: item,
       onBuy: () => _onBuyItem(item),
       onReceive: () => _onUseItem(item),
@@ -175,21 +183,14 @@ class _ItemSlot extends StatelessWidget {
               ),
             ),
             Positioned(
-              top: -3,
-              right: -3,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'x$quantity',
-                  style: const TextStyle(
-                    fontSize: 9,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+              top: -2,
+              right: -2,
+              child: Text(
+                'x$quantity',
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: Colors.black,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),

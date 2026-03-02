@@ -28,6 +28,12 @@ class SharedPrefsService {
     }
   }
 
+  /// Kiểm tra đã từng lưu số lượng item chưa (để biết lần đầu vào game).
+  static Future<bool> hasItemQuantityKey(String itemId) async {
+    await init();
+    return _prefs!.containsKey(_itemQtyPrefix + itemId);
+  }
+
   /// Load số lượng tất cả item (key = itemId).
   static Future<Map<String, int>> getItemQuantities(Iterable<String> itemIds) async {
     await init();

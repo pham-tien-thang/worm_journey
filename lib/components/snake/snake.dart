@@ -37,6 +37,22 @@ class Snake extends PositionComponent {
   final List<SnakeBodySegment> _bodySegments = [];
   late SnakeTail _tail;
 
+  /// Buff đang bật: item id + thời điểm hết hạn (game time).
+  final List<SnakeBuffEntry> _buffEffects = [];
+
+  /// Danh sách buff đang hoạt động (read-only).
+  List<SnakeBuffEntry> get buffEffects => List.unmodifiable(_buffEffects);
+
+  /// Thêm buff (game gọi khi người chơi dùng item). [endTime] = thời điểm game khi buff hết.
+  void addBuff(String itemId, double endTime) {
+    _buffEffects.add(SnakeBuffEntry(itemId: itemId, endTime: endTime));
+  }
+
+  /// Xoá buff đã hết hạn. Game gọi mỗi frame với [currentTime] = _gameTime.
+  void removeExpiredBuffs(double currentTime) {
+    _buffEffects.removeWhere((b) => b.endTime <= currentTime);
+  }
+
   /// Hướng đang di chuyển (đã áp dụng next nếu có).
   SnakeDirection get currentDirection => _nextDirection ?? _direction;
 
@@ -222,4 +238,12 @@ class Snake extends PositionComponent {
     _syncVisuals();
     return newHead;
   }
+}
+
+/// Một buff đang bật trên sâu: id item + thời điểm hết hạn (game time).
+class SnakeBuffEntry {
+  const SnakeBuffEntry({required this.itemId, required this.endTime});
+
+  final String itemId;
+  final double endTime;
 }

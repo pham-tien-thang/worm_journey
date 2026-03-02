@@ -19,5 +19,5 @@ abstract class GameConfig {
 
   // Số cột / hàng — lưới lớn hơn để vùng chơi to
   static const int gridColumns = 24;
-  static const int gridRows = 18;
+  static const int gridRows = 19;
 }

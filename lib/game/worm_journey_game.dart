@@ -14,6 +14,8 @@ import '../components/snake/snake.dart';
 import '../components/snake/snake_direction.dart';
 import '../components/x_obstacle.dart';
 import '../config/config.dart';
+import '../core/buff/buff_config.dart';
+import 'level_config.dart';
 
 /// Loại va chạm nguy hiểm: tường, chướng ngại X, đuôi rắn, thân rắn.
 enum HazardType {
@@ -26,10 +28,12 @@ enum HazardType {
 /// Game rắn săn mồi. Full màn hình. Đâm tường/đuôi trừ 1 đốt; còn đầu+đuôi thì thua.
 class WormJourneyGame extends FlameGame
     with KeyboardEvents, TapCallbacks, HasCollisionDetection {
-  WormJourneyGame() : super();
+  WormJourneyGame({this.level = 1}) : super();
+
+  final int level;
 
   @override
-  Color backgroundColor() => Colors.white;
+  Color backgroundColor() => const Color(0xFF1B3D2E);
 
   late Snake _snake;
   late Prey _prey;
@@ -40,10 +44,10 @@ class WormJourneyGame extends FlameGame
   static const double _appleSpawnInterval = 10.0;
 
   double _gameTime = 0;
-  double? _devilModeEndTime;
   static const double _devilBlinkLastSeconds = 3.0;
   double _devilBlinkAccumulator = 0;
   bool _devilBlinkShowEvil = true;
+  bool _wasInDevilMode = false;
 
   double _moveAccumulator = 0;
   bool _gameOver = false;
@@ -63,13 +67,16 @@ class WormJourneyGame extends FlameGame
     _paused = value;
   }
 
-  /// Gọi khi dùng item (vd. quả dừa) — bật evil mode 10s.
+  /// Gọi khi dùng item (vd. quả dừa) — bật evil mode theo BuffConfig, lưu buff vào sâu.
   void triggerDevilModeByItem() {
     if (_gameOver || !_loaded) return;
+    const itemId = 'coconut';
+    final duration = BuffConfig.durationSecondsFor(itemId);
+    if (duration <= 0) return;
     _snake.setHasHelmet(true);
-    _devilModeEndTime = _gameTime + 10;
     _devilBlinkAccumulator = 0;
     _devilBlinkShowEvil = true;
+    _snake.addBuff(itemId, _gameTime + duration);
   }
 
   /// Gọi từ nút/joystick — đổi hướng và kích hoạt bước ngay (không delay).
@@ -103,10 +110,12 @@ class WormJourneyGame extends FlameGame
   @override
   Future<void> onLoad() async {
     camera.viewport = MaxViewport();
+    final gridColors = LevelConfig.colorsFor(level);
     _gridBackground = GridBackground(
       segmentSize: _segmentSize,
       gridColumns: GameConfig.gridColumns,
       gridRows: _gridRows,
+      colors: gridColors,
     );
     add(_gridBackground);
 
@@ -235,7 +244,7 @@ class WormJourneyGame extends FlameGame
     }
     _appleSpawnAccumulator = 0;
     _gameTime = 0;
-    _devilModeEndTime = null;
+    _wasInDevilMode = false;
 
     _gameOver = false;
     _paused = false;
@@ -268,6 +277,12 @@ class WormJourneyGame extends FlameGame
     }
   }
 
+  /// Buff coconut đang bật (sau khi đã removeExpiredBuffs). Dùng cho evil mode + phá vật cản.
+  SnakeBuffEntry? _coconutBuff() {
+    final list = _snake.buffEffects.where((b) => b.itemId == 'coconut').toList();
+    return list.isEmpty ? null : list.first;
+  }
+
   /// Xử lý chung khi đầu chạm vùng nguy hiểm: tường, chướng ngại, đuôi hoặc thân.
   /// Thân và đuôi/tường/X: trừ 1 đốt + để lại dấu X. Chỉ game over khi còn ≤ 2 đốt.
   bool _onHitHazard(HazardType type, Vector2 nextHead) {
@@ -278,7 +293,7 @@ class WormJourneyGame extends FlameGame
         _loseSegment();
         return true;
       case HazardType.obstacle:
-        if (_devilModeEndTime != null) {
+        if (_coconutBuff() != null) {
           _destroyObstacleAt(nextHead);
           _snake.step();
         } else {
@@ -296,16 +311,15 @@ class WormJourneyGame extends FlameGame
 
     _gameTime += dt;
 
-    final inDevilMode = _devilModeEndTime != null;
-    if (inDevilMode && _gameTime >= _devilModeEndTime!) {
-      _snake.setHasHelmet(false);
-      _devilModeEndTime = null;
-      _appleSpawnAccumulator = 0;
-      _devilBlinkAccumulator = 0;
-    }
+    _snake.removeExpiredBuffs(_gameTime);
 
-    if (_devilModeEndTime != null) {
-      final timeLeft = _devilModeEndTime! - _gameTime;
+    final coconut = _coconutBuff();
+    if (coconut == null) {
+      _snake.setHasHelmet(false);
+      if (_wasInDevilMode) _appleSpawnAccumulator = 0;
+      _devilBlinkAccumulator = 0;
+    } else {
+      final timeLeft = coconut.endTime - _gameTime;
       if (timeLeft <= _devilBlinkLastSeconds && timeLeft > 0) {
         _devilBlinkAccumulator += dt;
         if (_devilBlinkAccumulator >= 0.15) {
@@ -316,13 +330,14 @@ class WormJourneyGame extends FlameGame
       }
     }
 
-    if (!inDevilMode) {
+    if (coconut == null) {
       _appleSpawnAccumulator += dt;
       if (_appleSpawnAccumulator >= _appleSpawnInterval) {
         _appleSpawnAccumulator -= _appleSpawnInterval;
         _spawnApple();
       }
     }
+    _wasInDevilMode = coconut != null;
 
     final interval = _snake.moveInterval;
     final progress = (_moveAccumulator / interval).clamp(0.0, 1.0);
@@ -381,8 +396,12 @@ class WormJourneyGame extends FlameGame
         newHead.x == _applePreyGrid!.x &&
         newHead.y == _applePreyGrid!.y) {
       _snake.grow();
-      _snake.setHasHelmet(true);
-      _devilModeEndTime = _gameTime + 10;
+      const itemId = 'coconut';
+      final duration = BuffConfig.durationSecondsFor(itemId);
+      if (duration > 0) {
+        _snake.setHasHelmet(true);
+        _snake.addBuff(itemId, _gameTime + duration);
+      }
       _applePrey?.removeFromParent();
       _applePrey = null;
       _applePreyGrid = null;
