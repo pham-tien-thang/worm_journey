@@ -2,9 +2,11 @@ import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../common/debug_apply.dart';
 import '../core/services/shared_prefs_service.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/item_model.dart';
+import '../widgets/game_hud.dart';
 import '../widgets/game_joystick.dart';
 import '../widgets/item_info_dialog.dart';
 import 'worm_journey_game.dart';
@@ -57,7 +59,7 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
   }
 
   void _onBuyItem(ItemModel item) {
-    if (kDebugMode) {
+    if (shouldApplyDebug) {
       final q = _itemQuantities[item.id] ?? 0;
       final next = q + 10;
       setState(() => _itemQuantities[item.id] = next);
@@ -75,7 +77,18 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
             child: Column(
               children: [
                 Expanded(
-                  child: GameWidget(game: game),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      GameWidget(game: game),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        child: GameHud(game: game),
+                      ),
+                    ],
+                  ),
                 ),
                 Container(
                   width: double.infinity,

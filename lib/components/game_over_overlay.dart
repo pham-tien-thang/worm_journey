@@ -1,20 +1,31 @@
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 
 import '../gen_l10n/app_localizations.dart';
 
 /// Overlay khi game over: nền mờ + chữ "Game Over" và "Chạm để chơi lại".
-class GameOverOverlay extends PositionComponent {
-  GameOverOverlay({required Vector2 size, required this.locale})
-      : super(
+/// Thêm vào [camera.viewport] → (0,0) = góc trên-trái viewport, căn giữa chuẩn. [onTap] để chơi lại.
+class GameOverOverlay extends PositionComponent with TapCallbacks {
+  GameOverOverlay({
+    required Vector2 size,
+    required this.locale,
+    this.onTap,
+  }) : super(
           position: Vector2.zero(),
           size: size,
-          priority: 100,
+          priority: 1000,
         );
 
   final Locale locale;
+  final VoidCallback? onTap;
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    onTap?.call();
+  }
 
   @override
   void render(Canvas canvas) {
@@ -26,7 +37,6 @@ class GameOverOverlay extends PositionComponent {
     final l10n = AppLocalizations.lookup(locale);
     final title = l10n.gameOver;
     final subtitle = l10n.tapToPlayAgain;
-
     final centerX = size.x / 2;
     final centerY = size.y / 2;
 
@@ -44,10 +54,7 @@ class GameOverOverlay extends PositionComponent {
     titlePainter.layout();
     titlePainter.paint(
       canvas,
-      Offset(
-        centerX - titlePainter.width / 2,
-        centerY - 40,
-      ),
+      Offset(centerX - titlePainter.width / 2, centerY - 40),
     );
 
     final subPainter = TextPainter(
@@ -63,10 +70,7 @@ class GameOverOverlay extends PositionComponent {
     subPainter.layout();
     subPainter.paint(
       canvas,
-      Offset(
-        centerX - subPainter.width / 2,
-        centerY + 10,
-      ),
+      Offset(centerX - subPainter.width / 2, centerY + 10),
     );
   }
 }

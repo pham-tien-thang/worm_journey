@@ -60,6 +60,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/component/
     - assets/music/
     - assets/sfx/
 

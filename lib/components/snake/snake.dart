@@ -1,6 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flame/components.dart';
+import 'package:flutter/material.dart';
 
 import '../../config/config.dart';
+import '../../entities/entities.dart';
 import 'snake_body_segment.dart';
 import 'snake_direction.dart';
 import 'snake_head.dart';
@@ -8,16 +12,21 @@ import 'snake_tail.dart';
 
 /// Rắn: đầu + các đốt thân + đuôi (ô trắng X). Game gọi [step] mỗi tick.
 /// Tốc độ cố định gắn vào rắn khi khởi tạo ([moveInterval] giây / 1 bước).
+/// [entity]: thông tin chung (player/bot, team, skin) — null = legacy.
 class Snake extends PositionComponent {
   Snake({
     Vector2? position,
     double segmentSize = 28.0,
     double moveInterval = 0.28,
     int? gridRows,
+    this.entity,
   })  : _segmentSize = segmentSize,
         _moveInterval = moveInterval,
         _gridRows = gridRows ?? GameConfig.gridRows,
         super(position: position ?? Vector2.zero());
+
+  /// Thông tin rắn: loại (joystick/bot), team, skin, name, id... Dùng để phân biệt player vs bot và scale sau (chiêu thức).
+  final WormEntity? entity;
 
   double _segmentSize;
   final int _gridRows;
@@ -32,6 +41,12 @@ class Snake extends PositionComponent {
   SnakeDirection _direction = SnakeDirection.right;
   SnakeDirection? _nextDirection;
   int _pendingGrow = 0;
+
+  /// Đang chờ bắt đầu (start delay): nhấp nháy toàn thân.
+  bool _waitingToStart = false;
+  double _blinkPhase = 0;
+  /// Alpha hiện tại khi đang blink (0.5..1), dùng trong render.
+  double _blinkAlpha = 1.0;
 
   late SnakeHead _head;
   final List<SnakeBodySegment> _bodySegments = [];
@@ -145,6 +160,12 @@ class Snake extends PositionComponent {
     _syncVisuals();
   }
 
+  /// Game gọi khi đang đếm ngược trước lúc rắn di chuyển (đứng yên). Rắn sẽ nhấp nháy toàn thân.
+  void setWaitingToStart(bool value) {
+    _waitingToStart = value;
+    if (!value) _blinkPhase = 0;
+  }
+
   /// Tiến độ nội suy 0→1 giữa ô cũ và ô mới (game gọi mỗi frame).
   void setVisualProgress(double t) {
     _visualProgress = t.clamp(0.0, 1.0);
@@ -210,7 +231,30 @@ class Snake extends PositionComponent {
   @override
   void update(double dt) {
     super.update(dt);
+    if (_waitingToStart) {
+      _blinkPhase += dt * 4;
+      _blinkAlpha = (0.5 + 0.5 * math.sin(_blinkPhase)).clamp(0.0, 1.0);
+    } else {
+      _blinkAlpha = 1.0;
+    }
     _syncVisuals();
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (_waitingToStart && _blinkAlpha < 1.0) {
+      final rect = Rect.fromLTWH(
+        0,
+        0,
+        _segmentSize * GameConfig.gridColumns,
+        _segmentSize * _gridRows,
+      );
+      canvas.saveLayer(rect, Paint()..color = Color.fromRGBO(1, 1, 1, _blinkAlpha));
+      super.render(canvas);
+      canvas.restore();
+    } else {
+      super.render(canvas);
+    }
   }
 
   /// Game gọi mỗi tick. Trả về vị trí lưới của đầu mới (sau khi đã di chuyển).

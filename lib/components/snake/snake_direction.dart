@@ -20,6 +20,14 @@ enum SnakeDirection {
     }
   }
 
+  /// True nếu [other] là hướng ngược lại (up↔down, left↔right).
+  bool isOppositeOf(SnakeDirection other) {
+    return (this == SnakeDirection.up && other == SnakeDirection.down) ||
+        (this == SnakeDirection.down && other == SnakeDirection.up) ||
+        (this == SnakeDirection.left && other == SnakeDirection.right) ||
+        (this == SnakeDirection.right && other == SnakeDirection.left);
+  }
+
   /// Góc (radian) để xoay đầu rắn cho mặt hướng đúng.
   double get rotationRadians {
     switch (this) {

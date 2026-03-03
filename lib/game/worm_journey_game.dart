@@ -8,13 +8,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../components/debug_grid_coordinates.dart';
 import '../components/game_over_overlay.dart';
 import '../components/grid_background.dart';
 import '../components/prey.dart' show Prey, PreyType;
 import '../components/snake/snake.dart';
 import '../components/snake/snake_direction.dart';
 import '../components/x_obstacle.dart';
+import '../common/debug_apply.dart';
 import '../config/config.dart';
+import '../entities/entities.dart';
 import '../core/buff/buff_config.dart';
 import 'level_config.dart';
 
@@ -55,6 +58,29 @@ class WormJourneyGame extends FlameGame
   bool _paused = false;
   bool _loaded = false;
 
+  /// Delay 1 giây khi mới vào: sâu không di chuyển, tránh nhấp nháy.
+  static const double startDelaySeconds = 1.0;
+  double _startDelayRemaining = startDelaySeconds;
+
+  /// Thời gian chơi mặc định (giây). Đếm ngược từ 2 phút.
+  static const double defaultTimeLimitSeconds = 120.0;
+  double _timeLimit = defaultTimeLimitSeconds;
+
+  /// Kim cương (sẽ load từ config sau).
+  int _diamonds = 0;
+
+  /// Nhiệm vụ: lá cây (hiện tại / mục tiêu). Sẽ load từ config sau.
+  int _leavesCurrent = 0;
+  int _leavesTarget = 10;
+
+  /// Nhiệm vụ 2 (chưa dùng thì target = 0 → ẩn trên HUD). Sau load từ config / xử lý tương ứng.
+  int _mission2Current = 0;
+  int _mission2Target = 0;
+
+  /// HP boss (sẽ load từ config sau). Hiển thị dạng icon x4.
+  int _bossHp = 4;
+  static const int _bossHpMax = 4;
+
   /// Chướng ngại X để lại khi mất đuôi (vị trí lưới).
   final List<Vector2> _obstacles = [];
   final List<XObstacle> _obstacleComponents = [];
@@ -62,6 +88,12 @@ class WormJourneyGame extends FlameGame
   double _segmentSize = 28.0;
   int _gridRows = GameConfig.gridRows;
   late GridBackground _gridBackground;
+
+  /// Overlay tọa độ ô (A1, B1...) chỉ khi kDebugMode.
+  DebugGridCoordinates? _debugGridCoordinates;
+
+  /// Camera Y đang lerp (làm mượt, tránh giật).
+  double? _cameraY;
 
   /// Pause / resume (vd. khi mở/đóng dialog).
   void setPaused(bool value) {
@@ -80,14 +112,32 @@ class WormJourneyGame extends FlameGame
     _snake.addBuff(itemId, _gameTime + duration);
   }
 
-  /// Gọi từ nút/joystick — đổi hướng và kích hoạt bước ngay (không delay).
-  /// Nếu đang đi đúng hướng đó rồi thì không làm gì.
+  /// Tăng tiến độ nhiệm vụ 2 (gọi khi player thực hiện hành động tương ứng). Sau load config có thể có thêm mission 3, 4...
+  void addMission2Progress() {
+    _mission2Current = (_mission2Current + 1).clamp(0, _mission2Target);
+  }
+
+  /// Gán mục tiêu nhiệm vụ 2 (từ config / level). > 0 thì mới hiện trên HUD.
+  void setMission2Target(int target) {
+    _mission2Target = target.clamp(0, 9999);
+    _mission2Current = _mission2Current.clamp(0, _mission2Target);
+  }
+
+  /// Gọi từ nút/joystick — chỉ đổi hướng cho bước tiếp theo, không ép step ngay.
+  /// Rắn sẽ quay khi tới đúng thời điểm step (tránh nhảy ô vì step sớm).
   void setDirection(SnakeDirection d) {
     if (_gameOver || !_loaded) return;
-    if (d == _snake.currentDirection) return;
+    final current = _snake.currentDirection;
+    if (d == current || d.isOppositeOf(current)) return;
     _snake.setNextDirection(d);
-    _moveAccumulator = _snake.moveInterval;
   }
+
+  /// Vùng chơi: A13–X49 (cột A–X, hàng 13–49). Chỉ vùng này là grid; ngoài ra trắng + 🟫.
+  /// Camera chỉ hở thêm ~5 ô trên/dưới, không hở nhiều bên ngoài.
+  static const int _extraRowsAboveBelow = 5;
+  static const int playableStartRow = _extraRowsAboveBelow; // 5
+  static const int playableRowCount = 37;  // 13..49
+  static const int totalWorldRows = _extraRowsAboveBelow + playableRowCount + _extraRowsAboveBelow; // 47
 
   @override
   void onGameResize(Vector2 size) {
@@ -95,37 +145,50 @@ class WormJourneyGame extends FlameGame
     if (size.x <= 0 || size.y <= 0) return;
     final byWidth = size.x / GameConfig.gridColumns;
     _segmentSize = byWidth;
-    _gridRows = (size.y / _segmentSize).floor();
-    if (_gridRows < GameConfig.gridRows) _gridRows = GameConfig.gridRows;
+    _gridRows = playableRowCount;
     camera.viewport = FixedResolutionViewport(resolution: size);
     if (_loaded) {
       _snake.setSegmentSize(_segmentSize);
+      _snake.position = Vector2(0, playableStartRow * _segmentSize);
       _gridBackground.updateGrid(
         _segmentSize,
         GameConfig.gridColumns,
-        _gridRows,
+        totalWorldRows,
+        playableStartRow,
+        playableRowCount,
       );
+      _debugGridCoordinates?.updateGrid(
+        _segmentSize,
+        GameConfig.gridColumns,
+        playableRowCount,
+      );
+      _debugGridCoordinates?.position = Vector2(0, playableStartRow * _segmentSize);
     }
   }
 
   @override
   Future<void> onLoad() async {
+    _gridRows = playableRowCount;
     camera.viewport = MaxViewport();
     final gridColors = LevelConfig.colorsFor(level);
     _gridBackground = GridBackground(
       segmentSize: _segmentSize,
       gridColumns: GameConfig.gridColumns,
-      gridRows: _gridRows,
+      totalWorldRows: totalWorldRows,
+      playableStartRow: playableStartRow,
+      playableRowCount: playableRowCount,
       colors: gridColors,
     );
-    add(_gridBackground);
+    world.add(_gridBackground);
 
     _snake = Snake(
       segmentSize: _segmentSize,
       moveInterval: GameConfig.moveInterval,
       gridRows: _gridRows,
+      entity: WormEntity.playerDefault,
+      position: Vector2(0, playableStartRow * _segmentSize),
     );
-    add(_snake);
+    world.add(_snake);
 
     _prey = Prey(
       segmentSize: _segmentSize,
@@ -133,6 +196,20 @@ class WormJourneyGame extends FlameGame
       position: Vector2.zero(),
     );
     _spawnPrey();
+
+    if (kDebugMode) {
+      _debugGridCoordinates = DebugGridCoordinates(
+        segmentSize: _segmentSize,
+        gridColumns: GameConfig.gridColumns,
+        gridRows: playableRowCount,
+      );
+      _debugGridCoordinates!.position = Vector2(0, playableStartRow * _segmentSize);
+      _debugGridCoordinates!.size = Vector2(
+        GameConfig.gridColumns * _segmentSize,
+        playableRowCount * _segmentSize,
+      );
+      world.add(_debugGridCoordinates!);
+    }
 
     _loaded = true;
   }
@@ -171,7 +248,7 @@ class WormJourneyGame extends FlameGame
       type: PreyType.leaf,
       position: _gridToWorld(pos),
     );
-    add(_prey);
+    world.add(_prey);
   }
 
   void _spawnApple() {
@@ -194,29 +271,54 @@ class WormJourneyGame extends FlameGame
       type: PreyType.apple,
       position: _gridToWorld(pos),
     );
-    add(_applePrey!);
+    world.add(_applePrey!);
   }
 
+  /// Chuyển ô logic (0..23, 0..36) sang tọa độ world. A1 = vị trí cũ A13.
   Vector2 _gridToWorld(Vector2 grid) {
     final half = _segmentSize / 2;
     return Vector2(
       grid.x * _segmentSize + half,
-      grid.y * _segmentSize + half,
+      (grid.y + playableStartRow) * _segmentSize + half,
     );
+  }
+
+  /// Tốc độ làm mượt camera (càng lớn càng bám nhanh). ~6 = mượt, ~15 = bám gần ngay.
+  static const double _cameraSmoothSpeed = 8.0;
+
+  /// Di chuyển camera theo đầu rắn (trục Y), lerp mượt. Không cho camera xuống quá hàng 37 (cuối vùng chơi).
+  void _updateCameraFollowSnake(double dt) {
+    if (!_loaded) return;
+    final viewportSize = camera.viewport.size;
+    final worldWidth = GameConfig.gridColumns * _segmentSize;
+    final halfViewY = viewportSize.y / 2;
+    final bottomOfPlayable = (playableStartRow + playableRowCount) * _segmentSize;
+    final maxCameraY = bottomOfPlayable - halfViewY;
+
+    final headWorld = _gridToWorld(_snake.headGridPosition);
+    final targetY = headWorld.y.clamp(halfViewY, maxCameraY.clamp(halfViewY, double.infinity));
+
+    final current = _cameraY ?? targetY;
+    final smoothFactor = 1.0 - exp(-_cameraSmoothSpeed * dt);
+    _cameraY = current + (targetY - current) * smoothFactor;
+
+    camera.viewfinder.position = Vector2(worldWidth / 2, _cameraY!);
   }
 
   void _setGameOver() {
     if (_gameOver) return;
     _gameOver = true;
     final sz = camera.viewport.size;
-    add(GameOverOverlay(
+    // Thêm vào viewport → tọa độ đúng viewport, vẽ đè lên; có onTap để chạm tắt và chơi lại.
+    camera.viewport.add(GameOverOverlay(
       size: Vector2(sz.x, sz.y),
       locale: ui.PlatformDispatcher.instance.locale,
+      onTap: _restart,
     ));
   }
 
   void _restart() {
-    for (final c in children.whereType<GameOverOverlay>().toList()) {
+    for (final c in camera.viewport.children.whereType<GameOverOverlay>().toList()) {
       c.removeFromParent();
     }
     _snake.removeFromParent();
@@ -231,8 +333,10 @@ class WormJourneyGame extends FlameGame
       segmentSize: _segmentSize,
       moveInterval: GameConfig.moveInterval,
       gridRows: _gridRows,
+      entity: WormEntity.playerDefault,
+      position: Vector2(0, playableStartRow * _segmentSize),
     );
-    add(_snake);
+    world.add(_snake);
 
     _prey = Prey(
       segmentSize: _segmentSize,
@@ -249,10 +353,15 @@ class WormJourneyGame extends FlameGame
     _appleSpawnAccumulator = 0;
     _gameTime = 0;
     _wasInDevilMode = false;
+    _startDelayRemaining = startDelaySeconds;
+    _timeLimit = defaultTimeLimitSeconds;
+    _leavesCurrent = 0;
+    _mission2Current = 0;
 
     _gameOver = false;
     _paused = false;
     _moveAccumulator = 0;
+    _cameraY = null;
   }
 
   /// Trừ 1 đốt đuôi và để lại chướng ngại X tại vị trí đuôi.
@@ -265,7 +374,7 @@ class WormJourneyGame extends FlameGame
     );
     _obstacles.add(Vector2(tailGrid.x, tailGrid.y));
     _obstacleComponents.add(comp);
-    add(comp);
+    world.add(comp);
     if (_snake.segmentCount <= 2) _setGameOver();
   }
 
@@ -307,11 +416,69 @@ class WormJourneyGame extends FlameGame
     }
   }
 
+  /// Dữ liệu HUD (cập nhật trong lúc chơi). Cấu trúc sẵn để sau load từ JSON.
+  /// Chỉ đưa nhiệm vụ có target > 0 vào [missions] (chưa có thì ẩn).
+  /// Trả về giá trị mặc định khi game chưa load (tránh LateInitializationError khi GameHud build trước onLoad).
+  GameHudData get hudData {
+    if (!_loaded) {
+      return GameHudData(
+        timeRemainingSeconds: _timeLimit,
+        diamonds: _diamonds,
+        missions: [
+          GameHudMission(id: 'leaves', label: 'Lá cây', current: 0, target: _leavesTarget, icon: '🍃'),
+        ],
+        bossHp: _bossHp,
+        bossHpMax: _bossHpMax,
+        itemBuffs: const [],
+        startDelayRemaining: _startDelayRemaining,
+      );
+    }
+    final missions = <GameHudMission>[
+      GameHudMission(
+        id: 'leaves',
+        label: 'Lá cây',
+        current: _leavesCurrent,
+        target: _leavesTarget,
+        icon: '🍃',
+      ),
+    ];
+    if (_mission2Target > 0) {
+      missions.add(GameHudMission(
+        id: 'mission2',
+        label: 'Nhiệm vụ 2',
+        current: _mission2Current,
+        target: _mission2Target,
+        icon: null,
+      ));
+    }
+    return GameHudData(
+      timeRemainingSeconds: (_timeLimit - _gameTime).clamp(0.0, _timeLimit),
+      diamonds: _diamonds,
+      missions: missions,
+      bossHp: _bossHp,
+      bossHpMax: _bossHpMax,
+      itemBuffs: _snake.buffEffects
+          .map((e) => GameHudItemBuff(
+                itemId: e.itemId,
+                remainingSeconds: (e.endTime - _gameTime).clamp(0.0, double.infinity),
+              ))
+          .toList(),
+      startDelayRemaining: _startDelayRemaining,
+    );
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
+    if (_loaded) _updateCameraFollowSnake(dt);
     if (_gameOver) return;
     if (_paused) return;
+
+    _snake.setWaitingToStart(_startDelayRemaining > 0);
+    if (_startDelayRemaining > 0) {
+      _startDelayRemaining -= dt;
+      return;
+    }
 
     _gameTime += dt;
 
@@ -392,6 +559,7 @@ class WormJourneyGame extends FlameGame
 
     if (newHead.x == _preyGrid.x && newHead.y == _preyGrid.y) {
       _snake.grow();
+      _leavesCurrent = (_leavesCurrent + 1).clamp(0, _leavesTarget);
       _spawnPrey();
       return;
     }
@@ -445,9 +613,58 @@ class WormJourneyGame extends FlameGame
       _restart();
       return;
     }
-    if (kDebugMode) {
+    if (shouldApplyDebug) {
       _paused = !_paused;
     }
   }
+}
 
+/// Một nhiệm vụ trên HUD (x/xx). Target = 0 thì không hiển thị.
+class GameHudMission {
+  const GameHudMission({
+    required this.id,
+    required this.label,
+    required this.current,
+    required this.target,
+    this.icon,
+  });
+
+  final String id;
+  final String label;
+  final int current;
+  final int target;
+  /// Icon optional (emoji hoặc asset), null thì chỉ hiện label.
+  final String? icon;
+}
+
+/// Dữ liệu HUD (sẽ load từ JSON config sau). Cập nhật trong lúc chơi.
+class GameHudData {
+  const GameHudData({
+    required this.timeRemainingSeconds,
+    required this.diamonds,
+    required this.missions,
+    required this.bossHp,
+    required this.bossHpMax,
+    required this.itemBuffs,
+    required this.startDelayRemaining,
+  });
+
+  final double timeRemainingSeconds;
+  final int diamonds;
+  /// Nhiệm vụ (lá cây, nhiệm vụ 2, ...). Chỉ chứa mission có target > 0.
+  final List<GameHudMission> missions;
+  final int bossHp;
+  final int bossHpMax;
+  final List<GameHudItemBuff> itemBuffs;
+  final double startDelayRemaining;
+}
+
+class GameHudItemBuff {
+  const GameHudItemBuff({
+    required this.itemId,
+    required this.remainingSeconds,
+  });
+
+  final String itemId;
+  final double remainingSeconds;
 }
