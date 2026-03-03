@@ -10,7 +10,7 @@ class PlaceholderComponent extends RectangleComponent {
     Vector2? size,
   }) : super(
           position: position ?? Vector2.zero(),
-          size: size ?? Vector2.all(GameConfig.defaultBlockSize),
-          paint: Paint()..color = GameConfig.primaryColor,
+          size: size ?? Vector2.all(GameConfig.segmentSize),
+          paint: Paint()..color = GameConfig.snakePink,
         );
 }

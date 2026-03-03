@@ -3,14 +3,18 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
+import '../gen_l10n/app_localizations.dart';
+
 /// Overlay khi game over: nền mờ + chữ "Game Over" và "Chạm để chơi lại".
 class GameOverOverlay extends PositionComponent {
-  GameOverOverlay({required Vector2 size})
+  GameOverOverlay({required Vector2 size, required this.locale})
       : super(
           position: Vector2.zero(),
           size: size,
           priority: 100,
         );
+
+  final Locale locale;
 
   @override
   void render(Canvas canvas) {
@@ -19,8 +23,9 @@ class GameOverOverlay extends PositionComponent {
       Paint()..color = const Color(0xCC000000),
     );
 
-    const title = 'Game Over';
-    const subtitle = 'Chạm để chơi lại';
+    final l10n = AppLocalizations.lookup(locale);
+    final title = l10n.gameOver;
+    final subtitle = l10n.tapToPlayAgain;
 
     final centerX = size.x / 2;
     final centerY = size.y / 2;

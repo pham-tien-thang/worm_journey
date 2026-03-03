@@ -1,0 +1,44 @@
+{
+  "@@locale": "en",
+  "appTitle": "Worm Journey",
+  "levelLabel": "Lv{level}",
+  "@levelLabel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "gameOver": "Game Over",
+  "tapToPlayAgain": "Tap to play again",
+  "view": "View",
+  "quantityShort": "x{quantity}",
+  "@quantityShort": {
+    "placeholders": {
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "buyDiamonds": "Buy {price}💎",
+  "@buyDiamonds": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "receive": "Receive",
+  "itemCoconutName": "Coconut",
+  "itemCoconutDescription": "Snake enters tough mode and can break obstacles.",
+  "itemSnailName": "Snail",
+  "itemSnailDescription": "Snake moves slowly, easier to control.",
+  "itemMagnetName": "Magnet",
+  "itemMagnetDescription": "Attracts all leaves within 2 tiles.",
+  "itemShieldName": "Shield",
+  "itemShieldDescription": "One shield blocks one hit from obstacle or damage.",
+  "itemBombName": "Bomb",
+  "itemBombDescription": "Destroys obstacles and damages enemies in 3 tiles.",
+  "itemSeedName": "Seed",
+  "itemSeedDescription": "Spawns 3 more leaves."
+}

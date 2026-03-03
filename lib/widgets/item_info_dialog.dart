@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../gen_l10n/app_localizations.dart';
 import '../models/item_model.dart';
 
 /// Dialog thông tin item: tên + X, mô tả, nút Mua, nút Nhận (có icon quảng cáo).
@@ -33,6 +34,7 @@ class ItemInfoDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
@@ -47,7 +49,7 @@ class ItemInfoDialog extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      item.name,
+                      l10n.itemName(item.id),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -63,7 +65,7 @@ class ItemInfoDialog extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                item.description,
+                l10n.itemDescription(item.id),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 20),
@@ -78,7 +80,7 @@ class ItemInfoDialog extends StatelessWidget {
                             }
                           : null,
                       icon: const Icon(Icons.store, size: 20),
-                      label: Text('Mua ${item.price}💎'),
+                      label: Text(l10n.buyDiamonds(item.price)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -94,7 +96,7 @@ class ItemInfoDialog extends StatelessWidget {
                                 }
                               : null,
                           icon: Text(item.icon, style: const TextStyle(fontSize: 20)),
-                          label: const Text('Nhận'),
+                          label: Text(l10n.receive),
                           style: FilledButton.styleFrom(
                             backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
                             foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,

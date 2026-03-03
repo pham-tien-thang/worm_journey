@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/services/shared_prefs_service.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../models/item_model.dart';
 import '../widgets/game_joystick.dart';
 import '../widgets/item_info_dialog.dart';
@@ -198,7 +199,7 @@ class _ItemSlot extends StatelessWidget {
               top: -2,
               right: -2,
               child: Text(
-                'x$quantity',
+                AppLocalizations.of(context).quantityShort(quantity),
                 style: const TextStyle(
                   fontSize: 9,
                   color: Colors.black,
@@ -228,7 +229,7 @@ class _ItemSlot extends StatelessWidget {
                   ),
                   const SizedBox(width: 2),
                   Text(
-                    'Xem',
+                    AppLocalizations.of(context).view,
                     style: TextStyle(
                       fontSize: 9,
                       color: Colors.grey.shade800,

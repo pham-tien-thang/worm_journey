@@ -1,0 +1,23 @@
+{
+  "@@locale": "vi",
+  "appTitle": "Worm Journey",
+  "levelLabel": "Lv{level}",
+  "gameOver": "Game Over",
+  "tapToPlayAgain": "Chạm để chơi lại",
+  "view": "Xem",
+  "quantityShort": "x{quantity}",
+  "buyDiamonds": "Mua {price}💎",
+  "receive": "Nhận",
+  "itemCoconutName": "Quả dừa",
+  "itemCoconutDescription": "Ăn vào sâu vào chế độ cứng đầu, phá được chướng ngại vật.",
+  "itemSnailName": "Ốc sên",
+  "itemSnailDescription": "Sâu vào chế độ đi chậm, dễ dàng điều khiển.",
+  "itemMagnetName": "Nam châm",
+  "itemMagnetDescription": "Hút tất cả các lá cây trong khoảng cách 2 ô.",
+  "itemShieldName": "Khiên",
+  "itemShieldDescription": "1 Khiên sẽ bảo vệ 1 lần khi đâm vào chướng ngại vật hoặc nhận sát thương.",
+  "itemBombName": "Bom",
+  "itemBombDescription": "Phá huỷ chướng ngại vật và gây sát thương lên kẻ địch trong 3 ô.",
+  "itemSeedName": "Hạt giống",
+  "itemSeedDescription": "Tạo thêm 3 lá cây."
+}

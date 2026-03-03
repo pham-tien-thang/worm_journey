@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flame/camera.dart';
 import 'package:flame/events.dart';
@@ -208,7 +209,10 @@ class WormJourneyGame extends FlameGame
     if (_gameOver) return;
     _gameOver = true;
     final sz = camera.viewport.size;
-    add(GameOverOverlay(size: Vector2(sz.x, sz.y)));
+    add(GameOverOverlay(
+      size: Vector2(sz.x, sz.y),
+      locale: ui.PlatformDispatcher.instance.locale,
+    ));
   }
 
   void _restart() {
