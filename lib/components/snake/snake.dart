@@ -268,6 +268,16 @@ class Snake extends PositionComponent {
     }
   }
 
+  /// Áp dụng hướng đã chọn (nextDirection) và cập nhật visual — không di chuyển ô.
+  /// Game gọi khi va chạm (trước loseSegment) để đầu quay đúng hướng đâm vào tường/vật cản.
+  void applyNextDirectionAndSyncVisuals() {
+    if (_nextDirection != null) {
+      _direction = _nextDirection!;
+      _nextDirection = null;
+    }
+    _syncVisuals();
+  }
+
   /// Game gọi mỗi tick. Trả về vị trí lưới của đầu mới (sau khi đã di chuyển).
   Vector2? step() {
     if (_gridPositions.isEmpty) return null;

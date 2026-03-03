@@ -398,7 +398,9 @@ class WormJourneyGame extends FlameGame
 
   /// Xử lý chung khi đầu chạm vùng nguy hiểm: tường, chướng ngại, đuôi hoặc thân.
   /// Thân và đuôi/tường/X: trừ 1 đốt + để lại dấu X. Chỉ game over khi còn ≤ 2 đốt.
+  /// Gọi applyNextDirectionAndSyncVisuals trước để đầu quay đúng hướng đâm.
   bool _onHitHazard(HazardType type, Vector2 nextHead) {
+    _snake.applyNextDirectionAndSyncVisuals();
     switch (type) {
       case HazardType.wall:
       case HazardType.tail:
