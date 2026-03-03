@@ -1,11 +1,13 @@
 import 'dart:ui';
 
+import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../../config/config.dart';
 
 /// Đốt thân rắn: hình tròn màu hồng, bên trong có hình tròn nhỏ màu cam.
+/// Hitbox passive, isSolid (chặn) — logic va chạm đầu-thân xử lý trong game.
 class SnakeBodySegment extends PositionComponent {
   SnakeBodySegment({
     required double segmentSize,
@@ -15,6 +17,15 @@ class SnakeBodySegment extends PositionComponent {
           size: Vector2.all(segmentSize),
           anchor: Anchor.center,
         );
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    add(RectangleHitbox(
+      collisionType: CollisionType.passive,
+      isSolid: true,
+    ));
+  }
 
   @override
   void render(Canvas canvas) {

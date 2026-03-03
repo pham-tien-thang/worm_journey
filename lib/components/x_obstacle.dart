@@ -1,9 +1,11 @@
 import 'dart:ui';
 
+import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 /// Chướng ngại vật: ô có bia mộ 🪦, để lại khi rắn mất đuôi. Đâm vào = trừ 1 đốt.
+/// Hitbox passive, isSolid (chặn) — logic va chạm xử lý trong game.
 class XObstacle extends PositionComponent {
   XObstacle({
     required double segmentSize,
@@ -15,6 +17,15 @@ class XObstacle extends PositionComponent {
         );
 
   static const String _emoji = '🪦';
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    add(RectangleHitbox(
+      collisionType: CollisionType.passive,
+      isSolid: true,
+    ));
+  }
 
   @override
   void render(Canvas canvas) {

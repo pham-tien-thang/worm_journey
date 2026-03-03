@@ -8,6 +8,7 @@ class GreenButton extends StatelessWidget {
     required this.onPressed,
     this.height = 56,
     this.width,
+    this.fontSize = 18,
   });
 
   final String text;
@@ -15,6 +16,8 @@ class GreenButton extends StatelessWidget {
   final double height;
   /// Nếu set, nút kéo dài theo chiều ngang (ảnh stretch theo width).
   final double? width;
+  /// Cỡ chữ, mặc định 18.
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -30,16 +33,16 @@ class GreenButton extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               Image.asset(
-                'assets/images/button_main.png',
+                'assets/images/button_main_50.png',
                 fit: width != null ? BoxFit.fill : BoxFit.contain,
                 width: width,
                 height: height,
               ),
               Text(
                 text,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
-                  fontSize: 22,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.bold,
                   shadows: [
                     Shadow(

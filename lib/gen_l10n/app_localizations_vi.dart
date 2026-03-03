@@ -32,6 +32,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get buttonChallenge => 'Thử thách';
 
   @override
+  String get buttonShop => 'Cửa hàng';
+
+  @override
+  String get buttonSettings => 'Cài đặt';
+
+  @override
   String get itemCoconutName => 'Quả dừa';
 
   @override

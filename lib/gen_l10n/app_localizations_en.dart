@@ -32,6 +32,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get buttonChallenge => 'Challenge';
 
   @override
+  String get buttonShop => 'Shop';
+
+  @override
+  String get buttonSettings => 'Settings';
+
+  @override
   String get itemCoconutName => 'Coconut';
 
   @override

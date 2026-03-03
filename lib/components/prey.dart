@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
@@ -10,6 +11,7 @@ enum PreyType {
 }
 
 /// Con mồi: icon lá 🍃 hoặc dừa 🥥 (ký tự đặc biệt).
+/// Hitbox passive, không chặn (trigger/xuyên) — logic ăn mồi xử lý trong game.
 class Prey extends PositionComponent {
   Prey({
     required double segmentSize,
@@ -36,6 +38,15 @@ class Prey extends PositionComponent {
   }
 
   PreyType get type => _type;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    add(RectangleHitbox(
+      collisionType: CollisionType.passive,
+      isSolid: false,
+    ));
+  }
 
   @override
   void render(Canvas canvas) {

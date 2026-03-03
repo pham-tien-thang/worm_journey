@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
@@ -8,6 +9,7 @@ import 'snake_direction.dart';
 
 /// Đốt đuôi: hình tam giác màu hồng.
 /// [direction] là hướng từ thân tới đuôi (đuôi nhọn hướng ngược lại).
+/// Hitbox passive, isSolid (chặn) — logic va chạm đầu-đuôi xử lý trong game.
 class SnakeTail extends PositionComponent {
   SnakeTail({
     required this.direction,
@@ -20,6 +22,15 @@ class SnakeTail extends PositionComponent {
         );
 
   SnakeDirection direction;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    add(RectangleHitbox(
+      collisionType: CollisionType.passive,
+      isSolid: true,
+    ));
+  }
 
   @override
   void render(Canvas canvas) {

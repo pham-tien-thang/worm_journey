@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../app_router.dart';
-import '../gen_l10n/app_localizations.dart';
-import '../widgets/green_button.dart';
+import '../../app_router.dart';
+import '../../gen_l10n/app_localizations.dart';
+import '../../widgets/green_button.dart';
 
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
@@ -49,7 +49,25 @@ class MainMenuScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: GreenButton(
                       text: l10n.buttonChallenge,
-                      onPressed: () => context.push(AppRoutes.play),
+                      onPressed: () => context.push(AppRoutes.challenge),
+                      width: 175,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: GreenButton(
+                      text: l10n.buttonShop,
+                      onPressed: () => context.push(AppRoutes.shop),
+                      width: 175,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: GreenButton(
+                      text: l10n.buttonSettings,
+                      onPressed: () => context.push(AppRoutes.settings),
                       width: 175,
                     ),
                   ),

@@ -1,11 +1,13 @@
 import 'dart:ui';
 
+import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import 'snake_direction.dart';
 
 /// Đầu rắn: ký tự đặc biệt (mặt cười). Ăn táo thì đổi thành mũ/ nón bảo hiểm.
+/// Hitbox active — tham gia phát hiện va chạm với mồi, chướng ngại, đuôi, thân.
 class SnakeHead extends PositionComponent {
   SnakeHead({
     required this.direction,
@@ -23,6 +25,15 @@ class SnakeHead extends PositionComponent {
   String _emoji;
 
   set emoji(String value) => _emoji = value;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    add(RectangleHitbox(
+      collisionType: CollisionType.active,
+      isSolid: false,
+    ));
+  }
 
   @override
   void render(Canvas canvas) {

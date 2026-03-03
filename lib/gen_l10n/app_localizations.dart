@@ -37,6 +37,8 @@ abstract class AppLocalizations {
   String get receive;
   String get buttonJourney;
   String get buttonChallenge;
+  String get buttonShop;
+  String get buttonSettings;
   String get itemCoconutName;
   String get itemCoconutDescription;
   String get itemSnailName;

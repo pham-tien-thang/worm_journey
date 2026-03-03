@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../app_router.dart';
-import '../gen_l10n/app_localizations.dart';
+import '../../app_router.dart';
+import '../../gen_l10n/app_localizations.dart';
 
 /// Màn chọn level: nền full, 3 ô Lv1/Lv2/Lv3, nút Back.
 class LevelSelectionScreen extends StatelessWidget {
