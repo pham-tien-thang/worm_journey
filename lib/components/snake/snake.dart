@@ -110,7 +110,6 @@ class Snake extends PositionComponent {
     _head = SnakeHead(
       direction: _direction,
       segmentSize: _segmentSize,
-      emoji: '🙂',
       position: _gridToWorld(_gridPositions[0]),
     );
     add(_head);
@@ -145,9 +144,9 @@ class Snake extends PositionComponent {
     _pendingGrow++;
   }
 
-  /// Bật/ tắt chế độ 😈 (sau khi ăn táo, tồn tại 10s rồi tự tắt).
+  /// Bật/ tắt chế độ evil (dừa). Đầu sâu vẫn dùng ảnh vertical/horizontal, không đổi.
   void setHasHelmet(bool value) {
-    _head.emoji = value ? '😈' : '🙂';
+    // Kệ vẫn vậy: không đổi hình đầu khi evil mode.
   }
 
   /// Bỏ 1 đốt đuôi (khi đâm tường hoặc đâm đuôi). Trả về true nếu còn đủ đốt.
@@ -177,6 +176,13 @@ class Snake extends PositionComponent {
     return from + (to - from) * _visualProgress;
   }
 
+  SnakeDirection _vectorToDirection(Vector2 v) {
+    if (v.x.abs() >= v.y.abs()) {
+      return v.x > 0 ? SnakeDirection.right : SnakeDirection.left;
+    }
+    return v.y > 0 ? SnakeDirection.down : SnakeDirection.up;
+  }
+
   void _syncVisuals() {
     if (_gridPositions.isEmpty) return;
 
@@ -185,7 +191,8 @@ class Snake extends PositionComponent {
         : _gridPositions.first;
     _head.position = _lerpWorld(headPrev, _gridPositions.first);
     _head.direction = _direction;
-    _head.angle = _direction.rotationRadians;
+    // Góc đầu do SnakeHead tự xử lý (ảnh vertical/horizontal + lật), không xoay component.
+    _head.angle = 0;
 
     final tailGrid = _gridPositions.last;
     final tailPrev = _previousGridPositions.length >= _gridPositions.length
@@ -215,10 +222,14 @@ class Snake extends PositionComponent {
           ? _previousGridPositions[i]
           : _gridPositions[i];
       final pos = _lerpWorld(prev, _gridPositions[i]);
+      final towardHead = _gridPositions[i - 1] - _gridPositions[i];
+      final bodyDir = _vectorToDirection(towardHead);
       if (i - 1 < _bodySegments.length) {
         _bodySegments[i - 1].position = pos;
+        _bodySegments[i - 1].setDirection(bodyDir);
       } else {
         final seg = SnakeBodySegment(
+          direction: bodyDir,
           segmentSize: _segmentSize,
           position: pos,
         );
