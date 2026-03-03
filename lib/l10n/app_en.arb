@@ -29,6 +29,8 @@
     }
   },
   "receive": "Receive",
+  "buttonJourney": "Journey",
+  "buttonChallenge": "Challenge",
   "itemCoconutName": "Coconut",
   "itemCoconutDescription": "Snake enters tough mode and can break obstacles.",
   "itemSnailName": "Snail",

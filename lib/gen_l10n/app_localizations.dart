@@ -35,6 +35,8 @@ abstract class AppLocalizations {
   String quantityShort(int quantity);
   String buyDiamonds(int price);
   String get receive;
+  String get buttonJourney;
+  String get buttonChallenge;
   String get itemCoconutName;
   String get itemCoconutDescription;
   String get itemSnailName;

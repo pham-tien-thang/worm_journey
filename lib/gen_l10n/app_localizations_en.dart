@@ -26,6 +26,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receive => 'Receive';
 
   @override
+  String get buttonJourney => 'Journey';
+
+  @override
+  String get buttonChallenge => 'Challenge';
+
+  @override
   String get itemCoconutName => 'Coconut';
 
   @override

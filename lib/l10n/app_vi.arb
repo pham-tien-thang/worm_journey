@@ -8,6 +8,8 @@
   "quantityShort": "x{quantity}",
   "buyDiamonds": "Mua {price}💎",
   "receive": "Nhận",
+  "buttonJourney": "Hành trình",
+  "buttonChallenge": "Thử thách",
   "itemCoconutName": "Quả dừa",
   "itemCoconutDescription": "Ăn vào sâu vào chế độ cứng đầu, phá được chướng ngại vật.",
   "itemSnailName": "Ốc sên",
