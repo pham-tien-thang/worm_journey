@@ -77,4 +77,13 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get itemSeedDescription => 'Tạo thêm 3 lá cây.';
+
+  @override
+  String get entityPreyLeafName => 'Chiếc lá';
+
+  @override
+  String get entityPreyCoconutName => 'Quả dừa';
+
+  @override
+  String get entityXMarkName => 'Chướng ngại vật';
 }

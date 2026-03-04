@@ -77,4 +77,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get itemSeedDescription => 'Spawns 3 more leaves.';
+
+  @override
+  String get entityPreyLeafName => 'Leaf';
+
+  @override
+  String get entityPreyCoconutName => 'Coconut';
+
+  @override
+  String get entityXMarkName => 'Obstacle';
 }

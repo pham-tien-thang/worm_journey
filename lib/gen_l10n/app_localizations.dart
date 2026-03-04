@@ -51,6 +51,23 @@ abstract class AppLocalizations {
   String get itemBombDescription;
   String get itemSeedName;
   String get itemSeedDescription;
+  String get entityPreyLeafName;
+  String get entityPreyCoconutName;
+  String get entityXMarkName;
+
+  /// Tên hiển thị entity theo typeId — lấy từ ARB (entityPreyLeafName, ...).
+  String entityDisplayName(String typeId) {
+    switch (typeId) {
+      case 'prey_leaf':
+        return entityPreyLeafName;
+      case 'prey_apple':
+        return entityPreyCoconutName;
+      case 'x_mark':
+        return entityXMarkName;
+      default:
+        return typeId;
+    }
+  }
 
   String itemName(String id) {
     switch (id) {

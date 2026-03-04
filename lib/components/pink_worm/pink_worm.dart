@@ -31,7 +31,7 @@ class PinkWorm extends Worm {
   @override
   void setHasHelmet(bool value) {
     _hasHelmet = value;
-    // TODO: đồng bộ lên head sprite (evil/helmet) khi có asset
+    setHeadHelmet(value);
   }
 
   @override

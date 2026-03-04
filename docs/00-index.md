@@ -37,4 +37,4 @@ Game rắn săn mồi (Flutter + Flame), hỗ trợ mồi lá/táo, chế độ 
 
 - Đầu rắn chỉ **chạm** vùng chết (dùng `peekNextHead()`), không cho đầu đi vào ô chết.
 - Độ dài khởi điểm: **10** đốt.
-- Mồi lá 🍃, mồi táo 🍎 (mỗi 10s khi không 😈); ăn táo → 😈 10s, có thể phá dấu X.
+- Mồi lá 🌿, mồi táo 🍎 (mỗi 10s khi không 😈); ăn táo → 😈 10s, có thể phá dấu X.

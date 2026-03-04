@@ -23,7 +23,7 @@ lib/
 │   │   ├── snake_body_segment.dart
 │   │   ├── snake_tail.dart   # Đuôi tam giác
 │   │   └── snake_direction.dart
-│   ├── prey.dart             # Mồi lá 🍃 / táo 🍎
+│   ├── prey.dart             # Mồi lá 🌿 / táo 🍎
 │   ├── x_obstacle.dart       # Chướng ngại dấu X
 │   ├── game_over_overlay.dart
 │   ├── placeholder_component.dart

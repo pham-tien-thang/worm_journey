@@ -18,7 +18,7 @@
 
 ## Mồi
 
-- **Lá 🍃:** mồi thường, luôn có 1 trên map; ăn → dài thêm 1 đốt, spawn lá mới.
+- **Lá 🌿:** mồi thường, luôn có 1 trên map; ăn → dài thêm 1 đốt, spawn lá mới.
 - **Táo 🍎:** xuất hiện **10 giây** một lần **chỉ khi không đang 😈**. Sau khi 😈 hết, đợi **10 giây** nữa mới spawn táo tiếp.
 
 ## Chế độ 😈 (ăn táo)

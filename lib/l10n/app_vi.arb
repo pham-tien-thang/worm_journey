@@ -1,5 +1,8 @@
 {
   "@@locale": "vi",
+  "entityPreyLeafName": "Chiếc lá",
+  "entityPreyCoconutName": "Quả dừa",
+  "entityXMarkName": "Chướng ngại vật",
   "appTitle": "Worm Journey",
   "levelLabel": "Lv{level}",
   "gameOver": "Game Over",

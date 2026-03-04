@@ -62,6 +62,7 @@ flutter:
     - assets/images/
     - assets/images/component/
     - assets/images/component/worm/pink_worm/
+    - assets/images/component/worm/pink_worm/helmet/
     - assets/levels/
     - assets/jsonTypeObj.json
     - assets/music/

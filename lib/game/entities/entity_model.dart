@@ -20,7 +20,7 @@ extension ProjectTypeExtension on ProjectType {
   }
 }
 
-/// Model gốc cho entity: icon, độ cứng, type. Model con (grey, obstacle) set mặc định trong class.
+/// Model gốc cho entity: icon, độ cứng, type. Tên hiển thị lấy từ ARB qua [AppLocalizations.entityDisplayName(typeId)].
 abstract class EntityModel {
   String get icon;
   int get hardness;

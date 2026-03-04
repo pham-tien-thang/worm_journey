@@ -18,42 +18,38 @@ enum EnumRule {
   // noItems, noApple, ...
 }
 
-/// Một nhiệm vụ trong config (ăn N lá, ...).
+/// Một nhiệm vụ trong config. Icon và label lấy từ [EntityModels] + l10n theo [typeId].
 class MissionConfig {
   const MissionConfig({
     required this.id,
-    required this.label,
+    required this.typeId,
     required this.target,
-    this.icon,
   });
 
   final String id;
-  final String label;
+  /// typeId entity (vd. prey_leaf). HUD lấy icon từ EntityModels, name từ ARB (l10n.entityDisplayName).
+  final String typeId;
   final int target;
-  final String? icon;
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'label': label,
+        'typeId': typeId,
         'target': target,
-        if (icon != null) 'icon': icon,
       };
 
   static MissionConfig fromJson(Map<String, dynamic> json) {
     return MissionConfig(
       id: json['id'] as String? ?? 'leaves',
-      label: json['label'] as String? ?? 'Lá cây',
+      typeId: json['typeId'] as String? ?? 'prey_leaf',
       target: (json['target'] as num?)?.toInt() ?? 10,
-      icon: json['icon'] as String?,
     );
   }
 
   /// Mặc định: 1 nhiệm vụ ăn 10 lá.
   static const MissionConfig defaultLeaves = MissionConfig(
     id: 'leaves',
-    label: 'Lá cây',
+    typeId: 'prey_leaf',
     target: 10,
-    icon: '🍃',
   );
 }
 

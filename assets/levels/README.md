@@ -13,7 +13,7 @@ Tất cả key đều tùy chọn. Thiếu hoặc `null` thì dùng giá trị m
 
 | Key | Kiểu | Mặc định | Mô tả |
 |-----|------|----------|--------|
-| `missions` | `array` | 1 nhiệm vụ "ăn 10 lá" | Danh sách nhiệm vụ (id, label, target, icon). |
+| `missions` | `array` | 1 nhiệm vụ "ăn 10 lá" | Danh sách nhiệm vụ (id, typeId, target). Icon/label từ model + l10n. |
 | `timeLimitSeconds` | `number` | `120` | Thời gian chơi (giây), đếm ngược. |
 | `rule` | `string` | `"none"` | Quy tắc: `none` (sau có thể: `noItems`, ...). |
 | `grid` | `object` | nâu nhạt | Màu ô lưới trong vùng chơi. |
@@ -25,15 +25,14 @@ Tất cả key đều tùy chọn. Thiếu hoặc `null` thì dùng giá trị m
 Mỗi phần tử là object:
 
 - `id` (string): mã nhiệm vụ, vd. `"leaves"`, `"mission2"`.
-- `label` (string): chữ hiển thị trên HUD.
+- `typeId` (string): loại entity (prey_leaf, prey_apple, x_mark). Icon và label lấy từ model + l10n.
 - `target` (number): mục tiêu (vd. 10 lá).
-- `icon` (string, tùy chọn): emoji hoặc icon, vd. `"🍃"`.
 
 Ví dụ:
 
 ```json
 "missions": [
-  { "id": "leaves", "label": "Lá cây", "target": 10, "icon": "🍃" }
+  { "id": "leaves", "typeId": "prey_leaf", "target": 10 }
 ]
 ```
 
@@ -58,7 +57,7 @@ Vùng trên/dưới vùng chơi (ô không thuộc grid):
 Mỗi **key** = loại entity (typeId), **value** = list tọa độ grid `[[col, row], ...]`. Game dùng factory đăng ký từng typeId → hàm tạo entity tại ô (chướng ngại → ObstacleManager, mồi → PreyManager, bot → list agent...). Thêm loại mới (đá, nước, mồi chuối, bot nhỏ) chỉ cần đăng ký thêm trong game, không gom hết vào một manager.
 
 - `x_mark` (array): dấu X 🪦 — chướng ngại, có buff dừa thì phá được.
-- `prey_leaf` (array): mồi lá 🍃.
+- `prey_leaf` (array): mồi lá 🌿.
 - `prey_apple` (array): mồi táo/dừa 🥥.
 - *(Tương thích cũ: `obstacles` → coi là `x_mark`, `prey` → coi là `prey_leaf`.)*
 - *Sau có thể thêm: `rock`, `water`, `prey_banana`, `small_bot`, ...*
@@ -78,7 +77,7 @@ Ví dụ:
 ```json
 {
   "missions": [
-    { "id": "leaves", "label": "Lá cây", "target": 10, "icon": "🍃" }
+    { "id": "leaves", "typeId": "prey_leaf", "target": 10 }
   ],
   "timeLimitSeconds": 120,
   "rule": "none",

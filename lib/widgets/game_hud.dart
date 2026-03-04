@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../common/debug_apply.dart';
+import '../game/entities/entity_models.dart';
 import '../game/worm_journey_game.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../models/item_model.dart';
 
 /// Thanh HUD phía trên màn chơi: thời gian giữa, kim cương bên phải, nhiệm vụ & hiệu ứng bên trái.
@@ -106,14 +108,21 @@ class _LeftSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (final m in data.missions) ...[
-          Text(
-            m.icon != null ? '${m.icon} ${m.label} ${m.current}/${m.target}' : '${m.label} ${m.current}/${m.target}',
-            style: textStyle,
+          Builder(
+            builder: (_) {
+              final icon = EntityModels.icon(m.typeId);
+              final label = l10n.entityDisplayName(m.typeId);
+              return Text(
+                '$icon $label ${m.current}/${m.target}',
+                style: textStyle,
+              );
+            },
           ),
           const SizedBox(height: 2),
         ],

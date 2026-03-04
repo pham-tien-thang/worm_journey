@@ -16,7 +16,7 @@
 ## Mồi (Prey)
 
 - **Prey** (`components/prey.dart`):
-  - `PreyType`: `leaf` (🍃) hoặc `apple` (🍎).
+  - `PreyType`: `leaf` (🌿) hoặc `apple` (🍎).
   - Vẽ bằng emoji (TextPainter), không vẽ circle nữa.
 
 ## Chướng ngại X

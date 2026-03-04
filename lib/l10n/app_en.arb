@@ -1,5 +1,8 @@
 {
   "@@locale": "en",
+  "entityPreyLeafName": "Leaf",
+  "entityPreyCoconutName": "Coconut",
+  "entityXMarkName": "Obstacle",
   "appTitle": "Worm Journey",
   "levelLabel": "Lv{level}",
   "@levelLabel": {

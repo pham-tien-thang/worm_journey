@@ -32,10 +32,17 @@ class WormHead extends PositionComponent {
   bool _showCryFace = false;
   void setShowCryFace(bool value) => _showCryFace = value;
 
+  bool _useHelmet = false;
+  void setUseHelmet(bool value) => _useHelmet = value;
+
   Sprite? _spriteVertical;
   Sprite? _spriteHorizontal;
   Sprite? _spriteBack;
   Sprite? _spriteCry;
+  Sprite? _helmetVertical;
+  Sprite? _helmetHorizontal;
+  Sprite? _helmetBack;
+  Sprite? _helmetCry;
 
   @override
   void update(double dt) {
@@ -54,6 +61,13 @@ class WormHead extends PositionComponent {
     _spriteHorizontal = await Sprite.load(config.assetHorizontal, images: game.images);
     _spriteBack = await Sprite.load(config.assetBack, images: game.images);
     _spriteCry = await Sprite.load(config.assetCry, images: game.images);
+
+    if (config.hasHelmetAssets) {
+      _helmetVertical = await Sprite.load(config.assetHelmetVertical!, images: game.images);
+      _helmetHorizontal = await Sprite.load(config.assetHelmetHorizontal!, images: game.images);
+      _helmetBack = await Sprite.load(config.assetHelmetBack!, images: game.images);
+      _helmetCry = await Sprite.load(config.assetHelmetCry!, images: game.images);
+    }
   }
 
   @override
@@ -69,7 +83,8 @@ class WormHead extends PositionComponent {
 
     canvas.save();
     final bool flipX = direction == WormDirection.left;
-    final bool flipY = !_showCryFace && direction == WormDirection.up && sprite != _spriteBack;
+    final bool isBackSprite = sprite == _spriteBack || sprite == _helmetBack;
+    final bool flipY = !_showCryFace && direction == WormDirection.up && !isBackSprite;
     if (flipX || flipY) {
       canvas.translate(cx, cy);
       if (flipX) canvas.scale(-1.0, 1.0);
@@ -96,6 +111,13 @@ class WormHead extends PositionComponent {
 
   /// Override nếu cần logic chọn sprite khác (vd. không hiện cry khi đi lên).
   Sprite? get currentSprite {
+    final useHelmet = _useHelmet && _helmetVertical != null;
+    if (useHelmet) {
+      if (_showCryFace && _helmetCry != null && direction != WormDirection.up) return _helmetCry;
+      if (direction == WormDirection.up) return _helmetBack;
+      if (direction == WormDirection.down) return _helmetVertical;
+      return _helmetHorizontal;
+    }
     if (_showCryFace && _spriteCry != null && direction != WormDirection.up) return _spriteCry;
     if (direction == WormDirection.up) return _spriteBack;
     if (direction == WormDirection.down) return _spriteVertical;

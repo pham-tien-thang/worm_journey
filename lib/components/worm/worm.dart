@@ -105,6 +105,11 @@ class Worm extends PositionComponent {
     _syncVisuals();
   }
 
+  /// Bật/tắt head dùng bộ ảnh helmet (vd. buff dừa). Chỉ có tác dụng nếu [WormHeadConfig] có helmet assets.
+  void setHeadHelmet(bool useHelmet) {
+    _head.setUseHelmet(useHelmet);
+  }
+
   /// Hướng hiện tại (đã áp next nếu có).
   WormDirection get currentDirection => _nextDirection ?? _direction;
 

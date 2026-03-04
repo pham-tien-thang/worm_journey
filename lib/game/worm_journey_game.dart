@@ -121,7 +121,7 @@ class WormJourneyGame extends FlameGame
     if (t <= 0) return;
     _missionTargetOverrides['mission2'] = t;
     if (_missionConfigs.every((m) => m.id != 'mission2')) {
-      _missionConfigs = [..._missionConfigs, const MissionConfig(id: 'mission2', label: 'Nhiệm vụ 2', target: 0, icon: null)];
+      _missionConfigs = [..._missionConfigs, const MissionConfig(id: 'mission2', typeId: 'prey_leaf', target: 0)];
       _missionCurrents = [..._missionCurrents, 0];
     }
   }
@@ -445,17 +445,16 @@ class WormJourneyGame extends FlameGame
       if (target <= 0) continue;
       missions.add(GameHudMission(
         id: m.id,
-        label: m.label,
+        typeId: m.typeId,
         current: _missionCurrents[i],
         target: target,
-        icon: m.icon,
       ));
     }
     if (!_loaded) {
       return GameHudData(
         timeRemainingSeconds: _timeLimit,
         diamonds: 0,
-        missions: missions.isEmpty ? [const GameHudMission(id: 'leaves', label: 'Lá cây', current: 0, target: 10, icon: '🍃')] : missions,
+        missions: missions.isEmpty ? [const GameHudMission(id: 'leaves', typeId: 'prey_leaf', current: 0, target: 10)] : missions,
         bossHp: 0,
         bossHpMax: 0,
         itemBuffs: const [],
@@ -602,22 +601,19 @@ class WormJourneyGame extends FlameGame
   }
 }
 
-/// Một nhiệm vụ trên HUD (x/xx). Target = 0 thì không hiển thị.
+/// Một nhiệm vụ trên HUD (x/xx). Target = 0 thì không hiển thị. Icon và label lấy từ EntityModels + l10n theo [typeId].
 class GameHudMission {
   const GameHudMission({
     required this.id,
-    required this.label,
+    required this.typeId,
     required this.current,
     required this.target,
-    this.icon,
   });
 
   final String id;
-  final String label;
+  final String typeId;
   final int current;
   final int target;
-  /// Icon optional (emoji hoặc asset), null thì chỉ hiện label.
-  final String? icon;
 }
 
 /// Dữ liệu HUD (sẽ load từ JSON config sau). Cập nhật trong lúc chơi.

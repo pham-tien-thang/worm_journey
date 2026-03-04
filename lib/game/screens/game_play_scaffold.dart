@@ -92,7 +92,13 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                 ),
                 Container(
                   width: double.infinity,
-                  color: Colors.grey.shade300,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: const AssetImage('assets/images/bottom_joystick.png'),
+                      fit: BoxFit.cover,
+                      alignment: Alignment.topCenter,
+                    ),
+                  ),
                   padding: const EdgeInsets.symmetric(
                     vertical: 0,
                     horizontal: 12,
@@ -105,7 +111,7 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                         Expanded(
                           child: SingleChildScrollView(
                             child: Padding(
-                              padding: const EdgeInsets.only(top: 12),
+                              padding: const EdgeInsets.only(top: 24),
                               child: Wrap(
                                 spacing: 6,
                                 runSpacing: 6,

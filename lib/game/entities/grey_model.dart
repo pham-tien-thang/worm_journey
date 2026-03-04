@@ -6,10 +6,10 @@ abstract class GreyModel extends EntityModel {
   int get hardness => 0;
 }
 
-/// Lá 🍃
+/// Lá 🌿
 class PreyLeafModel extends GreyModel {
   @override
-  String get icon => '🍃';
+  String get icon => '🌿';
   @override
   ProjectType get type => ProjectType.preyLeaf;
 }
