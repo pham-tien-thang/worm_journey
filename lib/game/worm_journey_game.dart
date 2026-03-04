@@ -12,16 +12,21 @@ import '../components/debug_grid_coordinates.dart';
 import '../components/game_over_overlay.dart';
 import '../components/grid_background.dart';
 import '../components/prey.dart' show PreyType;
-import '../components/pink_worm/snake_direction.dart';
-import '../components/pink_worm/worm.dart';
+import '../components/pink_worm/pink_worm.dart';
+import '../components/pink_worm/pink_worm_config.dart';
+import '../components/worm/worm.dart';
+import '../components/worm/worm_direction.dart';
 import '../common/debug_apply.dart';
 import '../config/config.dart';
 import '../entities/entities.dart';
 import '../core/buff/buff_config.dart';
-import 'level_config.dart';
-import 'obstacle_manager.dart';
-import 'prey_manager.dart';
-import 'worm_agents.dart';
+import 'config/level_json_config.dart';
+import 'managers/obstacle_manager.dart';
+import 'behavior/player_worm_behavior.dart';
+import 'managers/prey_manager.dart';
+import 'behavior/worm_agents.dart';
+import 'behavior/worm_behavior.dart';
+import 'context/worm_game_context.dart';
 
 /// Loại va chạm nguy hiểm: tường, chướng ngại X, đuôi rắn, thân rắn.
 enum HazardType {
@@ -42,43 +47,40 @@ class WormJourneyGame extends FlameGame
   Color backgroundColor() => const Color(0xFF1B3D2E);
 
   late WormAgent _playerAgent;
-  Worm get _worm => _playerAgent.worm;
+  /// Con sâu được điều khiển và lấy thông tin lên HUD.
+  Worm get mainWorm => _playerAgent.worm;
 
+  late WormGameContext _wormContext;
   late PreyManager _preyManager;
   late ObstacleManager _obstacleManager;
 
   double _appleSpawnAccumulator = 0;
   static const double _appleSpawnInterval = 10.0;
 
+  /// Thời gian đã chơi (giây), tăng mỗi frame. Dùng cho buff expiry, HUD còn lại = [ _timeLimit ] - [_gameTime].
   double _gameTime = 0;
-  static const double _devilBlinkLastSeconds = 3.0;
-  double _devilBlinkAccumulator = 0;
-  bool _devilBlinkShowEvil = true;
-  bool _wasInDevilMode = false;
 
   double _moveAccumulator = 0;
   bool _gameOver = false;
   bool _paused = false;
   bool _loaded = false;
 
-  /// Delay 1 giây khi mới vào: sâu không di chuyển, tránh nhấp nháy.
+  /// Delay khi mới vào (sâu nhấp nháy). Hiện chưa đưa vào config; mặc định 1s.
   static const double startDelaySeconds = 1.0;
   double _startDelayRemaining = startDelaySeconds;
 
-  /// Thời gian chơi mặc định (giây). Đếm ngược từ 2 phút.
-  static const double defaultTimeLimitSeconds = 120.0;
-  double _timeLimit = defaultTimeLimitSeconds;
+  /// Thời gian chơi tối đa (giây), từ [ _levelConfig.timeLimitSeconds ]. Ghi đè trong onLoad và _restart.
+  double _timeLimit = 120.0;
 
-  /// Kim cương (sẽ load từ config sau).
   int _diamonds = 0;
 
-  /// Nhiệm vụ: lá cây (hiện tại / mục tiêu). Sẽ load từ config sau.
-  int _leavesCurrent = 0;
-  int _leavesTarget = 10;
-
-  /// Nhiệm vụ 2 (chưa dùng thì target = 0 → ẩn trên HUD). Sau load từ config / xử lý tương ứng.
-  int _mission2Current = 0;
-  int _mission2Target = 0;
+  /// Config màn load từ JSON (level_1.json, level_2.json, ...).
+  late LevelJsonConfig _levelConfig;
+  /// Nhiệm vụ từ config; [ _missionCurrents[i] ] = tiến độ của [ _missionConfigs[i] ].
+  List<MissionConfig> _missionConfigs = const [MissionConfig.defaultLeaves];
+  List<int> _missionCurrents = [0];
+  /// Ghi đè target theo id (vd. setMission2Target gọi khi load level).
+  final Map<String, int> _missionTargetOverrides = {};
 
   /// HP boss (sẽ load từ config sau). Hiển thị dạng icon x4.
   int _bossHp = 4;
@@ -101,36 +103,42 @@ class WormJourneyGame extends FlameGame
     _paused = value;
   }
 
-  /// Gọi khi dùng item (vd. quả dừa) — bật evil mode theo BuffConfig, lưu buff vào sâu.
+  /// Gọi khi dùng item (vd. quả dừa). Logic effect (nón, blink) do worm xử lý trong addItemEffect.
   void triggerDevilModeByItem() {
     if (_gameOver || !_loaded) return;
     const itemId = 'coconut';
     final duration = BuffConfig.durationSecondsFor(itemId);
     if (duration <= 0) return;
-    _worm.setHasHelmet(true);
-    _devilBlinkAccumulator = 0;
-    _devilBlinkShowEvil = true;
-    _worm.addBuff(itemId, _gameTime + duration);
+    mainWorm.addItemEffect(itemId, _gameTime + duration);
   }
 
-  /// Tăng tiến độ nhiệm vụ 2 (gọi khi player thực hiện hành động tương ứng). Sau load config có thể có thêm mission 3, 4...
+  /// Tăng tiến độ nhiệm vụ có [id] (mặc định 'mission2').
   void addMission2Progress() {
-    _mission2Current = (_mission2Current + 1).clamp(0, _mission2Target);
+    final i = _missionConfigs.indexWhere((m) => m.id == 'mission2');
+    if (i >= 0 && i < _missionCurrents.length) {
+      final target = _missionTargetOverrides['mission2'] ?? _missionConfigs[i].target;
+      _missionCurrents[i] = (_missionCurrents[i] + 1).clamp(0, target);
+    }
   }
 
-  /// Gán mục tiêu nhiệm vụ 2 (từ config / level). > 0 thì mới hiện trên HUD.
+  /// Ghi đè mục tiêu nhiệm vụ theo id (vd. 'mission2'). > 0 thì hiện trên HUD; nếu chưa có mission đó thì thêm vào.
   void setMission2Target(int target) {
-    _mission2Target = target.clamp(0, 9999);
-    _mission2Current = _mission2Current.clamp(0, _mission2Target);
+    final t = target.clamp(0, 9999);
+    if (t <= 0) return;
+    _missionTargetOverrides['mission2'] = t;
+    if (_missionConfigs.every((m) => m.id != 'mission2')) {
+      _missionConfigs = [..._missionConfigs, const MissionConfig(id: 'mission2', label: 'Nhiệm vụ 2', target: 0, icon: null)];
+      _missionCurrents = [..._missionCurrents, 0];
+    }
   }
 
   /// Gọi từ nút/joystick — chỉ đổi hướng cho bước tiếp theo, không ép step ngay.
   /// Rắn sẽ quay khi tới đúng thời điểm step (tránh nhảy ô vì step sớm).
-  void setDirection(SnakeDirection d) {
+  void setDirection(WormDirection d) {
     if (_gameOver || !_loaded) return;
-    final current = _worm.currentDirection;
+    final current = mainWorm.currentDirection;
     if (d == current || d.isOppositeOf(current)) return;
-    _worm.setNextDirection(d);
+    mainWorm.setNextDirection(d);
   }
 
   /// Vùng chơi: A13–X49 (cột A–X, hàng 13–49). Chỉ vùng này là grid; ngoài ra trắng + 🟫.
@@ -149,14 +157,16 @@ class WormJourneyGame extends FlameGame
     _gridRows = playableRowCount;
     camera.viewport = FixedResolutionViewport(resolution: size);
     if (_loaded) {
-      _worm.setSegmentSize(_segmentSize);
-      _worm.position = Vector2(0, playableStartRow * _segmentSize);
+      mainWorm.setSegmentSize(_segmentSize);
+      mainWorm.position = Vector2(0, playableStartRow * _segmentSize);
       _gridBackground.updateGrid(
         _segmentSize,
         GameConfig.gridColumns,
         totalWorldRows,
         playableStartRow,
         playableRowCount,
+        outsideColor: _levelConfig.outsideConfig.color,
+        outsideIcon: _levelConfig.outsideConfig.icon,
       );
       _debugGridCoordinates?.updateGrid(
         _segmentSize,
@@ -171,7 +181,14 @@ class WormJourneyGame extends FlameGame
   Future<void> onLoad() async {
     _gridRows = playableRowCount;
     camera.viewport = MaxViewport();
-    final gridColors = LevelConfig.colorsFor(level);
+
+    _levelConfig = await loadLevelJsonConfig(level);
+    _missionConfigs = _levelConfig.missions;
+    _missionCurrents = List.filled(_missionConfigs.length, 0);
+    _timeLimit = _levelConfig.timeLimitSeconds;
+
+    final gridColors = _levelConfig.gridColors.toGridBackgroundColors();
+    final outsideConfig = _levelConfig.outsideConfig.toOutsideGridConfig();
     _gridBackground = GridBackground(
       segmentSize: _segmentSize,
       gridColumns: GameConfig.gridColumns,
@@ -179,6 +196,7 @@ class WormJourneyGame extends FlameGame
       playableStartRow: playableStartRow,
       playableRowCount: playableRowCount,
       colors: gridColors,
+      outsideConfig: outsideConfig,
     );
     world.add(_gridBackground);
 
@@ -193,15 +211,44 @@ class WormJourneyGame extends FlameGame
       gridToWorld: _gridToWorld,
     );
 
-    final worm = Worm(
-      segmentSize: _segmentSize,
-      moveInterval: GameConfig.moveInterval,
-      gridRows: _gridRows,
+    _wormContext = WormGameContextImpl(
+      gameTimeGetter: () => _gameTime,
+      spawnPreyCallback: _spawnPrey,
+      addMissionLeavesCallback: (n) {
+        final i = _missionConfigs.indexWhere((m) => m.id == 'leaves');
+        if (i >= 0 && i < _missionCurrents.length) {
+          final m = _missionConfigs[i];
+          final target = _missionTargetOverrides[m.id] ?? m.target;
+          _missionCurrents[i] = (_missionCurrents[i] + n).clamp(0, target);
+        }
+      },
+      destroyObstacleAtCallback: _destroyObstacleAt,
+      loseSegmentCallback: _loseSegment,
+      hasBuffCallback: _hasBuff,
+    );
+
+    final worm = PinkWorm(
+      config: PinkWormConfig(
+        segmentSize: _segmentSize,
+        moveInterval: GameConfig.moveInterval,
+        initialLength: 10,
+        gridRows: _gridRows,
+      ),
       info: WormInfo.playerDefault,
       position: Vector2(0, playableStartRow * _segmentSize),
+      gridRowsOverride: _gridRows,
     );
     world.add(worm);
-    _playerAgent = WormAgent(worm: worm, info: WormInfo.playerDefault);
+    _playerAgent = WormAgent(
+      worm: worm,
+      behavior: PlayerWormBehavior(),
+    );
+
+    for (final grid in _levelConfig.mapConfig.obstacles) {
+      final comp = _obstacleManager.createComponent(ObstacleType.xMark, grid);
+      _obstacleManager.add(grid, ObstacleType.xMark, comp);
+      world.add(comp);
+    }
 
     _spawnPrey();
 
@@ -224,7 +271,7 @@ class WormJourneyGame extends FlameGame
 
   Set<String> _occupiedGridKeys() {
     return _preyManager.occupiedGridKeys(
-      snakePositions: _worm.allGridPositions,
+      snakePositions: mainWorm.allGridPositions,
       obstaclePositions: _obstacleManager.gridPositions,
     );
   }
@@ -263,7 +310,7 @@ class WormJourneyGame extends FlameGame
     final bottomOfPlayable = (playableStartRow + playableRowCount) * _segmentSize;
     final maxCameraY = bottomOfPlayable - halfViewY;
 
-    final headWorld = _gridToWorld(_worm.headGridPosition);
+    final headWorld = _gridToWorld(mainWorm.headGridPosition);
     final targetY = headWorld.y.clamp(halfViewY, maxCameraY.clamp(halfViewY, double.infinity));
 
     final current = _cameraY ?? targetY;
@@ -289,31 +336,42 @@ class WormJourneyGame extends FlameGame
     for (final c in camera.viewport.children.whereType<GameOverOverlay>().toList()) {
       c.removeFromParent();
     }
-    _worm.removeFromParent();
+    mainWorm.removeFromParent();
     for (final e in _preyManager.entries) e.component.removeFromParent();
     _preyManager.clear();
     for (final e in _obstacleManager.entries) e.component.removeFromParent();
     _obstacleManager.clear();
 
-    final worm = Worm(
-      segmentSize: _segmentSize,
-      moveInterval: GameConfig.moveInterval,
-      gridRows: _gridRows,
+    final worm = PinkWorm(
+      config: PinkWormConfig(
+        segmentSize: _segmentSize,
+        moveInterval: GameConfig.moveInterval,
+        initialLength: 10,
+        gridRows: _gridRows,
+      ),
       info: WormInfo.playerDefault,
       position: Vector2(0, playableStartRow * _segmentSize),
+      gridRowsOverride: _gridRows,
     );
     world.add(worm);
-    _playerAgent = WormAgent(worm: worm, info: WormInfo.playerDefault);
+    _playerAgent = WormAgent(
+      worm: worm,
+      behavior: PlayerWormBehavior(),
+    );
+
+    for (final grid in _levelConfig.mapConfig.obstacles) {
+      final comp = _obstacleManager.createComponent(ObstacleType.xMark, grid);
+      _obstacleManager.add(grid, ObstacleType.xMark, comp);
+      world.add(comp);
+    }
 
     _spawnPrey();
 
     _appleSpawnAccumulator = 0;
     _gameTime = 0;
-    _wasInDevilMode = false;
     _startDelayRemaining = startDelaySeconds;
-    _timeLimit = defaultTimeLimitSeconds;
-    _leavesCurrent = 0;
-    _mission2Current = 0;
+    _timeLimit = _levelConfig.timeLimitSeconds;
+    _missionCurrents = List.filled(_missionConfigs.length, 0);
 
     _gameOver = false;
     _paused = false;
@@ -323,13 +381,13 @@ class WormJourneyGame extends FlameGame
 
   /// Trừ 1 đốt đuôi và để lại chướng ngại tại vị trí đuôi (type X, sau có thể config).
   void _loseSegment() {
-    _worm.showCryFace();
-    final tailGrid = _worm.tailGridPosition;
-    _worm.removeTail();
+    mainWorm.showCryFace();
+    final tailGrid = mainWorm.tailGridPosition;
+    mainWorm.removeTail();
     final comp = _obstacleManager.createComponent(ObstacleType.xMark, tailGrid);
     _obstacleManager.add(tailGrid, ObstacleType.xMark, comp);
     world.add(comp);
-    if (_worm.segmentCount <= 2) _setGameOver();
+    if (mainWorm.segmentCount <= 2) _setGameOver();
   }
 
   /// Phá chướng ngại tại ô [grid] (vd. khi đang 😈 có buff phá được).
@@ -338,21 +396,14 @@ class WormJourneyGame extends FlameGame
     if (entry != null) entry.component.removeFromParent();
   }
 
-  /// Buff coconut đang bật (sau khi đã removeExpiredBuffs). Dùng cho evil mode + phá vật cản.
-  WormBuffEntry? _coconutBuff() {
-    final list = _worm.buffEffects.where((b) => b.itemId == 'coconut').toList();
-    return list.isEmpty ? null : list.first;
-  }
-
-  /// Có buff [itemId] đang bật không (dùng chung cho obstacle behavior).
-  bool _hasBuff(String itemId) =>
-      _worm.buffEffects.any((b) => b.itemId == itemId);
+  /// Có effect [itemId] đang bật không (context/obstacle behavior dùng).
+  bool _hasBuff(String itemId) => mainWorm.hasItemEffect(itemId);
 
   /// Xử lý chung khi đầu chạm vùng nguy hiểm: tường, chướng ngại, đuôi hoặc thân.
   /// Thân và đuôi/tường/X: trừ 1 đốt + để lại dấu X. Chỉ game over khi còn ≤ 2 đốt.
   /// Gọi applyNextDirectionAndSyncVisuals trước để đầu quay đúng hướng đâm.
   bool _onHitHazard(HazardType type, Vector2 nextHead) {
-    _worm.applyNextDirectionAndSyncVisuals();
+    mainWorm.applyNextDirectionAndSyncVisuals();
     switch (type) {
       case HazardType.wall:
       case HazardType.tail:
@@ -362,12 +413,23 @@ class WormJourneyGame extends FlameGame
       case HazardType.obstacle: {
         final entry = _obstacleManager.getAt(nextHead);
         if (entry == null) return true;
-        final behavior = ObstacleManager.behaviorFor(entry.type);
-        if (behavior.buffIdToDestroy != null && _hasBuff(behavior.buffIdToDestroy!)) {
-          _destroyObstacleAt(nextHead);
-          _worm.step();
-        } else if (behavior.loseSegmentIfNotDestroyed) {
-          _loseSegment();
+        final obstacleBehavior = ObstacleManager.behaviorFor(entry.type);
+        final result = _playerAgent.behavior.onHitObstacle(
+          _playerAgent,
+          entry.type,
+          obstacleBehavior,
+          _wormContext,
+        );
+        switch (result) {
+          case HitObstacleResult.loseSegment:
+            _loseSegment();
+            break;
+          case HitObstacleResult.destroyAndStep:
+            _destroyObstacleAt(nextHead);
+            mainWorm.step();
+            break;
+          case HitObstacleResult.none:
+            break;
         }
         return true;
       }
@@ -378,61 +440,57 @@ class WormJourneyGame extends FlameGame
   /// Chỉ đưa nhiệm vụ có target > 0 vào [missions] (chưa có thì ẩn).
   /// Trả về giá trị mặc định khi game chưa load (tránh LateInitializationError khi GameHud build trước onLoad).
   GameHudData get hudData {
+    final missions = <GameHudMission>[];
+    for (var i = 0; i < _missionConfigs.length && i < _missionCurrents.length; i++) {
+      final m = _missionConfigs[i];
+      if (m.target <= 0) continue;
+      final target = _missionTargetOverrides[m.id] ?? m.target;
+      if (target <= 0) continue;
+      missions.add(GameHudMission(
+        id: m.id,
+        label: m.label,
+        current: _missionCurrents[i],
+        target: target,
+        icon: m.icon,
+      ));
+    }
     if (!_loaded) {
       return GameHudData(
         timeRemainingSeconds: _timeLimit,
         diamonds: _diamonds,
-        missions: [
-          GameHudMission(id: 'leaves', label: 'Lá cây', current: 0, target: _leavesTarget, icon: '🍃'),
-        ],
+        missions: missions.isEmpty ? [const GameHudMission(id: 'leaves', label: 'Lá cây', current: 0, target: 10, icon: '🍃')] : missions,
         bossHp: _bossHp,
         bossHpMax: _bossHpMax,
         itemBuffs: const [],
         startDelayRemaining: _startDelayRemaining,
       );
     }
-    final missions = <GameHudMission>[
-      GameHudMission(
-        id: 'leaves',
-        label: 'Lá cây',
-        current: _leavesCurrent,
-        target: _leavesTarget,
-        icon: '🍃',
-      ),
-    ];
-    if (_mission2Target > 0) {
-      missions.add(GameHudMission(
-        id: 'mission2',
-        label: 'Nhiệm vụ 2',
-        current: _mission2Current,
-        target: _mission2Target,
-        icon: null,
-      ));
-    }
+    final itemBuffs = mainWorm.itemEffects
+        .where((e) => e.endTime != null)
+        .map((e) => GameHudItemBuff(
+              itemId: e.itemId,
+              remainingSeconds: (e.endTime! - _gameTime).clamp(0.0, double.infinity),
+            ))
+        .toList();
     return GameHudData(
       timeRemainingSeconds: (_timeLimit - _gameTime).clamp(0.0, _timeLimit),
       diamonds: _diamonds,
       missions: missions,
       bossHp: _bossHp,
       bossHpMax: _bossHpMax,
-      itemBuffs: _worm.buffEffects
-          .map((e) => GameHudItemBuff(
-                itemId: e.itemId,
-                remainingSeconds: (e.endTime - _gameTime).clamp(0.0, double.infinity),
-              ))
-          .toList(),
+      itemBuffs: itemBuffs,
       startDelayRemaining: _startDelayRemaining,
     );
   }
 
   @override
   void update(double dt) {
+    mainWorm.setWaitingToStart(_startDelayRemaining > 0);
     super.update(dt);
     if (_loaded) _updateCameraFollowSnake(dt);
     if (_gameOver) return;
     if (_paused) return;
 
-    _worm.setWaitingToStart(_startDelayRemaining > 0);
     if (_startDelayRemaining > 0) {
       _startDelayRemaining -= dt;
       return;
@@ -440,43 +498,31 @@ class WormJourneyGame extends FlameGame
 
     _gameTime += dt;
 
-    _worm.removeExpiredBuffs(_gameTime);
-
-    final coconut = _coconutBuff();
-    if (coconut == null) {
-      _worm.setHasHelmet(false);
-      if (_wasInDevilMode) _appleSpawnAccumulator = 0;
-      _devilBlinkAccumulator = 0;
-    } else {
-      final timeLeft = coconut.endTime - _gameTime;
-      if (timeLeft <= _devilBlinkLastSeconds && timeLeft > 0) {
-        _devilBlinkAccumulator += dt;
-        if (_devilBlinkAccumulator >= 0.15) {
-          _devilBlinkAccumulator = 0;
-          _devilBlinkShowEvil = !_devilBlinkShowEvil;
-          _worm.setHasHelmet(_devilBlinkShowEvil);
-        }
-      }
+    if (_gameTime >= _timeLimit) {
+      _setGameOver();
+      return;
     }
 
-    if (coconut == null) {
+    mainWorm.setGameTime(_gameTime);
+    mainWorm.removeExpiredItemEffects(_gameTime);
+
+    if (!mainWorm.hasItemEffect('coconut')) {
       _appleSpawnAccumulator += dt;
       if (_appleSpawnAccumulator >= _appleSpawnInterval) {
         _appleSpawnAccumulator -= _appleSpawnInterval;
         _spawnApple();
       }
     }
-    _wasInDevilMode = coconut != null;
 
-    final interval = _worm.moveInterval;
+    final interval = mainWorm.moveInterval;
     final progress = (_moveAccumulator / interval).clamp(0.0, 1.0);
-    _worm.setVisualProgress(progress);
+    mainWorm.setVisualProgress(progress);
 
     _moveAccumulator += dt;
     if (_moveAccumulator < interval) return;
     _moveAccumulator -= interval;
 
-    final nextHead = _worm.peekNextHead();
+    final nextHead = mainWorm.peekNextHead();
 
     final outOfBounds = nextHead.x < 0 ||
         nextHead.x >= GameConfig.gridColumns ||
@@ -493,7 +539,7 @@ class WormJourneyGame extends FlameGame
       return;
     }
 
-    final tailGrid = _worm.tailGridPosition;
+    final tailGrid = mainWorm.tailGridPosition;
     final hitTail =
         nextHead.x == tailGrid.x && nextHead.y == tailGrid.y;
     if (hitTail) {
@@ -501,7 +547,7 @@ class WormJourneyGame extends FlameGame
       return;
     }
 
-    final body = _worm.allGridPositions;
+    final body = mainWorm.allGridPositions;
     for (var i = 1; i < body.length - 1; i++) {
       if (body[i].x == nextHead.x && body[i].y == nextHead.y) {
         _onHitHazard(HazardType.body, nextHead);
@@ -509,27 +555,13 @@ class WormJourneyGame extends FlameGame
       }
     }
 
-    _worm.step();
+    mainWorm.step();
 
-    final newHead = _worm.headGridPosition;
+    final newHead = mainWorm.headGridPosition;
     final consumed = _preyManager.consumeAt(newHead);
     if (consumed != null) {
       consumed.component.removeFromParent();
-      _worm.grow();
-      switch (consumed.type) {
-        case PreyType.leaf:
-          _leavesCurrent = (_leavesCurrent + 1).clamp(0, _leavesTarget);
-          _spawnPrey();
-          break;
-        case PreyType.apple:
-          const itemId = 'coconut';
-          final duration = BuffConfig.durationSecondsFor(itemId);
-          if (duration > 0) {
-            _worm.setHasHelmet(true);
-            _worm.addBuff(itemId, _gameTime + duration);
-          }
-          break;
-      }
+      _playerAgent.behavior.onEatPrey(_playerAgent, consumed.type, _wormContext);
       return;
     }
   }
@@ -543,19 +575,19 @@ class WormJourneyGame extends FlameGame
     if (_gameOver) return KeyEventResult.ignored;
 
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      _worm.setNextDirection(SnakeDirection.up);
+      mainWorm.setNextDirection(WormDirection.up);
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      _worm.setNextDirection(SnakeDirection.down);
+      mainWorm.setNextDirection(WormDirection.down);
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-      _worm.setNextDirection(SnakeDirection.left);
+      mainWorm.setNextDirection(WormDirection.left);
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-      _worm.setNextDirection(SnakeDirection.right);
+      mainWorm.setNextDirection(WormDirection.right);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;

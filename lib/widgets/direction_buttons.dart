@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../game/game.dart';
-import '../components/snake/snake_direction.dart';
+import '../components/worm/worm_direction.dart';
 
 /// Bốn nút điều khiển hướng ở cuối màn (không nằm trong vùng game).
 class DirectionButtons extends StatelessWidget {
@@ -24,25 +24,25 @@ class DirectionButtons extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildButton(SnakeDirection.up, Icons.keyboard_arrow_up),
+            _buildButton(WormDirection.up, Icons.keyboard_arrow_up),
             const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildButton(SnakeDirection.left, Icons.keyboard_arrow_left),
+                _buildButton(WormDirection.left, Icons.keyboard_arrow_left),
                 SizedBox(width: buttonSize + 8),
-                _buildButton(SnakeDirection.right, Icons.keyboard_arrow_right),
+                _buildButton(WormDirection.right, Icons.keyboard_arrow_right),
               ],
             ),
             const SizedBox(height: 4),
-            _buildButton(SnakeDirection.down, Icons.keyboard_arrow_down),
+            _buildButton(WormDirection.down, Icons.keyboard_arrow_down),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildButton(SnakeDirection direction, IconData icon) {
+  Widget _buildButton(WormDirection direction, IconData icon) {
     return Material(
       color: Colors.white,
       elevation: 2,

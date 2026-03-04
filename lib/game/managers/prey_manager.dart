@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flame/components.dart';
 
-import '../components/prey.dart' show Prey, PreyType;
+import '../../components/prey.dart' show Prey, PreyType;
 
 /// Một mồi trên map: vị trí lưới + loại + component để vẽ và remove.
 class PreyEntry {

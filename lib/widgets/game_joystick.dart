@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../game/game.dart';
-import '../components/snake/snake_direction.dart';
+import '../components/worm/worm_direction.dart';
 
 /// Joystick: kéo đổi hướng, bấm vào từng vùng (có mũi tên) cũng đổi hướng.
 class GameJoystick extends StatefulWidget {
@@ -36,14 +36,14 @@ class _GameJoystickState extends State<GameJoystick> {
   double get _deadZone => widget.baseRadius * widget.deadZoneRatio;
   Offset get _center => Offset(widget.size / 2, widget.size / 2);
 
-  SnakeDirection _directionFromAngle(double angleDeg) {
-    if (angleDeg >= -45 && angleDeg < 45) return SnakeDirection.right;
-    if (angleDeg >= 45 && angleDeg < 135) return SnakeDirection.down;
-    if (angleDeg >= 135 || angleDeg < -135) return SnakeDirection.left;
-    return SnakeDirection.up;
+  WormDirection _directionFromAngle(double angleDeg) {
+    if (angleDeg >= -45 && angleDeg < 45) return WormDirection.right;
+    if (angleDeg >= 45 && angleDeg < 135) return WormDirection.down;
+    if (angleDeg >= 135 || angleDeg < -135) return WormDirection.left;
+    return WormDirection.up;
   }
 
-  SnakeDirection? _directionFromOffset(Offset o) {
+  WormDirection? _directionFromOffset(Offset o) {
     if (o.distance < _deadZone) return null;
     final angleDeg = math.atan2(o.dy, o.dx) * 180 / math.pi;
     return _directionFromAngle(angleDeg);
@@ -52,7 +52,7 @@ class _GameJoystickState extends State<GameJoystick> {
   /// Ngưỡng kéo (px): khi vượt qua thì ưu tiên hướng theo vector kéo để tránh gửi nhầm hướng lúc mới bắt đầu kéo (vd. tay đặt trái, kéo sang phải thì phải ra right chứ không ra left).
   static const double _dragIntentThreshold = 24.0;
 
-  SnakeDirection _directionFromPosition(Offset localPosition) {
+  WormDirection _directionFromPosition(Offset localPosition) {
     final o = localPosition - _center;
     final angleDeg = math.atan2(o.dy, o.dx) * 180 / math.pi;
     return _directionFromAngle(angleDeg);
@@ -83,7 +83,7 @@ class _GameJoystickState extends State<GameJoystick> {
     if (_isDragging) {
       final o = _clampOffset(current - _center);
       setState(() => _stickOffset = o);
-      SnakeDirection? dir = _directionFromOffset(o);
+      WormDirection? dir = _directionFromOffset(o);
       // Khi kéo xa (qua vùng giữa): ưu tiên hướng theo vector kéo, tránh gửi hướng điểm bấm (vd. tay đặt trái kéo sang phải → right, không bị left).
       if (delta.distance >= _dragIntentThreshold) {
         final dragDir = _directionFromOffset(delta);

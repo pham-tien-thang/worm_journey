@@ -7,46 +7,47 @@ import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 
 import '../../config/config.dart';
-import 'snake_direction.dart';
-import 'snake_body_segment.dart';
+import 'worm.dart';
+import 'worm_direction.dart';
+import 'worm_tail_config.dart';
 
-/// Đốt đuôi: dùng ảnh thân (vertical/horizontal), tỉ lệ như thân, vẽ thêm chấm để phân biệt đuôi.
-/// Hitbox passive, isSolid — logic va chạm đầu-đuôi xử lý trong game.
-class SnakeTail extends PositionComponent {
-  SnakeTail({
+/// Đuôi sâu (class cha): vẽ theo [WormTailConfig], dùng asset thân + chấm đuôi.
+class WormTail extends PositionComponent {
+  WormTail({
+    required this.config,
     required this.direction,
     required double segmentSize,
     Vector2? position,
-  }) : super(
+  })  : _segmentSize = segmentSize,
+        super(
           position: position ?? Vector2.zero(),
           size: Vector2.all(segmentSize),
           anchor: Anchor.center,
-          priority: 9, // vẽ trên thân, không bị che
+          priority: 9,
         );
 
-  SnakeDirection direction;
+  final WormTailConfig config;
+  WormDirection direction;
 
-  /// Hướng chấm đuôi (lerp từ từ về [direction]).
+  final double _segmentSize;
   Vector2 _dotDirection = Vector2(1, 0);
-
-  static const double _dotLerpSpeed = 8.0;
 
   Sprite? _spriteVertical;
   Sprite? _spriteHorizontal;
 
-  void setDirection(SnakeDirection value) {
+  void setDirection(WormDirection value) {
     direction = value;
   }
 
-  Vector2 _directionToVector(SnakeDirection d) {
+  Vector2 _directionToVector(WormDirection d) {
     switch (d) {
-      case SnakeDirection.left:
+      case WormDirection.left:
         return Vector2(-1, 0);
-      case SnakeDirection.right:
+      case WormDirection.right:
         return Vector2(1, 0);
-      case SnakeDirection.up:
+      case WormDirection.up:
         return Vector2(0, -1);
-      case SnakeDirection.down:
+      case WormDirection.down:
         return Vector2(0, 1);
     }
   }
@@ -55,7 +56,7 @@ class SnakeTail extends PositionComponent {
   void update(double dt) {
     super.update(dt);
     final target = _directionToVector(direction);
-    final t = (1.0 - (_dotLerpSpeed * dt).clamp(0.0, 1.0));
+    final t = (1.0 - (config.dotLerpSpeed * dt).clamp(0.0, 1.0));
     final next = _dotDirection * t + target * (1 - t);
     if (next.length2 < 0.0001) {
       _dotDirection.setFrom(target);
@@ -68,26 +69,20 @@ class SnakeTail extends PositionComponent {
   Future<void> onLoad() async {
     await super.onLoad();
     _dotDirection = _directionToVector(direction);
-    add(RectangleHitbox(
-      collisionType: CollisionType.passive,
-      isSolid: true,
-    ));
+    add(RectangleHitbox(collisionType: CollisionType.passive, isSolid: true));
 
     final game = findParent<FlameGame>();
     if (game == null) return;
-    _spriteVertical = await Sprite.load(
-      SnakeBodyAssets.vertical,
-      images: game.images,
-    );
-    _spriteHorizontal = await Sprite.load(
-      SnakeBodyAssets.horizontal,
-      images: game.images,
-    );
+    final c = config.bodyConfig;
+    _spriteVertical = await Sprite.load(c.assetVertical, images: game.images);
+    _spriteHorizontal = await Sprite.load(c.assetHorizontal, images: game.images);
   }
 
   @override
   void render(Canvas canvas) {
-    final sprite = _currentSprite;
+    // Nhấp nháy khi đợi ready: Worm bật/tắt [isBlinkVisible], đuôi không vẽ khi ẩn.
+    if (findParent<Worm>()?.isBlinkVisible == false) return;
+    final sprite = currentSprite;
     if (sprite == null) return;
 
     final center = Vector2(size.x / 2, size.y / 2);
@@ -95,31 +90,24 @@ class SnakeTail extends PositionComponent {
     final cy = center.y;
 
     canvas.save();
-    final bool flipX = direction == SnakeDirection.left;
-    final bool flipY = direction == SnakeDirection.up;
+    final bool flipX = direction == WormDirection.left;
+    final bool flipY = direction == WormDirection.up;
     if (flipX || flipY) {
       canvas.translate(cx, cy);
       if (flipX) canvas.scale(-1.0, 1.0);
       if (flipY) canvas.scale(1.0, -1.0);
       canvas.translate(-cx, -cy);
     }
-    final drawSize = size * SnakeBodySegment.bodyImageScale;
-    sprite.render(
-      canvas,
-      position: center,
-      size: drawSize,
-      anchor: Anchor.center,
-    );
+    final drawSize = size * config.bodyConfig.imageScale;
+    sprite.render(canvas, position: center, size: drawSize, anchor: Anchor.center);
     canvas.restore();
 
-    // Hai chấm đuôi: vị trí dùng _dotDirection (lerp từ từ khi đổi hướng)
-    final step = size.x * 0.22;
-    final startOffset = size.x * 0.55;
+    final step = size.x * config.dotStepRatio;
+    final startOffset = size.x * config.dotStartOffsetRatio;
     final ux = _dotDirection.x;
     final uy = _dotDirection.y;
-    final dotRadius = size.x * 0.12;
+    final dotRadius = size.x * config.dotRadiusRatio;
     final fillPaint = Paint()..color = GameConfig.snakePink;
-
     for (var i = 0; i < 2; i++) {
       final d = startOffset + step * i;
       final dx = center.x + ux * d;
@@ -128,9 +116,8 @@ class SnakeTail extends PositionComponent {
     }
   }
 
-  Sprite? get _currentSprite {
-    final isVertical = direction == SnakeDirection.up ||
-        direction == SnakeDirection.down;
+  Sprite? get currentSprite {
+    final isVertical = direction == WormDirection.up || direction == WormDirection.down;
     return isVertical ? _spriteVertical : _spriteHorizontal;
   }
 }

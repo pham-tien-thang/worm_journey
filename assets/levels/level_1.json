@@ -1,0 +1,19 @@
+{
+  "missions": [
+    { "id": "leaves", "label": "Lá cây", "target": 10, "icon": "🍃" }
+  ],
+  "timeLimitSeconds": 120,
+  "rule": "none",
+  "grid": {
+    "colorLight": "0xFFE8DED5",
+    "colorLighter": "0xFFD7CCC8"
+  },
+  "outside": {
+    "color": "0xFF8B7355",
+    "icon": "🌱"
+  },
+  "map": {
+    "obstacles": [],
+    "prey": []
+  }
+}

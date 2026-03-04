@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'game_play_scaffold.dart';
-import 'worm_journey_game.dart';
+import '../worm_journey_game.dart';
 
 /// Màn game theo level (giữ để tương thích). Ưu tiên dùng [GameLevel1Screen], [GameLevel2Screen], [GameLevel3Screen] để init map design từng level.
 class GameScreen extends StatefulWidget {

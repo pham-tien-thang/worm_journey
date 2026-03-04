@@ -1,12 +1,11 @@
 import 'package:flame/components.dart';
 
-import '../components/x_obstacle.dart';
+import '../../components/x_obstacle.dart';
 
 /// Loại chướng ngại. Thêm type mới: enum + component tương ứng trong [ObstacleManager.createComponent].
 enum ObstacleType {
   /// Dấu X (🪦) để lại khi mất đuôi. Có buff dừa thì phá được.
   xMark,
-  // Sau này: spike, mud, ...
 }
 
 /// Cấu hình hành vi khi sâu đâm vào chướng ngại (game dùng để quyết định lose segment hay phá).

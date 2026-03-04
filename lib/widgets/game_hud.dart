@@ -185,17 +185,20 @@ class _RightSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.centerRight,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('💎', style: TextStyle(fontSize: textStyle?.fontSize ?? 14)),
-          const SizedBox(width: 4),
-          Text('${data.diamonds}', style: textStyle),
-          if (kDebugMode) ...[
-            const SizedBox(width: 12),
-            _DebugApplyToggle(textStyle: textStyle),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('💎', style: TextStyle(fontSize: textStyle?.fontSize ?? 14)),
+            const SizedBox(width: 4),
+            Text('${data.diamonds}', style: textStyle),
+            if (kDebugMode) ...[
+              const SizedBox(width: 12),
+              _DebugApplyToggle(textStyle: textStyle),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -212,18 +215,30 @@ class _DebugApplyToggle extends StatelessWidget {
     return ValueListenableBuilder<bool>(
       valueListenable: debugApplyNotifier,
       builder: (context, enabled, _) {
+        final isOn = enabled;
         return Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: () => isDebugApplyEnabled = !isDebugApplyEnabled,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: isOn
+                    ? Colors.greenAccent.withOpacity(0.95)
+                    : Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isOn ? Colors.green : Colors.orange,
+                  width: 1,
+                ),
+              ),
               child: Text(
-                enabled ? 'Debug ON' : 'Debug OFF',
+                isOn ? 'Debug ON' : 'Debug OFF',
                 style: (textStyle ?? const TextStyle()).copyWith(
                   fontSize: 10,
-                  color: enabled ? Colors.lightGreen : Colors.grey,
+                  fontWeight: FontWeight.w600,
+                  color: isOn ? Colors.black87 : Colors.orangeAccent,
                 ),
               ),
             ),
