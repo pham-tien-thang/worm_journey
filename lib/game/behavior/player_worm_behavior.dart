@@ -1,44 +1,38 @@
-import '../../components/prey.dart' show PreyType;
 import '../../core/buff/buff_config.dart';
-import '../managers/obstacle_manager.dart';
+import '../entities/entity_model.dart';
 import 'worm_agents.dart';
 import 'worm_behavior.dart';
 import '../context/worm_game_context.dart';
 
-/// Hành vi sâu người chơi: ăn lá → grow + mission + spawn; ăn táo → grow + buff dừa; va chướng → trừ đốt hoặc phá nếu có dừa.
+/// Hành vi sâu người chơi: ăn lá → grow + mission + spawn; ăn dừa → buff độ cứng.
+/// Va chạm: sâu <= độ cứng vật cản → trừ đuôi; sâu > độ cứng vật cản → phá.
 class PlayerWormBehavior extends WormBehavior {
   @override
-  void onEatPrey(WormAgent agent, PreyType type, WormGameContext context) {
+  void onEatEntity(WormAgent agent, String typeId, WormGameContext context) {
     agent.grow();
-    switch (type) {
-      case PreyType.leaf:
-        context.addMissionLeaves(1);
-        context.spawnPrey();
-        break;
-      case PreyType.apple:
-        const itemId = 'coconut';
-        final duration = BuffConfig.durationSecondsFor(itemId);
-        if (duration > 0) {
-          agent.addItemEffect(itemId, context.gameTime + duration);
-        }
-        break;
+    if (typeId == ProjectType.preyLeaf.typeId) {
+      context.addMissionLeaves(1);
+      context.spawnPrey();
+    } else if (typeId == ProjectType.preyCoconut.typeId) {
+      final duration = BuffConfig.durationSecondsFor(ProjectType.preyCoconut.typeId);
+      if (duration > 0) {
+        agent.addItemEffect(ProjectType.preyCoconut.typeId, context.gameTime + duration);
+      }
     }
   }
 
   @override
-  HitObstacleResult onHitObstacle(
+  HitResult onHitEntity(
     WormAgent agent,
-    ObstacleType obstacleType,
-    ObstacleBehavior behavior,
+    ProjectType projectType,
+    int entityHardness,
+    int wormHardness,
     WormGameContext context,
   ) {
-    if (behavior.buffIdToDestroy != null && context.hasBuff(behavior.buffIdToDestroy!)) {
-      return HitObstacleResult.destroyAndStep;
+    if (wormHardness <= entityHardness) {
+      return HitResult.loseSegment;
     }
-    if (behavior.loseSegmentIfNotDestroyed) {
-      return HitObstacleResult.loseSegment;
-    }
-    return HitObstacleResult.none;
+    return HitResult.destroyAndStep;
   }
 
   @override

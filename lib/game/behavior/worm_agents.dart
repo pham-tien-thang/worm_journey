@@ -40,7 +40,7 @@ class WormAgent {
   void removeExpiredItemEffects(double currentTime) => worm.removeExpiredItemEffects(currentTime);
   bool hasItemEffect(String itemId) => worm.hasItemEffect(itemId);
   List<ItemEffectEntry> get itemEffects => worm.itemEffects;
-  void setHasHelmet(bool value) => worm.setHasHelmet(value);
+  // void setHasHelmet(bool value) => worm.setHasHelmet(value);
   void setWaitingToStart(bool value) => worm.setWaitingToStart(value);
   void setVisualProgress(double progress) => worm.setVisualProgress(progress);
   double get moveInterval => worm.moveInterval;

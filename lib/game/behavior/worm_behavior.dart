@@ -1,30 +1,26 @@
-import '../../components/prey.dart' show PreyType;
-import '../managers/obstacle_manager.dart';
+import '../entities/entity_model.dart';
 import 'worm_agents.dart';
 import '../context/worm_game_context.dart';
 
-/// Kết quả xử lý khi sâu đâm chướng ngại: trừ đốt, phá rồi bước, hoặc không làm gì.
-enum HitObstacleResult {
+/// Kết quả xử lý va chạm với vật cản.
+enum HitResult {
   loseSegment,
   destroyAndStep,
   none,
 }
 
-/// Hành vi sâu: ăn mồi, va chướng ngại, ăn buff (và sau này chiêu thức) xử lý khác nhau theo loại.
-/// Game gọi [onEatPrey], [onHitObstacle], [onEatBuff]; mỗi loại worm (player, bot, hệ thống) implement khác.
+/// Hành vi sâu: ăn entity, ăn buff, va chạm vật cản. Game gọi [onHitEntity] khi đâm vào entity chặn.
 abstract class WormBehavior {
-  /// Sâu vừa ăn mồi [type]. Context cung cấp spawnPrey, addMissionLeaves, gameTime...
-  void onEatPrey(WormAgent agent, PreyType type, WormGameContext context);
+  void onEatEntity(WormAgent agent, String typeId, WormGameContext context);
 
-  /// Sâu sắp đâm chướng ngại [obstacleType]. Trả về cách xử lý: trừ đốt, phá rồi bước, hoặc none.
-  /// [behavior] là ObstacleBehavior của chướng đó (buffIdToDestroy, loseSegmentIfNotDestroyed).
-  HitObstacleResult onHitObstacle(
+  /// Sâu đâm vào vật cản [projectType]. [entityHardness], [wormHardness] để behavior quyết định trừ đuôi hay phá.
+  HitResult onHitEntity(
     WormAgent agent,
-    ObstacleType obstacleType,
-    ObstacleBehavior behavior,
+    ProjectType projectType,
+    int entityHardness,
+    int wormHardness,
     WormGameContext context,
   );
 
-  /// Sâu vừa ăn buff [buffId], thời lượng [duration] (endTime = context.gameTime + duration).
   void onEatBuff(WormAgent agent, String buffId, double duration, WormGameContext context);
 }

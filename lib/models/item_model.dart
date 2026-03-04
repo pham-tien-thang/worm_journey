@@ -1,3 +1,5 @@
+import '../game/entities/entity_model.dart';
+
 /// Loại tác dụng khi dùng item (mở rộng sau).
 enum ItemEffect {
   none,
@@ -29,8 +31,8 @@ class ItemModel {
 
 /// Danh sách item mặc định — gọi từ các màn (shop, inventory, ...).
 final List<ItemModel> commonItemList = [
-  const ItemModel(
-    id: 'coconut',
+  ItemModel(
+    id: ProjectType.preyCoconut.typeId,
     name: 'Quả dừa',
     icon: '🥥',
     description: 'Ăn vào sâu vào chế độ cứng đầu, phá được chướng ngại vật.',

@@ -113,24 +113,26 @@ Color? _parseColorFromJson(dynamic value) {
   return parsed != null ? Color(parsed) : null;
 }
 
-/// Map chơi: vị trí grid của chướng ngại / mồi đặt sẵn. Key [obstacles], [prey]; null hoặc thiếu = rỗng.
+/// Map chơi: mỗi key = loại entity (x_mark, prey_leaf, rock, water, small_bot...), value = danh sách ô [[col, row]].
+/// Game dùng factory đăng ký từng typeId → hàm "tạo + đặt tại ô"; không gom hết vào ObstacleManager.
 class MapConfig {
-  const MapConfig({
-    this.obstacles = const [],
-    this.prey = const [],
-  });
+  const MapConfig({this.placements = const {}});
 
-  /// Ô grid chướng ngại [[col, row], ...]. Mặc định [].
-  final List<Vector2> obstacles;
-
-  /// Ô grid mồi đặt sẵn [[col, row], ...]. Mặc định [].
-  final List<Vector2> prey;
+  /// typeId → danh sách vị trí grid. VD: "x_mark": [[1,2]], "prey_leaf": [[0,1],[2,3]], "rock": [[5,6]].
+  final Map<String, List<Vector2>> placements;
 
   static MapConfig fromJson(Map<String, dynamic>? json) {
     if (json == null || json.isEmpty) return const MapConfig();
-    final obstacles = _parseGridList(json['obstacles']);
-    final prey = _parseGridList(json['prey']);
-    return MapConfig(obstacles: obstacles, prey: prey);
+    final placements = <String, List<Vector2>>{};
+    for (final entry in json.entries) {
+      final list = _parseGridList(entry.value);
+      if (list.isEmpty) continue;
+      final key = entry.key;
+      // Tương thích cũ: obstacles → x_mark, prey → prey_leaf.
+      final typeId = key == 'obstacles' ? 'x_mark' : (key == 'prey' ? 'prey_leaf' : key);
+      placements[typeId] = [...(placements[typeId] ?? []), ...list];
+    }
+    return MapConfig(placements: placements);
   }
 
   static List<Vector2> _parseGridList(dynamic value) {
@@ -189,7 +191,7 @@ class LevelJsonConfig {
     return OutsideConfig.fromJson(outside);
   }
 
-  /// Chỉ load phần map. Key `map` trong JSON; bên trong dùng key `obstacles`, `prey` (list [[col, row]]). Null/thiếu = rỗng.
+  /// Chỉ load phần map. Key `map` trong JSON; bên trong mỗi key = typeId, value = list [[col, row]]. VD: "x_mark", "prey_leaf", "rock".
   static MapConfig loadMapConfig(Map<String, dynamic> jsonConfig) {
     final map = jsonConfig['map'] as Map<String, dynamic>?;
     return MapConfig.fromJson(map ?? {});

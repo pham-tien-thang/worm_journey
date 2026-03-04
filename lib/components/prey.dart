@@ -4,40 +4,20 @@ import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
-/// Loại mồi: lá (thường) hoặc dừa (đặc biệt, mỗi 10s).
-enum PreyType {
-  leaf,
-  apple,
-}
-
-/// Con mồi: icon lá 🍃 hoặc dừa 🥥 (ký tự đặc biệt).
-/// Hitbox passive, không chặn (trigger/xuyên) — logic ăn mồi xử lý trong game.
+/// Mồi: vẽ [icon] (emoji). Hitbox passive — logic ăn xử lý trong game.
 class Prey extends PositionComponent {
   Prey({
-    required double segmentSize,
-    required PreyType type,
+    required this.segmentSize,
+    required this.icon,
     Vector2? position,
-  })  : _type = type,
-        _emoji = _emojiForType(type),
-        super(
+  }) : super(
           position: position ?? Vector2.zero(),
           size: Vector2.all(segmentSize),
           anchor: Anchor.center,
         );
 
-  final PreyType _type;
-  final String _emoji;
-
-  static String _emojiForType(PreyType type) {
-    switch (type) {
-      case PreyType.leaf:
-        return '🍃';
-      case PreyType.apple:
-        return '🥥';
-    }
-  }
-
-  PreyType get type => _type;
+  final double segmentSize;
+  final String icon;
 
   @override
   Future<void> onLoad() async {
@@ -55,7 +35,7 @@ class Prey extends PositionComponent {
 
     final painter = TextPainter(
       text: TextSpan(
-        text: _emoji,
+        text: icon,
         style: TextStyle(
           fontSize: fontSize,
           fontFamily: 'Apple Color Emoji',

@@ -1,12 +1,13 @@
-/// Cấu hình buff dùng chung: thời gian (giây) theo [itemId].
-/// Các màn (game, shop, ...) dùng chung để apply buff và hiển thị.
+import '../../game/entities/entity_model.dart';
+
+/// Cấu hình buff dùng chung: thời gian (giây) theo typeId (ProjectType.typeId).
 abstract class BuffConfig {
   BuffConfig._();
 
-  /// Thời gian buff (giây). Null hoặc 0 = không có buff theo thời gian.
-  static const Map<String, double> durationSeconds = {
-    'coconut': 10.0,
-    // Thêm itemId khác khi có buff: 'snail': 5.0, 'shield': 1.0, ...
+  /// Thời gian buff (giây). Key = ProjectType.typeId.
+  static final Map<String, double> durationSeconds = {
+    ProjectType.preyCoconut.typeId: 10.0,
+    // Thêm typeId khác khi có buff: 'snail': 5.0, ...
   };
 
   /// Lấy thời gian buff (giây) cho [itemId]. Mặc định 0.

@@ -11,7 +11,6 @@ import 'package:flutter/services.dart';
 import '../components/debug_grid_coordinates.dart';
 import '../components/game_over_overlay.dart';
 import '../components/grid_background.dart';
-import '../components/prey.dart' show PreyType;
 import '../components/pink_worm/pink_worm.dart';
 import '../components/pink_worm/pink_worm_config.dart';
 import '../components/worm/worm.dart';
@@ -21,9 +20,10 @@ import '../config/config.dart';
 import '../entities/entities.dart';
 import '../core/buff/buff_config.dart';
 import 'config/level_json_config.dart';
-import 'managers/obstacle_manager.dart';
+import 'config/type_obj_config.dart';
+import 'entities/entity_models.dart';
+import 'managers/map_entity_manager.dart';
 import 'behavior/player_worm_behavior.dart';
-import 'managers/prey_manager.dart';
 import 'behavior/worm_agents.dart';
 import 'behavior/worm_behavior.dart';
 import 'context/worm_game_context.dart';
@@ -51,8 +51,8 @@ class WormJourneyGame extends FlameGame
   Worm get mainWorm => _playerAgent.worm;
 
   late WormGameContext _wormContext;
-  late PreyManager _preyManager;
-  late ObstacleManager _obstacleManager;
+  late TypeObjConfig _typeObjConfig;
+  late MapEntityManager _mapEntityManager;
 
   double _appleSpawnAccumulator = 0;
   static const double _appleSpawnInterval = 10.0;
@@ -72,8 +72,6 @@ class WormJourneyGame extends FlameGame
   /// Thời gian chơi tối đa (giây), từ [ _levelConfig.timeLimitSeconds ]. Ghi đè trong onLoad và _restart.
   double _timeLimit = 120.0;
 
-  int _diamonds = 0;
-
   /// Config màn load từ JSON (level_1.json, level_2.json, ...).
   late LevelJsonConfig _levelConfig;
   /// Nhiệm vụ từ config; [ _missionCurrents[i] ] = tiến độ của [ _missionConfigs[i] ].
@@ -81,12 +79,6 @@ class WormJourneyGame extends FlameGame
   List<int> _missionCurrents = [0];
   /// Ghi đè target theo id (vd. setMission2Target gọi khi load level).
   final Map<String, int> _missionTargetOverrides = {};
-
-  /// HP boss (sẽ load từ config sau). Hiển thị dạng icon x4.
-  int _bossHp = 4;
-  static const int _bossHpMax = 4;
-
-  /// Chướng ngại: quản lý qua [ObstacleManager] (nhiều loại, dễ mở rộng).
 
   double _segmentSize = 28.0;
   int _gridRows = GameConfig.gridRows;
@@ -98,18 +90,20 @@ class WormJourneyGame extends FlameGame
   /// Camera Y đang lerp (làm mượt, tránh giật).
   double? _cameraY;
 
+  /// Factory đặt entity tại ô: typeId (từ JSON) → hàm (grid). Mọi loại dùng chung [MapEntityManager.placeAt].
+  final Map<String, void Function(Vector2 grid)> _placeEntityAt = {};
+
   /// Pause / resume (vd. khi mở/đóng dialog).
   void setPaused(bool value) {
     _paused = value;
   }
 
-  /// Gọi khi dùng item (vd. quả dừa). Logic effect (nón, blink) do worm xử lý trong addItemEffect.
+  /// Dùng item dừa: thêm buff (ProjectType.preyCoconut) +1 độ cứng. Hết thời gian buff thì độ cứng về base.
   void triggerDevilModeByItem() {
     if (_gameOver || !_loaded) return;
-    const itemId = 'coconut';
-    final duration = BuffConfig.durationSecondsFor(itemId);
+    final duration = BuffConfig.durationSecondsFor(ProjectType.preyCoconut.typeId);
     if (duration <= 0) return;
-    mainWorm.addItemEffect(itemId, _gameTime + duration);
+    mainWorm.addItemEffect(ProjectType.preyCoconut.typeId, _gameTime + duration);
   }
 
   /// Tăng tiến độ nhiệm vụ có [id] (mặc định 'mission2').
@@ -183,6 +177,7 @@ class WormJourneyGame extends FlameGame
     camera.viewport = MaxViewport();
 
     _levelConfig = await loadLevelJsonConfig(level);
+    _typeObjConfig = await TypeObjConfig.load();
     _missionConfigs = _levelConfig.missions;
     _missionCurrents = List.filled(_missionConfigs.length, 0);
     _timeLimit = _levelConfig.timeLimitSeconds;
@@ -200,11 +195,8 @@ class WormJourneyGame extends FlameGame
     );
     world.add(_gridBackground);
 
-    _obstacleManager = ObstacleManager(
-      segmentSize: _segmentSize,
-      gridToWorld: _gridToWorld,
-    );
-    _preyManager = PreyManager(
+    _mapEntityManager = MapEntityManager(
+      typeObjConfig: _typeObjConfig,
       segmentSize: _segmentSize,
       gridColumns: GameConfig.gridColumns,
       gridRows: _gridRows,
@@ -222,9 +214,8 @@ class WormJourneyGame extends FlameGame
           _missionCurrents[i] = (_missionCurrents[i] + n).clamp(0, target);
         }
       },
-      destroyObstacleAtCallback: _destroyObstacleAt,
+      destroyObstacleAtCallback: _destroyEntityAt,
       loseSegmentCallback: _loseSegment,
-      hasBuffCallback: _hasBuff,
     );
 
     final worm = PinkWorm(
@@ -244,13 +235,9 @@ class WormJourneyGame extends FlameGame
       behavior: PlayerWormBehavior(),
     );
 
-    for (final grid in _levelConfig.mapConfig.obstacles) {
-      final comp = _obstacleManager.createComponent(ObstacleType.xMark, grid);
-      _obstacleManager.add(grid, ObstacleType.xMark, comp);
-      world.add(comp);
-    }
-
-    _spawnPrey();
+    _registerMapEntityPlacers();
+    _placeAllMapEntitiesFromConfig();
+    if (!_mapEntityManager.entries.any((e) => _typeObjConfig.isEatable(e.typeId))) _spawnPrey();
 
     if (kDebugMode) {
       _debugGridCoordinates = DebugGridCoordinates(
@@ -269,24 +256,41 @@ class WormJourneyGame extends FlameGame
     _loaded = true;
   }
 
-  Set<String> _occupiedGridKeys() {
-    return _preyManager.occupiedGridKeys(
-      snakePositions: mainWorm.allGridPositions,
-      obstaclePositions: _obstacleManager.gridPositions,
-    );
-  }
+  Set<String> _occupiedGridKeys() =>
+      _mapEntityManager.occupiedGridKeys(mainWorm.allGridPositions);
 
   void _spawnPrey() {
     final occupied = _occupiedGridKeys();
-    final entry = _preyManager.spawn(PreyType.leaf, occupied);
+    final entry = _mapEntityManager.spawn(ProjectType.preyLeaf.typeId, occupied);
     if (entry != null) world.add(entry.component);
   }
 
   void _spawnApple() {
-    if (_preyManager.entries.any((e) => e.type == PreyType.apple)) return;
+    if (_mapEntityManager.entries.any((e) => e.typeId == ProjectType.preyCoconut.typeId)) return;
     final occupied = _occupiedGridKeys();
-    final entry = _preyManager.spawn(PreyType.apple, occupied);
+    final entry = _mapEntityManager.spawn(ProjectType.preyCoconut.typeId, occupied);
     if (entry != null) world.add(entry.component);
+  }
+
+  /// Đăng ký typeId từ typeObjConfig → placeAt(grid, typeId) + world.add.
+  void _registerMapEntityPlacers() {
+    for (final typeId in _typeObjConfig.allTypeIds) {
+      _placeEntityAt[typeId] = (Vector2 grid) {
+        final comp = _mapEntityManager.placeAt(grid, typeId);
+        world.add(comp);
+      };
+    }
+  }
+
+  /// Duyệt config map: typeId (string) → placeAt cho từng ô. TypeId không có trong typeObjConfig thì bỏ qua.
+  void _placeAllMapEntitiesFromConfig() {
+    for (final entry in _levelConfig.mapConfig.placements.entries) {
+      final place = _placeEntityAt[entry.key];
+      if (place == null) continue;
+      for (final grid in entry.value) {
+        place(grid);
+      }
+    }
   }
 
   /// Chuyển ô logic (0..23, 0..36) sang tọa độ world. A1 = vị trí cũ A13.
@@ -337,10 +341,8 @@ class WormJourneyGame extends FlameGame
       c.removeFromParent();
     }
     mainWorm.removeFromParent();
-    for (final e in _preyManager.entries) e.component.removeFromParent();
-    _preyManager.clear();
-    for (final e in _obstacleManager.entries) e.component.removeFromParent();
-    _obstacleManager.clear();
+    for (final e in _mapEntityManager.entries) e.component.removeFromParent();
+    _mapEntityManager.clear();
 
     final worm = PinkWorm(
       config: PinkWormConfig(
@@ -359,13 +361,8 @@ class WormJourneyGame extends FlameGame
       behavior: PlayerWormBehavior(),
     );
 
-    for (final grid in _levelConfig.mapConfig.obstacles) {
-      final comp = _obstacleManager.createComponent(ObstacleType.xMark, grid);
-      _obstacleManager.add(grid, ObstacleType.xMark, comp);
-      world.add(comp);
-    }
-
-    _spawnPrey();
+    _placeAllMapEntitiesFromConfig();
+    if (!_mapEntityManager.entries.any((e) => _typeObjConfig.isEatable(e.typeId))) _spawnPrey();
 
     _appleSpawnAccumulator = 0;
     _gameTime = 0;
@@ -379,29 +376,26 @@ class WormJourneyGame extends FlameGame
     _cameraY = null;
   }
 
-  /// Trừ 1 đốt đuôi và để lại chướng ngại tại vị trí đuôi (type X, sau có thể config).
+  /// Trừ 1 đốt đuôi và để lại dấu X tại vị trí đuôi.
   void _loseSegment() {
     mainWorm.showCryFace();
     final tailGrid = mainWorm.tailGridPosition;
     mainWorm.removeTail();
-    final comp = _obstacleManager.createComponent(ObstacleType.xMark, tailGrid);
-    _obstacleManager.add(tailGrid, ObstacleType.xMark, comp);
+    final comp = _mapEntityManager.placeAt(tailGrid, 'x_mark');
     world.add(comp);
     if (mainWorm.segmentCount <= 2) _setGameOver();
   }
 
-  /// Phá chướng ngại tại ô [grid] (vd. khi đang 😈 có buff phá được).
-  void _destroyObstacleAt(Vector2 grid) {
-    final entry = _obstacleManager.removeAt(grid);
+  /// Phá entity tại ô [grid] (khi độ cứng sâu > độ cứng vật cản).
+  void _destroyEntityAt(Vector2 grid) {
+    final entry = _mapEntityManager.removeAt(grid);
     if (entry != null) entry.component.removeFromParent();
   }
 
-  /// Có effect [itemId] đang bật không (context/obstacle behavior dùng).
-  bool _hasBuff(String itemId) => mainWorm.hasItemEffect(itemId);
+  /// Độ cứng hiện tại của sâu (đã set trong onItemEffectAdded/Removed khi buff dừa).
+  int _getWormHardness() => mainWorm.stats.baseHardness;
 
-  /// Xử lý chung khi đầu chạm vùng nguy hiểm: tường, chướng ngại, đuôi hoặc thân.
-  /// Thân và đuôi/tường/X: trừ 1 đốt + để lại dấu X. Chỉ game over khi còn ≤ 2 đốt.
-  /// Gọi applyNextDirectionAndSyncVisuals trước để đầu quay đúng hướng đâm.
+  /// Xử lý khi đầu chạm vùng nguy hiểm. Wall/tail/body → trừ đuôi. Vật cản → gọi behavior.onHitEntity.
   bool _onHitHazard(HazardType type, Vector2 nextHead) {
     mainWorm.applyNextDirectionAndSyncVisuals();
     switch (type) {
@@ -411,24 +405,27 @@ class WormJourneyGame extends FlameGame
         _loseSegment();
         return true;
       case HazardType.obstacle: {
-        final entry = _obstacleManager.getAt(nextHead);
+        final entry = _mapEntityManager.getAt(nextHead);
         if (entry == null) return true;
-        final obstacleBehavior = ObstacleManager.behaviorFor(entry.type);
-        final result = _playerAgent.behavior.onHitObstacle(
+        final projectType = EntityModels.projectType(entry.typeId) ?? ProjectType.xMark;
+        final entityHardness = EntityModels.hardness(entry.typeId);
+        final wormHardness = _getWormHardness();
+        final result = _playerAgent.behavior.onHitEntity(
           _playerAgent,
-          entry.type,
-          obstacleBehavior,
+          projectType,
+          entityHardness,
+          wormHardness,
           _wormContext,
         );
         switch (result) {
-          case HitObstacleResult.loseSegment:
+          case HitResult.loseSegment:
             _loseSegment();
             break;
-          case HitObstacleResult.destroyAndStep:
-            _destroyObstacleAt(nextHead);
+          case HitResult.destroyAndStep:
+            _destroyEntityAt(nextHead);
             mainWorm.step();
             break;
-          case HitObstacleResult.none:
+          case HitResult.none:
             break;
         }
         return true;
@@ -457,10 +454,10 @@ class WormJourneyGame extends FlameGame
     if (!_loaded) {
       return GameHudData(
         timeRemainingSeconds: _timeLimit,
-        diamonds: _diamonds,
+        diamonds: 0,
         missions: missions.isEmpty ? [const GameHudMission(id: 'leaves', label: 'Lá cây', current: 0, target: 10, icon: '🍃')] : missions,
-        bossHp: _bossHp,
-        bossHpMax: _bossHpMax,
+        bossHp: 0,
+        bossHpMax: 0,
         itemBuffs: const [],
         startDelayRemaining: _startDelayRemaining,
       );
@@ -474,10 +471,10 @@ class WormJourneyGame extends FlameGame
         .toList();
     return GameHudData(
       timeRemainingSeconds: (_timeLimit - _gameTime).clamp(0.0, _timeLimit),
-      diamonds: _diamonds,
+      diamonds: 0,
       missions: missions,
-      bossHp: _bossHp,
-      bossHpMax: _bossHpMax,
+      bossHp: 0,
+      bossHpMax: 0,
       itemBuffs: itemBuffs,
       startDelayRemaining: _startDelayRemaining,
     );
@@ -506,7 +503,7 @@ class WormJourneyGame extends FlameGame
     mainWorm.setGameTime(_gameTime);
     mainWorm.removeExpiredItemEffects(_gameTime);
 
-    if (!mainWorm.hasItemEffect('coconut')) {
+    if (!mainWorm.hasItemEffect(ProjectType.preyCoconut.typeId)) {
       _appleSpawnAccumulator += dt;
       if (_appleSpawnAccumulator >= _appleSpawnInterval) {
         _appleSpawnAccumulator -= _appleSpawnInterval;
@@ -534,7 +531,7 @@ class WormJourneyGame extends FlameGame
       return;
     }
 
-    if (_obstacleManager.hasObstacleAt(nextHead)) {
+    if (_mapEntityManager.hasBlockingEntityAt(nextHead)) {
       _onHitHazard(HazardType.obstacle, nextHead);
       return;
     }
@@ -558,10 +555,10 @@ class WormJourneyGame extends FlameGame
     mainWorm.step();
 
     final newHead = mainWorm.headGridPosition;
-    final consumed = _preyManager.consumeAt(newHead);
+    final consumed = _mapEntityManager.consumeAt(newHead);
     if (consumed != null) {
       consumed.component.removeFromParent();
-      _playerAgent.behavior.onEatPrey(_playerAgent, consumed.type, _wormContext);
+      _playerAgent.behavior.onEatEntity(_playerAgent, consumed.typeId, _wormContext);
       return;
     }
   }

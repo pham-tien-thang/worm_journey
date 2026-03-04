@@ -54,7 +54,8 @@ abstract class AppLocalizations {
 
   String itemName(String id) {
     switch (id) {
-      case 'coconut': return itemCoconutName;
+      case 'coconut':
+      case 'prey_apple': return itemCoconutName;
       case 'snail': return itemSnailName;
       case 'magnet': return itemMagnetName;
       case 'shield': return itemShieldName;
@@ -66,7 +67,8 @@ abstract class AppLocalizations {
 
   String itemDescription(String id) {
     switch (id) {
-      case 'coconut': return itemCoconutDescription;
+      case 'coconut':
+      case 'prey_apple': return itemCoconutDescription;
       case 'snail': return itemSnailDescription;
       case 'magnet': return itemMagnetDescription;
       case 'shield': return itemShieldDescription;

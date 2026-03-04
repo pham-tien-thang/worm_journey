@@ -1,18 +1,14 @@
 import 'package:flame/components.dart';
 
-/// Context game dành cho [WormBehavior]: chỉ expose thao tác cần thiết (spawn mồi, mission, thời gian...).
-/// Config JSON theo màn (nhiệm vụ, thời gian, rule, map): dùng [LevelJsonConfig] trong [level_json_config.dart].
-/// Game tạo implementation (vd. bằng closure) để truyền vào behavior; bot/player có thể dùng context khác nhau.
+/// Context game cho [WormBehavior]: spawn mồi, mission, phá entity, lose segment, gameTime.
 abstract class WormGameContext {
   double get gameTime;
   void spawnPrey();
   void addMissionLeaves(int count);
   void destroyObstacleAt(Vector2 grid);
   void loseSegment();
-  bool hasBuff(String buffId);
 }
 
-/// Implementation dùng closure; game truyền getter/setter để không lộ private.
 class WormGameContextImpl extends WormGameContext {
   WormGameContextImpl({
     required this.gameTimeGetter,
@@ -20,7 +16,6 @@ class WormGameContextImpl extends WormGameContext {
     required this.addMissionLeavesCallback,
     required this.destroyObstacleAtCallback,
     required this.loseSegmentCallback,
-    required this.hasBuffCallback,
   });
 
   final double Function() gameTimeGetter;
@@ -28,7 +23,6 @@ class WormGameContextImpl extends WormGameContext {
   final void Function(int) addMissionLeavesCallback;
   final void Function(Vector2) destroyObstacleAtCallback;
   final void Function() loseSegmentCallback;
-  final bool Function(String) hasBuffCallback;
 
   @override
   double get gameTime => gameTimeGetter();
@@ -44,7 +38,4 @@ class WormGameContextImpl extends WormGameContext {
 
   @override
   void loseSegment() => loseSegmentCallback();
-
-  @override
-  bool hasBuff(String buffId) => hasBuffCallback(buffId);
 }

@@ -1,6 +1,7 @@
 import 'package:flame/components.dart';
 
 import '../../entities/entities.dart';
+import '../../game/entities/entity_model.dart';
 import '../worm/worm.dart';
 import 'pink_worm_config.dart';
 
@@ -35,7 +36,8 @@ class PinkWorm extends Worm {
 
   @override
   void onItemEffectAdded(String itemId) {
-    if (itemId == 'coconut') {
+    if (itemId == ProjectType.preyCoconut.typeId) {
+      stats.baseHardness = stats.originalBaseHardness + 1;
       setHasHelmet(true);
       _effectBlinkAccumulator = 0;
       _effectBlinkShow = true;
@@ -44,14 +46,17 @@ class PinkWorm extends Worm {
 
   @override
   void onItemEffectRemoved(String itemId) {
-    if (itemId == 'coconut') setHasHelmet(false);
+    if (itemId == ProjectType.preyCoconut.typeId) {
+      stats.baseHardness = stats.originalBaseHardness;
+      setHasHelmet(false);
+    }
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    if (!hasItemEffect('coconut') || gameTime == null) return;
-    final list = itemEffects.where((e) => e.itemId == 'coconut').toList();
+    if (!hasItemEffect(ProjectType.preyCoconut.typeId) || gameTime == null) return;
+    final list = itemEffects.where((e) => e.itemId == ProjectType.preyCoconut.typeId).toList();
     if (list.isEmpty) return;
     final entry = list.first;
     if (entry.endTime == null) return;

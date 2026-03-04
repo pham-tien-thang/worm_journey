@@ -55,17 +55,21 @@ Vùng trên/dưới vùng chơi (ô không thuộc grid):
 
 ### `map` (object)
 
-Vị trí chướng ngại và mồi đặt sẵn. Tọa độ theo **grid** (cột, hàng), bắt đầu từ 0.
+Mỗi **key** = loại entity (typeId), **value** = list tọa độ grid `[[col, row], ...]`. Game dùng factory đăng ký từng typeId → hàm tạo entity tại ô (chướng ngại → ObstacleManager, mồi → PreyManager, bot → list agent...). Thêm loại mới (đá, nước, mồi chuối, bot nhỏ) chỉ cần đăng ký thêm trong game, không gom hết vào một manager.
 
-- `obstacles` (array): list `[[col, row], ...]`. Null hoặc thiếu = không có chướng ngại.
-- `prey` (array): list `[[col, row], ...]`. Null hoặc thiếu = không có mồi đặt sẵn.
+- `x_mark` (array): dấu X 🪦 — chướng ngại, có buff dừa thì phá được.
+- `prey_leaf` (array): mồi lá 🍃.
+- `prey_apple` (array): mồi táo/dừa 🥥.
+- *(Tương thích cũ: `obstacles` → coi là `x_mark`, `prey` → coi là `prey_leaf`.)*
+- *Sau có thể thêm: `rock`, `water`, `prey_banana`, `small_bot`, ...*
 
 Ví dụ:
 
 ```json
 "map": {
-  "obstacles": [[5, 10], [6, 10]],
-  "prey": []
+  "x_mark": [[5, 10], [6, 10]],
+  "prey_leaf": [[1, 2], [3, 4]],
+  "prey_apple": [[8, 9]]
 }
 ```
 

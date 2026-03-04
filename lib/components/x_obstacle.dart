@@ -4,11 +4,11 @@ import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
-/// Chướng ngại vật: ô có bia mộ 🪦, để lại khi rắn mất đuôi. Đâm vào = trừ 1 đốt.
-/// Hitbox passive, isSolid (chặn) — logic va chạm xử lý trong game.
+/// Vật cản: vẽ [icon] (emoji). Hitbox isSolid — va chạm so độ cứng trong game.
 class XObstacle extends PositionComponent {
   XObstacle({
     required double segmentSize,
+    required this.icon,
     Vector2? position,
   }) : super(
           position: position ?? Vector2.zero(),
@@ -16,7 +16,7 @@ class XObstacle extends PositionComponent {
           anchor: Anchor.center,
         );
 
-  static const String _emoji = '🪦';
+  final String icon;
 
   @override
   Future<void> onLoad() async {
@@ -34,7 +34,7 @@ class XObstacle extends PositionComponent {
 
     final painter = TextPainter(
       text: TextSpan(
-        text: _emoji,
+        text: icon,
         style: TextStyle(
           fontSize: fontSize,
           fontFamily: 'Apple Color Emoji',

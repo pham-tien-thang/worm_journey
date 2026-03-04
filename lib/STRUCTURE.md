@@ -12,13 +12,21 @@
 - **`worm_game_context.dart`** – Context cho behavior (spawn mồi, mission, destroy obstacle, buff). Game tạo implementation (closure) truyền vào behavior.
 
 ### `game/behavior/`
-- **`worm_behavior.dart`** – Interface hành vi sâu: onEatPrey, onHitObstacle, onEatBuff.
-- **`worm_agents.dart`** – Worm + WormBehavior (WormAgent); game giữ `List<WormAgent>`.
-- **`player_worm_behavior.dart`** – Implement WormBehavior cho người chơi (ăn lá/táo, va chướng, buff dừa).
+- **`worm_behavior.dart`** – **HitResult** enum. Interface: onEatEntity, **onHitEntity**(projectType, entityHardness, wormHardness), onEatBuff.
+- **`worm_agents.dart`** – Worm + WormBehavior (WormAgent).
+- **`player_worm_behavior.dart`** – Implement: ăn lá/táo, **va chạm** (so độ cứng → loseSegment hoặc destroyAndStep), buff dừa.
+
+### `game/config/`
+- **`type_obj_config.dart`** – Load từ `assets/jsonTypeObj.json`: **chỉ** định nghĩa type thuộc category nào (obtain/grey). Không chứa icon/hardness.
+
+### `game/entities/`
+- **`entity_model.dart`** – **ProjectType** enum (preyLeaf, preyCoconut, xMark). Abstract **EntityModel** (icon, hardness, type).
+- **`grey_model.dart`** – **GreyModel** (mồi, hardness 0), **PreyLeafModel** (type preyLeaf), **PreyCoconutModel** (type preyCoconut).
+- **`obstacle_model.dart`** – **ObstacleModel** (vật cản, hardness 1), **XMarkModel** (type xMark).
+- **`entity_models.dart`** – Registry **EntityModels**: typeId → model; icon, hardness, projectType.
 
 ### `game/managers/`
-- **`prey_manager.dart`** – Quản lý mồi (spawn, consumeAt, occupiedGridKeys).
-- **`obstacle_manager.dart`** – Quản lý chướng ngại (ObstacleType, add, removeAt, behaviorFor).
+- **`map_entity_manager.dart`** – placeAt(grid, typeId). Tạo component theo TypeObjConfig.getCategory; icon lấy từ EntityModels.icon(typeId).
 
 ### `game/screens/`
 - **`game_screen.dart`** – Màn game theo level (StatefulWidget, tạo WormJourneyGame theo level).
