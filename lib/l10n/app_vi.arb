@@ -7,6 +7,8 @@
   "levelLabel": "Lv{level}",
   "gameOver": "Game Over",
   "tapToPlayAgain": "Chạm để chơi lại",
+  "gameOverPlayAgain": "Chơi lại",
+  "gameOverEnd": "Kết thúc",
   "view": "Xem",
   "quantityShort": "x{quantity}",
   "buyDiamonds": "Mua {price}💎",

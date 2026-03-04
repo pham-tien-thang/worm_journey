@@ -14,9 +14,14 @@ import '../worm_journey_game.dart';
 /// Scaffold chung cho màn chơi: nhận [game] đã tạo (theo level), hiển thị GameWidget + items + joystick.
 /// Mỗi level có màn riêng tạo game rồi truyền vào đây, về sau dễ init map design từng level.
 class GamePlayScaffold extends StatefulWidget {
-  const GamePlayScaffold({super.key, required this.game});
+  const GamePlayScaffold({
+    super.key,
+    required this.game,
+    this.onGameOverEnd,
+  });
 
   final WormJourneyGame game;
+  final VoidCallback? onGameOverEnd;
 
   @override
   State<GamePlayScaffold> createState() => _GamePlayScaffoldState();
@@ -70,6 +75,7 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
   @override
   Widget build(BuildContext context) {
     final game = widget.game;
+    game.setOnGameOverEnd(widget.onGameOverEnd);
     return Builder(
       builder: (dialogContext) {
         return Scaffold(
@@ -93,11 +99,12 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: const AssetImage('assets/images/bottom_joystick.png'),
-                      fit: BoxFit.cover,
-                      alignment: Alignment.topCenter,
-                    ),
+                    color: Colors.transparent,
+                    // image: DecorationImage(
+                    //   image: const AssetImage('assets/images/bottom_joystick.png'),
+                    //   fit: BoxFit.cover,
+                    //   alignment: Alignment.topCenter,
+                    // ),
                   ),
                   padding: const EdgeInsets.symmetric(
                     vertical: 0,

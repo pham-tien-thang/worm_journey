@@ -31,6 +31,8 @@ abstract class AppLocalizations {
   String levelLabel(int level);
   String get gameOver;
   String get tapToPlayAgain;
+  String get gameOverPlayAgain;
+  String get gameOverEnd;
   String get view;
   String quantityShort(int quantity);
   String buyDiamonds(int price);

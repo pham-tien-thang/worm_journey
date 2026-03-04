@@ -14,6 +14,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get tapToPlayAgain => 'Chạm để chơi lại';
 
   @override
+  String get gameOverPlayAgain => 'Chơi lại';
+
+  @override
+  String get gameOverEnd => 'Kết thúc';
+
+  @override
   String get view => 'Xem';
 
   @override

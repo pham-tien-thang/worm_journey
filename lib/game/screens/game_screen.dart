@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../app_router.dart';
 import 'game_play_scaffold.dart';
 import '../worm_journey_game.dart';
 
@@ -24,6 +26,9 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return GamePlayScaffold(game: _game);
+    return GamePlayScaffold(
+      game: _game,
+      onGameOverEnd: () => context.go(AppRoutes.play),
+    );
   }
 }

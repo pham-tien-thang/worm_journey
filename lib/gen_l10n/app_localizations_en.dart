@@ -14,6 +14,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tapToPlayAgain => 'Tap to play again';
 
   @override
+  String get gameOverPlayAgain => 'Play again';
+
+  @override
+  String get gameOverEnd => 'End';
+
+  @override
   String get view => 'View';
 
   @override

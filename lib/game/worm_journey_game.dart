@@ -39,9 +39,12 @@ enum HazardType {
 /// Game rắn săn mồi. Full màn hình. Đâm tường/đuôi trừ 1 đốt; còn đầu+đuôi thì thua.
 class WormJourneyGame extends FlameGame
     with KeyboardEvents, TapCallbacks, HasCollisionDetection {
-  WormJourneyGame({this.level = 1}) : super();
+  WormJourneyGame({this.level = 1, VoidCallback? onGameOverEnd}) : _onGameOverEnd = onGameOverEnd;
 
   final int level;
+  VoidCallback? _onGameOverEnd;
+
+  void setOnGameOverEnd(VoidCallback? cb) => _onGameOverEnd = cb;
 
   @override
   Color backgroundColor() => const Color(0xFF1B3D2E);
@@ -333,6 +336,7 @@ class WormJourneyGame extends FlameGame
       size: Vector2(sz.x, sz.y),
       locale: ui.PlatformDispatcher.instance.locale,
       onTap: _restart,
+      onEnd: _onGameOverEnd,
     ));
   }
 
