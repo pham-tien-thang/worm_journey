@@ -4,19 +4,19 @@ import '../components/snake/snake_direction.dart';
 import '../components/snake/worm.dart';
 import '../entities/entities.dart';
 
-/// Một “con sâu” trong game: component Worm + thông tin entity (player / bot).
+/// Một “con sâu” trong game: component Worm + thông tin (WormInfo, player / bot).
 /// Game giữ [List<WormAgent>]; index 0 = player, sau này thêm bot.
 class WormAgent {
   WormAgent({
     required this.worm,
-    required this.entity,
+    required this.info,
   });
 
   final Worm worm;
-  final WormEntity entity;
+  final WormInfo info;
 
-  bool get isPlayer => entity.isPlayerControlled;
-  bool get isBot => entity.isBot;
+  bool get isPlayer => info.isPlayerControlled;
+  bool get isBot => info.isBot;
 
   Vector2 get headGridPosition => worm.headGridPosition;
   Vector2 get tailGridPosition => worm.tailGridPosition;

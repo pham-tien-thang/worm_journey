@@ -38,7 +38,7 @@ class PreyManager {
 
   List<PreyEntry> get entries => List.unmodifiable(_entries);
 
-  /// Tạo set key ô đã bị chiếm (snake + mồi + chướng ngại) để spawn không trùng.
+  /// Tạo set key ô đã bị chiếm (pink_worm + mồi + chướng ngại) để spawn không trùng.
   Set<String> occupiedGridKeys({
     required Iterable<Vector2> snakePositions,
     required Iterable<Vector2> obstaclePositions,

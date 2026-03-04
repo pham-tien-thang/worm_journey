@@ -19,14 +19,14 @@ class Worm extends PositionComponent {
     double segmentSize = 28.0,
     double moveInterval = 0.28,
     int? gridRows,
-    this.entity,
+    this.info,
   })  : _segmentSize = segmentSize,
         _moveInterval = moveInterval,
         _gridRows = gridRows ?? GameConfig.gridRows,
         super(position: position ?? Vector2.zero());
 
   /// Thông tin sâu: loại (joystick/bot), team, skin, name, id... Dùng để phân biệt player vs bot và scale sau (chiêu thức).
-  final WormEntity? entity;
+  final WormInfo? info;
 
   double _segmentSize;
   final int _gridRows;

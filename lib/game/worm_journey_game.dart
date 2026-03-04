@@ -12,8 +12,8 @@ import '../components/debug_grid_coordinates.dart';
 import '../components/game_over_overlay.dart';
 import '../components/grid_background.dart';
 import '../components/prey.dart' show PreyType;
-import '../components/snake/snake_direction.dart';
-import '../components/snake/worm.dart';
+import '../components/pink_worm/snake_direction.dart';
+import '../components/pink_worm/worm.dart';
 import '../common/debug_apply.dart';
 import '../config/config.dart';
 import '../entities/entities.dart';
@@ -197,11 +197,11 @@ class WormJourneyGame extends FlameGame
       segmentSize: _segmentSize,
       moveInterval: GameConfig.moveInterval,
       gridRows: _gridRows,
-      entity: WormEntity.playerDefault,
+      info: WormInfo.playerDefault,
       position: Vector2(0, playableStartRow * _segmentSize),
     );
     world.add(worm);
-    _playerAgent = WormAgent(worm: worm, entity: WormEntity.playerDefault);
+    _playerAgent = WormAgent(worm: worm, info: WormInfo.playerDefault);
 
     _spawnPrey();
 
@@ -299,11 +299,11 @@ class WormJourneyGame extends FlameGame
       segmentSize: _segmentSize,
       moveInterval: GameConfig.moveInterval,
       gridRows: _gridRows,
-      entity: WormEntity.playerDefault,
+      info: WormInfo.playerDefault,
       position: Vector2(0, playableStartRow * _segmentSize),
     );
     world.add(worm);
-    _playerAgent = WormAgent(worm: worm, entity: WormEntity.playerDefault);
+    _playerAgent = WormAgent(worm: worm, info: WormInfo.playerDefault);
 
     _spawnPrey();
 

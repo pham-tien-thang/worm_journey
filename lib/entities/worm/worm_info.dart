@@ -1,10 +1,10 @@
 import 'worm_team.dart';
 import 'worm_type.dart';
 
-/// Thông tin chung của một con rắn (player hoặc bot).
+/// Thông tin của một con sâu (player hoặc bot): id, tên, loại điều khiển, team, skin, skill...
 /// Thiết kế dễ mở rộng: sau có thể thêm chiêu thức, kỹ năng, v.v.
-class WormEntity {
-  const WormEntity({
+class WormInfo {
+  const WormInfo({
     required this.id,
     required this.name,
     required this.description,
@@ -38,11 +38,11 @@ class WormEntity {
   bool get isPlayerControlled => wormType == WormType.playerControlled;
   bool get isBot => wormType == WormType.bot;
 
-  /// Rắn player mặc định (điều khiển bằng joystick).
-  static WormEntity get playerDefault => WormEntity(
+  /// Sâu player mặc định (điều khiển bằng joystick).
+  static WormInfo get playerDefault => WormInfo(
         id: 'player_1',
         name: 'Player',
-        description: 'Rắn điều khiển bởi joystick',
+        description: 'Sâu điều khiển bởi joystick',
         wormType: WormType.playerControlled,
         team: WormTeam.player,
         skin: 'default',
