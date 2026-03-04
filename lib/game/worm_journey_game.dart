@@ -392,8 +392,8 @@ class WormJourneyGame extends FlameGame
     if (entry != null) entry.component.removeFromParent();
   }
 
-  /// Độ cứng hiện tại của sâu (đã set trong onItemEffectAdded/Removed khi buff dừa).
-  int _getWormHardness() => mainWorm.stats.baseHardness;
+  /// Độ cứng hiện tại của sâu (currentHardness, set trong onItemEffectAdded/Removed khi buff dừa).
+  int _getWormHardness() => mainWorm.stats.currentHardness;
 
   /// Xử lý khi đầu chạm vùng nguy hiểm. Wall/tail/body → trừ đuôi. Vật cản → gọi behavior.onHitEntity.
   bool _onHitHazard(HazardType type, Vector2 nextHead) {

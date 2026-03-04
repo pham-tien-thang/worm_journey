@@ -37,7 +37,7 @@ class PinkWorm extends Worm {
   @override
   void onItemEffectAdded(String itemId) {
     if (itemId == ProjectType.preyCoconut.typeId) {
-      stats.baseHardness = stats.originalBaseHardness + 1;
+      stats.currentHardness = stats.originalBaseHardness + 1;
       setHasHelmet(true);
       _effectBlinkAccumulator = 0;
       _effectBlinkShow = true;
@@ -47,7 +47,7 @@ class PinkWorm extends Worm {
   @override
   void onItemEffectRemoved(String itemId) {
     if (itemId == ProjectType.preyCoconut.typeId) {
-      stats.baseHardness = stats.originalBaseHardness;
+      stats.currentHardness = stats.originalBaseHardness;
       setHasHelmet(false);
     }
   }
