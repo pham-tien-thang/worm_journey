@@ -11,15 +11,17 @@ import 'package:flutter/services.dart';
 import '../components/debug_grid_coordinates.dart';
 import '../components/game_over_overlay.dart';
 import '../components/grid_background.dart';
-import '../components/prey.dart' show Prey, PreyType;
-import '../components/snake/snake.dart';
+import '../components/prey.dart' show PreyType;
 import '../components/snake/snake_direction.dart';
-import '../components/x_obstacle.dart';
+import '../components/snake/worm.dart';
 import '../common/debug_apply.dart';
 import '../config/config.dart';
 import '../entities/entities.dart';
 import '../core/buff/buff_config.dart';
 import 'level_config.dart';
+import 'obstacle_manager.dart';
+import 'prey_manager.dart';
+import 'worm_agents.dart';
 
 /// Loại va chạm nguy hiểm: tường, chướng ngại X, đuôi rắn, thân rắn.
 enum HazardType {
@@ -39,11 +41,12 @@ class WormJourneyGame extends FlameGame
   @override
   Color backgroundColor() => const Color(0xFF1B3D2E);
 
-  late Snake _snake;
-  late Prey _prey;
-  Vector2 _preyGrid = Vector2.zero();
-  Prey? _applePrey;
-  Vector2? _applePreyGrid;
+  late WormAgent _playerAgent;
+  Worm get _worm => _playerAgent.worm;
+
+  late PreyManager _preyManager;
+  late ObstacleManager _obstacleManager;
+
   double _appleSpawnAccumulator = 0;
   static const double _appleSpawnInterval = 10.0;
 
@@ -81,9 +84,7 @@ class WormJourneyGame extends FlameGame
   int _bossHp = 4;
   static const int _bossHpMax = 4;
 
-  /// Chướng ngại X để lại khi mất đuôi (vị trí lưới).
-  final List<Vector2> _obstacles = [];
-  final List<XObstacle> _obstacleComponents = [];
+  /// Chướng ngại: quản lý qua [ObstacleManager] (nhiều loại, dễ mở rộng).
 
   double _segmentSize = 28.0;
   int _gridRows = GameConfig.gridRows;
@@ -106,10 +107,10 @@ class WormJourneyGame extends FlameGame
     const itemId = 'coconut';
     final duration = BuffConfig.durationSecondsFor(itemId);
     if (duration <= 0) return;
-    _snake.setHasHelmet(true);
+    _worm.setHasHelmet(true);
     _devilBlinkAccumulator = 0;
     _devilBlinkShowEvil = true;
-    _snake.addBuff(itemId, _gameTime + duration);
+    _worm.addBuff(itemId, _gameTime + duration);
   }
 
   /// Tăng tiến độ nhiệm vụ 2 (gọi khi player thực hiện hành động tương ứng). Sau load config có thể có thêm mission 3, 4...
@@ -127,9 +128,9 @@ class WormJourneyGame extends FlameGame
   /// Rắn sẽ quay khi tới đúng thời điểm step (tránh nhảy ô vì step sớm).
   void setDirection(SnakeDirection d) {
     if (_gameOver || !_loaded) return;
-    final current = _snake.currentDirection;
+    final current = _worm.currentDirection;
     if (d == current || d.isOppositeOf(current)) return;
-    _snake.setNextDirection(d);
+    _worm.setNextDirection(d);
   }
 
   /// Vùng chơi: A13–X49 (cột A–X, hàng 13–49). Chỉ vùng này là grid; ngoài ra trắng + 🟫.
@@ -148,8 +149,8 @@ class WormJourneyGame extends FlameGame
     _gridRows = playableRowCount;
     camera.viewport = FixedResolutionViewport(resolution: size);
     if (_loaded) {
-      _snake.setSegmentSize(_segmentSize);
-      _snake.position = Vector2(0, playableStartRow * _segmentSize);
+      _worm.setSegmentSize(_segmentSize);
+      _worm.position = Vector2(0, playableStartRow * _segmentSize);
       _gridBackground.updateGrid(
         _segmentSize,
         GameConfig.gridColumns,
@@ -181,20 +182,27 @@ class WormJourneyGame extends FlameGame
     );
     world.add(_gridBackground);
 
-    _snake = Snake(
+    _obstacleManager = ObstacleManager(
+      segmentSize: _segmentSize,
+      gridToWorld: _gridToWorld,
+    );
+    _preyManager = PreyManager(
+      segmentSize: _segmentSize,
+      gridColumns: GameConfig.gridColumns,
+      gridRows: _gridRows,
+      gridToWorld: _gridToWorld,
+    );
+
+    final worm = Worm(
       segmentSize: _segmentSize,
       moveInterval: GameConfig.moveInterval,
       gridRows: _gridRows,
       entity: WormEntity.playerDefault,
       position: Vector2(0, playableStartRow * _segmentSize),
     );
-    world.add(_snake);
+    world.add(worm);
+    _playerAgent = WormAgent(worm: worm, entity: WormEntity.playerDefault);
 
-    _prey = Prey(
-      segmentSize: _segmentSize,
-      type: PreyType.leaf,
-      position: Vector2.zero(),
-    );
     _spawnPrey();
 
     if (kDebugMode) {
@@ -215,63 +223,23 @@ class WormJourneyGame extends FlameGame
   }
 
   Set<String> _occupiedGridKeys() {
-    final occupied = _snake.allGridPositions
-        .map((v) => '${v.x.toInt()},${v.y.toInt()}')
-        .toSet();
-    occupied.add('${_preyGrid.x.toInt()},${_preyGrid.y.toInt()}');
-    if (_applePreyGrid != null) {
-      occupied.add('${_applePreyGrid!.x.toInt()},${_applePreyGrid!.y.toInt()}');
-    }
-    for (final o in _obstacles) {
-      occupied.add('${o.x.toInt()},${o.y.toInt()}');
-    }
-    return occupied;
+    return _preyManager.occupiedGridKeys(
+      snakePositions: _worm.allGridPositions,
+      obstaclePositions: _obstacleManager.gridPositions,
+    );
   }
 
   void _spawnPrey() {
-    if (_prey.parent != null) _prey.removeFromParent();
     final occupied = _occupiedGridKeys();
-    var pos = Vector2(
-      Random().nextInt(GameConfig.gridColumns).toDouble(),
-      Random().nextInt(_gridRows).toDouble(),
-    );
-    for (var i = 0; i < 100; i++) {
-      if (!occupied.contains('${pos.x.toInt()},${pos.y.toInt()}')) break;
-      pos = Vector2(
-        Random().nextInt(GameConfig.gridColumns).toDouble(),
-        Random().nextInt(_gridRows).toDouble(),
-      );
-    }
-    _preyGrid = pos;
-    _prey = Prey(
-      segmentSize: _segmentSize,
-      type: PreyType.leaf,
-      position: _gridToWorld(pos),
-    );
-    world.add(_prey);
+    final entry = _preyManager.spawn(PreyType.leaf, occupied);
+    if (entry != null) world.add(entry.component);
   }
 
   void _spawnApple() {
-    if (_applePreyGrid != null) return;
+    if (_preyManager.entries.any((e) => e.type == PreyType.apple)) return;
     final occupied = _occupiedGridKeys();
-    var pos = Vector2(
-      Random().nextInt(GameConfig.gridColumns).toDouble(),
-      Random().nextInt(_gridRows).toDouble(),
-    );
-    for (var i = 0; i < 100; i++) {
-      if (!occupied.contains('${pos.x.toInt()},${pos.y.toInt()}')) break;
-      pos = Vector2(
-        Random().nextInt(GameConfig.gridColumns).toDouble(),
-        Random().nextInt(_gridRows).toDouble(),
-      );
-    }
-    _applePreyGrid = pos;
-    _applePrey = Prey(
-      segmentSize: _segmentSize,
-      type: PreyType.apple,
-      position: _gridToWorld(pos),
-    );
-    world.add(_applePrey!);
+    final entry = _preyManager.spawn(PreyType.apple, occupied);
+    if (entry != null) world.add(entry.component);
   }
 
   /// Chuyển ô logic (0..23, 0..36) sang tọa độ world. A1 = vị trí cũ A13.
@@ -295,7 +263,7 @@ class WormJourneyGame extends FlameGame
     final bottomOfPlayable = (playableStartRow + playableRowCount) * _segmentSize;
     final maxCameraY = bottomOfPlayable - halfViewY;
 
-    final headWorld = _gridToWorld(_snake.headGridPosition);
+    final headWorld = _gridToWorld(_worm.headGridPosition);
     final targetY = headWorld.y.clamp(halfViewY, maxCameraY.clamp(halfViewY, double.infinity));
 
     final current = _cameraY ?? targetY;
@@ -321,35 +289,24 @@ class WormJourneyGame extends FlameGame
     for (final c in camera.viewport.children.whereType<GameOverOverlay>().toList()) {
       c.removeFromParent();
     }
-    _snake.removeFromParent();
-    _prey.removeFromParent();
-    for (final c in _obstacleComponents) {
-      c.removeFromParent();
-    }
-    _obstacles.clear();
-    _obstacleComponents.clear();
+    _worm.removeFromParent();
+    for (final e in _preyManager.entries) e.component.removeFromParent();
+    _preyManager.clear();
+    for (final e in _obstacleManager.entries) e.component.removeFromParent();
+    _obstacleManager.clear();
 
-    _snake = Snake(
+    final worm = Worm(
       segmentSize: _segmentSize,
       moveInterval: GameConfig.moveInterval,
       gridRows: _gridRows,
       entity: WormEntity.playerDefault,
       position: Vector2(0, playableStartRow * _segmentSize),
     );
-    world.add(_snake);
+    world.add(worm);
+    _playerAgent = WormAgent(worm: worm, entity: WormEntity.playerDefault);
 
-    _prey = Prey(
-      segmentSize: _segmentSize,
-      type: PreyType.leaf,
-      position: Vector2.zero(),
-    );
     _spawnPrey();
 
-    if (_applePrey != null) {
-      _applePrey!.removeFromParent();
-      _applePrey = null;
-      _applePreyGrid = null;
-    }
     _appleSpawnAccumulator = 0;
     _gameTime = 0;
     _wasInDevilMode = false;
@@ -364,57 +321,56 @@ class WormJourneyGame extends FlameGame
     _cameraY = null;
   }
 
-  /// Trừ 1 đốt đuôi và để lại chướng ngại X tại vị trí đuôi.
+  /// Trừ 1 đốt đuôi và để lại chướng ngại tại vị trí đuôi (type X, sau có thể config).
   void _loseSegment() {
-    final tailGrid = _snake.tailGridPosition;
-    _snake.removeTail();
-    final comp = XObstacle(
-      segmentSize: _segmentSize,
-      position: _gridToWorld(tailGrid),
-    );
-    _obstacles.add(Vector2(tailGrid.x, tailGrid.y));
-    _obstacleComponents.add(comp);
+    _worm.showCryFace();
+    final tailGrid = _worm.tailGridPosition;
+    _worm.removeTail();
+    final comp = _obstacleManager.createComponent(ObstacleType.xMark, tailGrid);
+    _obstacleManager.add(tailGrid, ObstacleType.xMark, comp);
     world.add(comp);
-    if (_snake.segmentCount <= 2) _setGameOver();
+    if (_worm.segmentCount <= 2) _setGameOver();
   }
 
-  /// Phá dấu X tại ô [grid] (khi đang 😈).
+  /// Phá chướng ngại tại ô [grid] (vd. khi đang 😈 có buff phá được).
   void _destroyObstacleAt(Vector2 grid) {
-    for (var i = 0; i < _obstacles.length; i++) {
-      if (_obstacles[i].x == grid.x && _obstacles[i].y == grid.y) {
-        _obstacles.removeAt(i);
-        _obstacleComponents[i].removeFromParent();
-        _obstacleComponents.removeAt(i);
-        return;
-      }
-    }
+    final entry = _obstacleManager.removeAt(grid);
+    if (entry != null) entry.component.removeFromParent();
   }
 
   /// Buff coconut đang bật (sau khi đã removeExpiredBuffs). Dùng cho evil mode + phá vật cản.
-  SnakeBuffEntry? _coconutBuff() {
-    final list = _snake.buffEffects.where((b) => b.itemId == 'coconut').toList();
+  WormBuffEntry? _coconutBuff() {
+    final list = _worm.buffEffects.where((b) => b.itemId == 'coconut').toList();
     return list.isEmpty ? null : list.first;
   }
+
+  /// Có buff [itemId] đang bật không (dùng chung cho obstacle behavior).
+  bool _hasBuff(String itemId) =>
+      _worm.buffEffects.any((b) => b.itemId == itemId);
 
   /// Xử lý chung khi đầu chạm vùng nguy hiểm: tường, chướng ngại, đuôi hoặc thân.
   /// Thân và đuôi/tường/X: trừ 1 đốt + để lại dấu X. Chỉ game over khi còn ≤ 2 đốt.
   /// Gọi applyNextDirectionAndSyncVisuals trước để đầu quay đúng hướng đâm.
   bool _onHitHazard(HazardType type, Vector2 nextHead) {
-    _snake.applyNextDirectionAndSyncVisuals();
+    _worm.applyNextDirectionAndSyncVisuals();
     switch (type) {
       case HazardType.wall:
       case HazardType.tail:
       case HazardType.body:
         _loseSegment();
         return true;
-      case HazardType.obstacle:
-        if (_coconutBuff() != null) {
+      case HazardType.obstacle: {
+        final entry = _obstacleManager.getAt(nextHead);
+        if (entry == null) return true;
+        final behavior = ObstacleManager.behaviorFor(entry.type);
+        if (behavior.buffIdToDestroy != null && _hasBuff(behavior.buffIdToDestroy!)) {
           _destroyObstacleAt(nextHead);
-          _snake.step();
-        } else {
+          _worm.step();
+        } else if (behavior.loseSegmentIfNotDestroyed) {
           _loseSegment();
         }
         return true;
+      }
     }
   }
 
@@ -459,7 +415,7 @@ class WormJourneyGame extends FlameGame
       missions: missions,
       bossHp: _bossHp,
       bossHpMax: _bossHpMax,
-      itemBuffs: _snake.buffEffects
+      itemBuffs: _worm.buffEffects
           .map((e) => GameHudItemBuff(
                 itemId: e.itemId,
                 remainingSeconds: (e.endTime - _gameTime).clamp(0.0, double.infinity),
@@ -476,7 +432,7 @@ class WormJourneyGame extends FlameGame
     if (_gameOver) return;
     if (_paused) return;
 
-    _snake.setWaitingToStart(_startDelayRemaining > 0);
+    _worm.setWaitingToStart(_startDelayRemaining > 0);
     if (_startDelayRemaining > 0) {
       _startDelayRemaining -= dt;
       return;
@@ -484,11 +440,11 @@ class WormJourneyGame extends FlameGame
 
     _gameTime += dt;
 
-    _snake.removeExpiredBuffs(_gameTime);
+    _worm.removeExpiredBuffs(_gameTime);
 
     final coconut = _coconutBuff();
     if (coconut == null) {
-      _snake.setHasHelmet(false);
+      _worm.setHasHelmet(false);
       if (_wasInDevilMode) _appleSpawnAccumulator = 0;
       _devilBlinkAccumulator = 0;
     } else {
@@ -498,7 +454,7 @@ class WormJourneyGame extends FlameGame
         if (_devilBlinkAccumulator >= 0.15) {
           _devilBlinkAccumulator = 0;
           _devilBlinkShowEvil = !_devilBlinkShowEvil;
-          _snake.setHasHelmet(_devilBlinkShowEvil);
+          _worm.setHasHelmet(_devilBlinkShowEvil);
         }
       }
     }
@@ -512,15 +468,15 @@ class WormJourneyGame extends FlameGame
     }
     _wasInDevilMode = coconut != null;
 
-    final interval = _snake.moveInterval;
+    final interval = _worm.moveInterval;
     final progress = (_moveAccumulator / interval).clamp(0.0, 1.0);
-    _snake.setVisualProgress(progress);
+    _worm.setVisualProgress(progress);
 
     _moveAccumulator += dt;
     if (_moveAccumulator < interval) return;
     _moveAccumulator -= interval;
 
-    final nextHead = _snake.peekNextHead();
+    final nextHead = _worm.peekNextHead();
 
     final outOfBounds = nextHead.x < 0 ||
         nextHead.x >= GameConfig.gridColumns ||
@@ -532,14 +488,12 @@ class WormJourneyGame extends FlameGame
       return;
     }
 
-    final hitObstacle = _obstacles.any(
-        (o) => o.x == nextHead.x && o.y == nextHead.y);
-    if (hitObstacle) {
+    if (_obstacleManager.hasObstacleAt(nextHead)) {
       _onHitHazard(HazardType.obstacle, nextHead);
       return;
     }
 
-    final tailGrid = _snake.tailGridPosition;
+    final tailGrid = _worm.tailGridPosition;
     final hitTail =
         nextHead.x == tailGrid.x && nextHead.y == tailGrid.y;
     if (hitTail) {
@@ -547,7 +501,7 @@ class WormJourneyGame extends FlameGame
       return;
     }
 
-    final body = _snake.allGridPositions;
+    final body = _worm.allGridPositions;
     for (var i = 1; i < body.length - 1; i++) {
       if (body[i].x == nextHead.x && body[i].y == nextHead.y) {
         _onHitHazard(HazardType.body, nextHead);
@@ -555,30 +509,28 @@ class WormJourneyGame extends FlameGame
       }
     }
 
-    _snake.step();
+    _worm.step();
 
-    final newHead = _snake.headGridPosition;
-
-    if (newHead.x == _preyGrid.x && newHead.y == _preyGrid.y) {
-      _snake.grow();
-      _leavesCurrent = (_leavesCurrent + 1).clamp(0, _leavesTarget);
-      _spawnPrey();
-      return;
-    }
-
-    if (_applePreyGrid != null &&
-        newHead.x == _applePreyGrid!.x &&
-        newHead.y == _applePreyGrid!.y) {
-      _snake.grow();
-      const itemId = 'coconut';
-      final duration = BuffConfig.durationSecondsFor(itemId);
-      if (duration > 0) {
-        _snake.setHasHelmet(true);
-        _snake.addBuff(itemId, _gameTime + duration);
+    final newHead = _worm.headGridPosition;
+    final consumed = _preyManager.consumeAt(newHead);
+    if (consumed != null) {
+      consumed.component.removeFromParent();
+      _worm.grow();
+      switch (consumed.type) {
+        case PreyType.leaf:
+          _leavesCurrent = (_leavesCurrent + 1).clamp(0, _leavesTarget);
+          _spawnPrey();
+          break;
+        case PreyType.apple:
+          const itemId = 'coconut';
+          final duration = BuffConfig.durationSecondsFor(itemId);
+          if (duration > 0) {
+            _worm.setHasHelmet(true);
+            _worm.addBuff(itemId, _gameTime + duration);
+          }
+          break;
       }
-      _applePrey?.removeFromParent();
-      _applePrey = null;
-      _applePreyGrid = null;
+      return;
     }
   }
 
@@ -591,19 +543,19 @@ class WormJourneyGame extends FlameGame
     if (_gameOver) return KeyEventResult.ignored;
 
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      _snake.setNextDirection(SnakeDirection.up);
+      _worm.setNextDirection(SnakeDirection.up);
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      _snake.setNextDirection(SnakeDirection.down);
+      _worm.setNextDirection(SnakeDirection.down);
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-      _snake.setNextDirection(SnakeDirection.left);
+      _worm.setNextDirection(SnakeDirection.left);
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-      _snake.setNextDirection(SnakeDirection.right);
+      _worm.setNextDirection(SnakeDirection.right);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;

@@ -22,7 +22,7 @@
 ## Chướng ngại X
 
 - **XObstacle** (`components/x_obstacle.dart`): ô vuông trắng có dấu X.
-- Game lưu `_obstacles` (vị trí lưới) và `_obstacleComponents` để có thể **phá** từng ô khi 😈 đâm vào.
+- Game quản lý qua **ObstacleManager** (list chướng ngại, nhiều type); có thể **phá** từng ô khi 😈 đâm vào.
 
 ## Overlay
 

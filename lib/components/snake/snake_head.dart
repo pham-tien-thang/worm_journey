@@ -13,6 +13,10 @@ class SnakeHeadAssets {
       'component/worm/pink_worm/pink_worm_head_vertical.png';
   static const String horizontal =
       'component/worm/pink_worm/pink_worm_head_horizontal.png';
+  static const String back =
+      'component/worm/pink_worm/pink_worm_head_back.png';
+  static const String cry =
+      'component/worm/pink_worm/pink_worm_head_cry.png';
 }
 
 /// Đầu rắn: ảnh từ assets — đi dọc dùng vertical, đi ngang dùng horizontal.
@@ -24,8 +28,8 @@ class SnakeHead extends PositionComponent {
   static const double headImageScale = 1.32;
   /// Dịch vẽ để râu lòi ra (tỉ lệ size.y).
   static const double antennaOffsetHorizontal = 0.18; // đi ngang: dịch lên
-  static const double antennaOffsetUp = 0.28; // đi lên: dịch lên đáng kể
-  static const double antennaOffsetDown = 0.14; // đi xuống: dịch lên
+  static const double antennaOffsetUp = 0.1; // đi lên: dịch xuống vừa
+  static const double antennaOffsetDown = 0.18; // đi xuống: dịch lên
 
   SnakeHead({
     required this.direction,
@@ -40,8 +44,21 @@ class SnakeHead extends PositionComponent {
 
   SnakeDirection direction;
 
+  /// Mặt khóc (khi đâm chướng ngại, hiện 0.5s). Game gọi [setShowCryFace].
+  bool _showCryFace = false;
+  void setShowCryFace(bool value) => _showCryFace = value;
+
   Sprite? _spriteVertical;
   Sprite? _spriteHorizontal;
+  Sprite? _spriteBack;
+  Sprite? _spriteCry;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    // Mặt khóc luôn vẽ trên cùng. Đi lên (không khóc): đầu vẽ dưới thân; các hướng khác: đầu trên thân.
+    priority = _showCryFace ? 10 : (direction == SnakeDirection.up ? -1 : 10);
+  }
 
   @override
   Future<void> onLoad() async {
@@ -61,6 +78,14 @@ class SnakeHead extends PositionComponent {
       SnakeHeadAssets.horizontal,
       images: game.images,
     );
+    _spriteBack = await Sprite.load(
+      SnakeHeadAssets.back,
+      images: game.images,
+    );
+    _spriteCry = await Sprite.load(
+      SnakeHeadAssets.cry,
+      images: game.images,
+    );
   }
 
   @override
@@ -73,9 +98,9 @@ class SnakeHead extends PositionComponent {
     final cy = center.y;
 
     canvas.save();
-    // Lật quanh tâm: trái = lật ngang, lên = lật dọc (ảnh mặc định: phải = hướng phải, xuống = hướng xuống).
+    // Lật: trái = lật ngang; đi lên dùng ảnh back nên không lật dọc. Mặt khóc không lật dọc để luôn thấy rõ.
     final bool flipX = direction == SnakeDirection.left;
-    final bool flipY = direction == SnakeDirection.up;
+    final bool flipY = !_showCryFace && direction == SnakeDirection.up && sprite != _spriteBack;
     if (flipX || flipY) {
       canvas.translate(cx, cy);
       if (flipX) canvas.scale(-1.0, 1.0);
@@ -90,7 +115,7 @@ class SnakeHead extends PositionComponent {
         drawCenter = center + Vector2(0, -size.y * antennaOffsetHorizontal);
         break;
       case SnakeDirection.up:
-        drawCenter = center + Vector2(0, -size.y * antennaOffsetUp); // dịch lên
+        drawCenter = center + Vector2(0, size.y * antennaOffsetUp); // dịch xuống
         break;
       case SnakeDirection.down:
         drawCenter = center + Vector2(0, -size.y * antennaOffsetDown);
@@ -106,8 +131,10 @@ class SnakeHead extends PositionComponent {
   }
 
   Sprite? get _currentSprite {
-    final isVertical = direction == SnakeDirection.up ||
-        direction == SnakeDirection.down;
-    return isVertical ? _spriteVertical : _spriteHorizontal;
+    // Không dùng mặt khóc khi đi lên; các hướng khác thì hiện mặt khóc nếu đang bật.
+    if (_showCryFace && _spriteCry != null && direction != SnakeDirection.up) return _spriteCry;
+    if (direction == SnakeDirection.up) return _spriteBack;
+    if (direction == SnakeDirection.down) return _spriteVertical;
+    return _spriteHorizontal;
   }
 }

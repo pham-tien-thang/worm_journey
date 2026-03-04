@@ -6,11 +6,11 @@
 - **Vuốt (swipe):** vuốt theo hướng muốn đi (ưu tiên velocity, tránh chéo).
 - **Nút trên màn:** 4 nút ↑ ↓ ← → ở cuối màn (overlay).
 
-## Vùng chết và “chạm” (không đâm xuyên)
+## Vùng chết và chạm (không đâm xuyên)
 
 - Đầu rắn **chỉ chạm** vùng chết: game dùng **`peekNextHead()`** để biết ô **sắp tới**.
 - Nếu ô sắp tới là tường / dấu X / đuôi / thân → **không** gọi `step()`: áp dụng phạt (trừ đốt hoặc game over), đầu **không** đi vào ô đó.
-- Nhờ vậy khi đổi hướng nhanh hoặc đâm vào tường/X/đuôi sẽ không bị “chết liên tục” do đầu đã nằm trong ô chết.
+- Nhờ vậy khi đổi hướng nhanh hoặc đâm vào tường/X/đuôi sẽ không bị chết liên tục do đầu đã nằm trong ô chết.
 
 ## Độ dài khởi điểm
 

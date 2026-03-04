@@ -10,11 +10,11 @@ import 'snake_direction.dart';
 import 'snake_head.dart';
 import 'snake_tail.dart';
 
-/// Rắn: đầu + các đốt thân + đuôi (ô trắng X). Game gọi [step] mỗi tick.
-/// Tốc độ cố định gắn vào rắn khi khởi tạo ([moveInterval] giây / 1 bước).
+/// Sâu (worm): đầu + các đốt thân + đuôi. Game gọi [step] mỗi tick.
+/// Tốc độ cố định gắn khi khởi tạo ([moveInterval] giây / 1 bước).
 /// [entity]: thông tin chung (player/bot, team, skin) — null = legacy.
-class Snake extends PositionComponent {
-  Snake({
+class Worm extends PositionComponent {
+  Worm({
     Vector2? position,
     double segmentSize = 28.0,
     double moveInterval = 0.28,
@@ -25,14 +25,14 @@ class Snake extends PositionComponent {
         _gridRows = gridRows ?? GameConfig.gridRows,
         super(position: position ?? Vector2.zero());
 
-  /// Thông tin rắn: loại (joystick/bot), team, skin, name, id... Dùng để phân biệt player vs bot và scale sau (chiêu thức).
+  /// Thông tin sâu: loại (joystick/bot), team, skin, name, id... Dùng để phân biệt player vs bot và scale sau (chiêu thức).
   final WormEntity? entity;
 
   double _segmentSize;
   final int _gridRows;
   final double _moveInterval;
 
-  /// Thời gian (giây) giữa mỗi bước di chuyển — cố định từ lúc tạo rắn.
+  /// Thời gian (giây) giữa mỗi bước di chuyển — cố định từ lúc tạo.
   double get moveInterval => _moveInterval;
   final List<Vector2> _gridPositions = [];
   List<Vector2> _previousGridPositions = [];
@@ -52,20 +52,31 @@ class Snake extends PositionComponent {
   final List<SnakeBodySegment> _bodySegments = [];
   late SnakeTail _tail;
 
+  /// Mặt khóc khi đâm chướng ngại: thời gian còn lại (giây). Re-trigger reset về 0.5.
+  double? _cryEndTimeRemaining;
+
   /// Buff đang bật: item id + thời điểm hết hạn (game time).
-  final List<SnakeBuffEntry> _buffEffects = [];
+  final List<WormBuffEntry> _buffEffects = [];
 
   /// Danh sách buff đang hoạt động (read-only).
-  List<SnakeBuffEntry> get buffEffects => List.unmodifiable(_buffEffects);
+  List<WormBuffEntry> get buffEffects => List.unmodifiable(_buffEffects);
 
   /// Thêm buff (game gọi khi người chơi dùng item). [endTime] = thời điểm game khi buff hết.
+  /// Nếu đang có buff cùng loại (cùng [itemId]) thì xoá buff cũ rồi thêm mới.
   void addBuff(String itemId, double endTime) {
-    _buffEffects.add(SnakeBuffEntry(itemId: itemId, endTime: endTime));
+    _buffEffects.removeWhere((b) => b.itemId == itemId);
+    _buffEffects.add(WormBuffEntry(itemId: itemId, endTime: endTime));
   }
 
   /// Xoá buff đã hết hạn. Game gọi mỗi frame với [currentTime] = _gameTime.
   void removeExpiredBuffs(double currentTime) {
     _buffEffects.removeWhere((b) => b.endTime <= currentTime);
+  }
+
+  /// Hiện mặt khóc 0.5 giây. Gọi mỗi lần trừ đốt đuôi; nếu đang hiện thì reset timer.
+  void showCryFace() {
+    _cryEndTimeRemaining = 0.5;
+    _syncVisuals(); // Đồng bộ ngay để head nhận _showCryFace trong cùng frame (kể cả khi đang đi lên).
   }
 
   /// Hướng đang di chuyển (đã áp dụng next nếu có).
@@ -159,7 +170,7 @@ class Snake extends PositionComponent {
     _syncVisuals();
   }
 
-  /// Game gọi khi đang đếm ngược trước lúc rắn di chuyển (đứng yên). Rắn sẽ nhấp nháy toàn thân.
+  /// Game gọi khi đang đếm ngược trước lúc sâu di chuyển (đứng yên). Sâu sẽ nhấp nháy toàn thân.
   void setWaitingToStart(bool value) {
     _waitingToStart = value;
     if (!value) _blinkPhase = 0;
@@ -191,6 +202,7 @@ class Snake extends PositionComponent {
         : _gridPositions.first;
     _head.position = _lerpWorld(headPrev, _gridPositions.first);
     _head.direction = _direction;
+    _head.setShowCryFace(_cryEndTimeRemaining != null && _cryEndTimeRemaining! > 0);
     // Góc đầu do SnakeHead tự xử lý (ảnh vertical/horizontal + lật), không xoay component.
     _head.angle = 0;
 
@@ -242,6 +254,10 @@ class Snake extends PositionComponent {
   @override
   void update(double dt) {
     super.update(dt);
+    if (_cryEndTimeRemaining != null) {
+      _cryEndTimeRemaining = _cryEndTimeRemaining! - dt;
+      if (_cryEndTimeRemaining! <= 0) _cryEndTimeRemaining = null;
+    }
     if (_waitingToStart) {
       _blinkPhase += dt * 4;
       _blinkAlpha = (0.5 + 0.5 * math.sin(_blinkPhase)).clamp(0.0, 1.0);
@@ -306,8 +322,8 @@ class Snake extends PositionComponent {
 }
 
 /// Một buff đang bật trên sâu: id item + thời điểm hết hạn (game time).
-class SnakeBuffEntry {
-  const SnakeBuffEntry({required this.itemId, required this.endTime});
+class WormBuffEntry {
+  const WormBuffEntry({required this.itemId, required this.endTime});
 
   final String itemId;
   final double endTime;
