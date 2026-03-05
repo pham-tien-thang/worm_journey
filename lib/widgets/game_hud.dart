@@ -216,7 +216,7 @@ class _CenterSectionState extends State<_CenterSection>
     final min = seconds ~/ 60;
     final sec = seconds % 60;
     final timeStr = '$min:${sec.toString().padLeft(2, '0')}';
-    final isUrgent = !showReady && seconds <= 15;
+    final isUrgent = !showReady && seconds <= widget.data.timeUrgentThresholdSeconds;
 
     if (isUrgent && !_wasUrgent) {
       _wasUrgent = true;
@@ -250,12 +250,22 @@ class _CenterSectionState extends State<_CenterSection>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '⏱',
-            style: TextStyle(
-              fontSize: 18,
-              color: AppColors.timeDisplayText,
-            ),
+          AnimatedBuilder(
+            animation: Listenable.merge([_scaleController, _colorController]),
+            builder: (context, _) {
+              return Transform.scale(
+                scale: isUrgent ? _scaleAnimation.value : 1,
+                child: Text(
+                  '⏱',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: isUrgent
+                        ? _colorAnimation.value
+                        : AppColors.timeDisplayText,
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(width: 6),
           AnimatedBuilder(

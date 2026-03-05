@@ -15,6 +15,7 @@ Tất cả key đều tùy chọn. Thiếu hoặc `null` thì dùng giá trị m
 |-----|------|----------|--------|
 | `missions` | `array` | 1 nhiệm vụ "ăn 10 lá" | Danh sách nhiệm vụ (id, typeId, target). Icon/label từ model + l10n. |
 | `timeLimitSeconds` | `number` | `120` | Thời gian chơi (giây), đếm ngược. |
+| `timeUrgentThresholdSeconds` | `number` | `30` | Còn ≤ X giây thì HUD cảnh báo đỏ nháy. |
 | `rule` | `string` | `"none"` | Quy tắc: `none` (sau có thể: `noItems`, ...). |
 | `grid` | `object` | nâu nhạt | Màu ô lưới trong vùng chơi. |
 | `outside` | `object` | nâu + 🌱 | Màu và icon vùng ngoài grid. |

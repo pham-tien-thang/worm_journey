@@ -458,6 +458,7 @@ class WormJourneyGame extends FlameGame
         bossHpMax: 0,
         itemBuffs: const [],
         startDelayRemaining: _startDelayRemaining,
+        timeUrgentThresholdSeconds: 30.0,
       );
     }
     final missions = <GameHudMission>[];
@@ -491,6 +492,7 @@ class WormJourneyGame extends FlameGame
       bossHpMax: bossHpMax,
       itemBuffs: itemBuffs,
       startDelayRemaining: _startDelayRemaining,
+      timeUrgentThresholdSeconds: _levelConfig.timeUrgentThresholdSeconds,
     );
   }
 
@@ -642,9 +644,12 @@ class GameHudData {
     required this.bossHpMax,
     required this.itemBuffs,
     required this.startDelayRemaining,
+    this.timeUrgentThresholdSeconds = 30.0,
   });
 
   final double timeRemainingSeconds;
+  /// Còn <= X giây thì cảnh báo đỏ nháy. Từ level config.
+  final double timeUrgentThresholdSeconds;
   final int diamonds;
   /// Nhiệm vụ (lá cây, nhiệm vụ 2, ...). Chỉ chứa mission có target > 0.
   final List<GameHudMission> missions;

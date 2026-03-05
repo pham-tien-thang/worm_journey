@@ -3,6 +3,7 @@
     { "id": "leaves", "typeId": "prey_leaf", "target": 10 }
   ],
   "timeLimitSeconds": 120,
+  "timeUrgentThresholdSeconds": 30,
   "rule": "none",
   "grid": {
     "colorLight": "0xFFE8EAF6",

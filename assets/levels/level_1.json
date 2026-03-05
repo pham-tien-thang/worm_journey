@@ -2,7 +2,8 @@
   "missions": [
     { "id": "leaves", "typeId": "prey_leaf", "target": 10 }
   ],
-  "timeLimitSeconds": 120,
+  "timeLimitSeconds": 30,
+  "timeUrgentThresholdSeconds": 10,
   "rule": "none",
   "grid": {
     "colorLight": "0xFFE8DED5",

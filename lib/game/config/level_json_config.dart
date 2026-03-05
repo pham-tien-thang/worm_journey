@@ -153,6 +153,7 @@ class LevelJsonConfig {
   const LevelJsonConfig({
     this.missions = const [MissionConfig.defaultLeaves],
     this.timeLimitSeconds = 120.0,
+    this.timeUrgentThresholdSeconds = 30.0,
     this.rule = EnumRule.none,
     this.mapConfig = const MapConfig(),
     this.gridColors = const GridColorsConfig(),
@@ -162,6 +163,8 @@ class LevelJsonConfig {
 
   final List<MissionConfig> missions;
   final double timeLimitSeconds;
+  /// Còn <= X giây thì HUD cảnh báo đỏ nháy. Load từ JSON `timeUrgentThresholdSeconds`.
+  final double timeUrgentThresholdSeconds;
   final EnumRule rule;
   final MapConfig mapConfig;
   final GridColorsConfig gridColors;
@@ -174,9 +177,11 @@ class LevelJsonConfig {
 
   /// Load toàn bộ từ [jsonConfig] (map, rule, missions, stats, grid, outside, boss).
   static LevelJsonConfig loadAllConfig(Map<String, dynamic> jsonConfig) {
+    final stats = loadStatsConfig(jsonConfig);
     return LevelJsonConfig(
       missions: loadMissionsConfig(jsonConfig),
-      timeLimitSeconds: loadStatsConfig(jsonConfig).timeLimitSeconds,
+      timeLimitSeconds: stats.timeLimitSeconds,
+      timeUrgentThresholdSeconds: stats.timeUrgentThresholdSeconds,
       rule: loadRuleConfig(jsonConfig),
       mapConfig: loadMapConfig(jsonConfig),
       gridColors: loadGridConfig(jsonConfig),
@@ -231,20 +236,27 @@ class LevelJsonConfig {
         .toList();
   }
 
-  /// Chỉ load thông số màn. Key `timeLimitSeconds` (number). Null → 120.
+  /// Chỉ load thông số màn. Key `timeLimitSeconds`, `timeUrgentThresholdSeconds` (number).
   static StatsConfig loadStatsConfig(Map<String, dynamic> jsonConfig) {
     final time = jsonConfig['timeLimitSeconds'] as num?;
+    final urgent = jsonConfig['timeUrgentThresholdSeconds'] as num?;
     return StatsConfig(
       timeLimitSeconds: time?.toDouble() ?? 120.0,
+      timeUrgentThresholdSeconds: urgent?.toDouble() ?? 30.0,
     );
   }
 }
 
 /// Thông số màn (thời gian, ...). Dùng từ [LevelJsonConfig.loadStatsConfig].
 class StatsConfig {
-  const StatsConfig({this.timeLimitSeconds = 120.0});
+  const StatsConfig({
+    this.timeLimitSeconds = 120.0,
+    this.timeUrgentThresholdSeconds = 30.0,
+  });
 
   final double timeLimitSeconds;
+  /// Còn <= X giây thì HUD chuyển cảnh báo (đỏ, nháy).
+  final double timeUrgentThresholdSeconds;
 }
 
 /// Load config màn từ assets.
