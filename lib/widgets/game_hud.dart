@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../common/debug_apply.dart';
+import '../core/app_colors.dart';
 import '../game/entities/entity_models.dart';
 import '../game/game.dart';
 import '../gen_l10n/app_localizations.dart';
@@ -57,23 +58,29 @@ class _GameHudState extends State<GameHud> {
     _data = widget.game.hudData;
     final theme = Theme.of(context);
     final textStyle = theme.textTheme.bodySmall?.copyWith(
-      color: Colors.white,
-      fontWeight: FontWeight.w600,
+      color: AppColors.hudTextBrown,
+      fontWeight: FontWeight.bold,
       fontSize: 12,
     );
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black54,
-            Colors.black26,
-            Colors.transparent,
-          ],
+        color: AppColors.hudBackground,
+        border: const Border(
+          top: BorderSide(color: AppColors.hudBorder, width: 4),
+          bottom: BorderSide(color: AppColors.hudBorder, width: 1),
         ),
+        // gradient: LinearGradient(
+        //   begin: Alignment.topCenter,
+        //   end: Alignment.bottomCenter,
+        //   colors: [
+        //     Colors.black54,
+        //     Colors.black26,
+        //     Colors.transparent,
+        //   ],
+        //
+        // ),
       ),
       child: SafeArea(
         bottom: false,
@@ -101,7 +108,7 @@ class _LeftSection extends StatelessWidget {
 
   static String _itemIcon(String itemId) {
     for (final e in commonItemList) {
-      if (e.id == itemId) return e.icon;
+      if (e.effectTypeId == itemId) return e.icon;
     }
     return '❓';
   }
@@ -154,34 +161,126 @@ class _LeftSection extends StatelessWidget {
   }
 }
 
-class _CenterSection extends StatelessWidget {
+class _CenterSection extends StatefulWidget {
   const _CenterSection({required this.data, required this.textStyle});
 
   final GameHudData data;
   final TextStyle? textStyle;
 
   @override
+  State<_CenterSection> createState() => _CenterSectionState();
+}
+
+class _CenterSectionState extends State<_CenterSection>
+    with TickerProviderStateMixin {
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnimation;
+  late final AnimationController _colorController;
+  late final Animation<Color?> _colorAnimation;
+  bool _wasUrgent = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.92, end: 1.08).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
+    _colorController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _colorAnimation = ColorTween(
+      begin: AppColors.timeDisplayText,
+      end: AppColors.timeUrgent,
+    ).animate(CurvedAnimation(
+      parent: _colorController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    _colorController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final showReady = data.startDelayRemaining > 0;
-    final seconds = data.timeRemainingSeconds.ceil();
+    final showReady = widget.data.startDelayRemaining > 0;
+    final seconds = widget.data.timeRemainingSeconds.ceil();
     final min = seconds ~/ 60;
     final sec = seconds % 60;
     final timeStr = '$min:${sec.toString().padLeft(2, '0')}';
+    final isUrgent = !showReady && seconds <= 15;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    if (isUrgent && !_wasUrgent) {
+      _wasUrgent = true;
+      _scaleController.repeat(reverse: true);
+      _colorController.repeat(reverse: true);
+    } else if (!isUrgent && _wasUrgent) {
+      _wasUrgent = false;
+      _scaleController.stop();
+      _scaleController.reset();
+      _colorController.stop();
+      _colorController.reset();
+    }
+
+    final content = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black38,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        showReady ? 'Sẵn sàng' : timeStr,
-        style: (textStyle ?? const TextStyle()).copyWith(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
+        color: AppColors.timeDisplayBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isUrgent ? AppColors.timeUrgent : AppColors.hudBorder,
+          width: isUrgent ? 2 : 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '⏱',
+            style: TextStyle(
+              fontSize: 18,
+              color: AppColors.timeDisplayText,
+            ),
+          ),
+          const SizedBox(width: 6),
+          AnimatedBuilder(
+            animation: Listenable.merge([_scaleController, _colorController]),
+            builder: (context, child) {
+              return Transform.scale(
+                scale: isUrgent ? _scaleAnimation.value : 1,
+                child: Text(
+                  showReady ? 'Sẵn sàng' : timeStr,
+                  style: (widget.textStyle ?? const TextStyle()).copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: isUrgent
+                        ? _colorAnimation.value
+                        : AppColors.timeDisplayText,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
+
+    return content;
   }
 }
 
@@ -200,7 +299,7 @@ class _RightSection extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('💎', style: TextStyle(fontSize: textStyle?.fontSize ?? 14)),
+            Text('🪙', style: TextStyle(fontSize: textStyle?.fontSize ?? 14)),
             const SizedBox(width: 4),
             Text('${data.diamonds}', style: textStyle),
             if (kDebugMode) ...[

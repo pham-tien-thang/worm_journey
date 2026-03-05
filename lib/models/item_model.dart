@@ -1,77 +1,122 @@
-import '../game/entities/entity_model.dart';
+import '../gen_l10n/app_localizations.dart';
 
-/// Loại tác dụng khi dùng item (mở rộng sau).
-enum ItemEffect {
-  none,
-  evilMode,
+/// Loại item. [effectTypeId] dùng cho l10n (tên, mô tả), SharedPrefs, addItemEffect, BuffConfig.
+enum ItemType {
+  coconut('prey_coconut'),
+  snail('snail'),
+  magnet('magnet'),
+  bomb('bomb'),
+  seed('seed'),
+  shield('shield'),
+  antidote('antidote'),
+  speed('speed'),
+  clock('clock'),
+  freeze('freeze');
+
+  const ItemType(this.effectTypeId);
+  final String effectTypeId;
+}
+
+/// Extension: tên và mô tả từ l10n. Switch [ItemType] và trả về getter tương ứng (itemCoconutName, ...).
+/// Không dùng l10n.itemName(id) / l10n.itemDescription(id) — chỉ switch type và gọi getter trực tiếp.
+extension ItemTypeExt on ItemType {
+  String name(AppLocalizations l10n) {
+    switch (this) {
+      case ItemType.coconut: return l10n.itemCoconutName;
+      case ItemType.snail: return l10n.itemSnailName;
+      case ItemType.magnet: return l10n.itemMagnetName;
+      case ItemType.bomb: return l10n.itemBombName;
+      case ItemType.seed: return l10n.itemSeedName;
+      case ItemType.shield: return l10n.itemShieldName;
+      case ItemType.antidote: return l10n.itemAntidoteName;
+      case ItemType.speed: return l10n.itemSpeedName;
+      case ItemType.clock: return l10n.itemClockName;
+      case ItemType.freeze: return l10n.itemFreezeName;
+    }
+  }
+  String description(AppLocalizations l10n) {
+    switch (this) {
+      case ItemType.coconut: return l10n.itemCoconutDescription;
+      case ItemType.snail: return l10n.itemSnailDescription;
+      case ItemType.magnet: return l10n.itemMagnetDescription;
+      case ItemType.bomb: return l10n.itemBombDescription;
+      case ItemType.seed: return l10n.itemSeedDescription;
+      case ItemType.shield: return l10n.itemShieldDescription;
+      case ItemType.antidote: return l10n.itemAntidoteDescription;
+      case ItemType.speed: return l10n.itemSpeedDescription;
+      case ItemType.clock: return l10n.itemClockDescription;
+      case ItemType.freeze: return l10n.itemFreezeDescription;
+    }
+  }
 }
 
 /// Model item dùng chung cho shop / inventory / các màn sau.
+/// Tên và mô tả: dùng extension [ItemTypeExt] — [type.name(l10n)], [type.description(l10n)].
+/// Hiệu ứng khi dùng: theo [type] (vd. [GamePlayScaffold._onUseItem] switch [type]).
 class ItemModel {
   const ItemModel({
-    required this.id,
-    required this.name,
+    required this.type,
     required this.icon,
-    required this.description,
     required this.price,
-    this.effect = ItemEffect.none,
   });
 
-  final String id;
-  final String name;
+  final ItemType type;
   final String icon;
-  final String description;
-  /// Giá (đơn vị 💎).
+  /// Giá (đơn vị 🪙).
   final int price;
-  final ItemEffect effect;
+
+  String get effectTypeId => type.effectTypeId;
 
   @override
-  String toString() => 'ItemModel($id, $name, $icon, $price💎)';
+  String toString() => 'ItemModel(${type.effectTypeId}, $icon, $price🪙)';
 }
 
 /// Danh sách item mặc định — gọi từ các màn (shop, inventory, ...).
+/// Hiển thị: [item.type.name(l10n)], [item.type.description(l10n)]. Hiệu ứng: theo [item.type].
 final List<ItemModel> commonItemList = [
-  ItemModel(
-    id: ProjectType.preyCoconut.typeId,
-    name: 'Quả dừa',
+  const ItemModel(
+    type: ItemType.coconut,
     icon: '🥥',
-    description: 'Ăn vào sâu vào chế độ cứng đầu, phá được chướng ngại vật.',
-    price: 5,
-    effect: ItemEffect.evilMode,
+    price: 500,
   ),
   const ItemModel(
-    id: 'snail',
-    name:  'Sâu vào chế độ đi chậm, dễ dàng điều khiển.',
+    type: ItemType.snail,
     icon: '🐌',
-    description: 'Ốc sên.',
-    price: 1,
+    price: 100,
   ),
   const ItemModel(
-    id: 'magnet',
-    name: 'Hút tất cả các lá cây trong khoảng cách 2 ô.',
+    type: ItemType.magnet,
     icon: '🧲',
-    description: 'Nam châm.',
-    price: 10,
+    price: 1000,
   ),
   const ItemModel(
-    id: 'shield',
-    name: 'Khiên',
-    icon: '🛡',
-    description: '1 Khiên sẽ bảo vệ 1 lần khi đâm vào chướng ngại vật hoặc nhận sát thương.',
-    price: 1,
-  ),
-  const ItemModel(
-    id: 'bomb',
-    name: 'Bom',
+    type: ItemType.bomb,
     icon: '💣',
-    description: 'Phá huỷ chướng ngại vậy và gây sát thương lên kẻ địch trong 3 ô.',
-    price: 10,
+    price: 1000,
   ),
   const ItemModel(
-    id: 'seed',
-    name: 'Hạt giống',
+    type: ItemType.seed,
     icon: '🌱',
-    description: 'Tạo thêm 3 lá cây .',
-    price: 2,
+    price: 200,
+  ),
+  const ItemModel(
+    type: ItemType.antidote,
+    icon: '🧪',
+    price: 200,
+  ),
+  const ItemModel(
+    type: ItemType.speed,
+    icon: '💨',
+    price: 200,
+  ),
+  const ItemModel(
+    type: ItemType.clock,
+    icon: '⏱',
+    price: 200,
+  ),
+  const ItemModel(
+    type: ItemType.freeze,
+    icon: '❄️',
+    price: 100,
   ),
 ];

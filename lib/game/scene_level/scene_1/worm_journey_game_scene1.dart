@@ -15,6 +15,7 @@ import '../../../components/worm/worm.dart';
 import '../../../components/worm/worm_direction.dart';
 import '../../../common/debug_apply.dart';
 import '../../../config/config.dart';
+import '../../../models/item_model.dart';
 import '../../../entities/entities.dart';
 import '../../../core/buff/buff_config.dart';
 import '../../config/level_json_config.dart';
@@ -97,11 +98,11 @@ class WormJourneyGame extends FlameGame
   }
 
   /// Dùng item dừa: thêm buff (ProjectType.preyCoconut) +1 độ cứng. Hết thời gian buff thì độ cứng về base.
-  void triggerDevilModeByItem() {
+  void useEffect(ItemType type) {
     if (_gameOver || !_loaded) return;
-    final duration = BuffConfig.durationSecondsFor(ProjectType.preyCoconut.typeId);
+    final duration = BuffConfig.durationSecondsFor(type.effectTypeId);
     if (duration <= 0) return;
-    mainWorm.addItemEffect(ProjectType.preyCoconut.typeId, _gameTime + duration);
+    mainWorm.addItemEffect(type.effectTypeId, _gameTime + duration);
   }
 
   /// Tăng tiến độ nhiệm vụ có [id] (mặc định 'mission2').
@@ -134,11 +135,11 @@ class WormJourneyGame extends FlameGame
   }
 
   /// Vùng chơi: A13–X49 (cột A–X, hàng 13–49). Chỉ vùng này là grid; ngoài ra trắng + 🟫.
-  /// Camera chỉ hở thêm ~5 ô trên/dưới, không hở nhiều bên ngoài.
-  static const int _extraRowsAboveBelow = 5;
-  static const int playableStartRow = _extraRowsAboveBelow; // 5
+  /// Camera chỉ hở thêm ~6 ô trên/dưới (outside), không hở nhiều bên ngoài.
+  static const int _extraRowsAboveBelow = 6;
+  static const int playableStartRow = _extraRowsAboveBelow; // 6
   static const int playableRowCount = 37;  // 13..49
-  static const int totalWorldRows = _extraRowsAboveBelow + playableRowCount + _extraRowsAboveBelow; // 47
+  static const int totalWorldRows = _extraRowsAboveBelow + playableRowCount + _extraRowsAboveBelow; // 49
 
   @override
   void onGameResize(Vector2 size) {
@@ -257,16 +258,32 @@ class WormJourneyGame extends FlameGame
   Set<String> _occupiedGridKeys() =>
       _mapEntityManager.occupiedGridKeys(mainWorm.allGridPositions);
 
+  bool _isGridInCameraView(Vector2 grid) {
+    if (_cameraY == null || !_loaded) return true;
+    final halfViewY = camera.viewport.size.y / 2;
+    final cellCenterY = (grid.y + playableStartRow + 0.5) * _segmentSize;
+    return cellCenterY >= _cameraY! - halfViewY &&
+        cellCenterY <= _cameraY! + halfViewY;
+  }
+
   void _spawnPrey() {
     final occupied = _occupiedGridKeys();
-    final entry = _mapEntityManager.spawn(ProjectType.preyLeaf.typeId, occupied);
+    final entry = _mapEntityManager.spawn(
+      ProjectType.preyLeaf.typeId,
+      occupied,
+      isCellVisible: _isGridInCameraView,
+    );
     if (entry != null) world.add(entry.component);
   }
 
   void _spawnApple() {
     if (_mapEntityManager.entries.any((e) => e.typeId == ProjectType.preyCoconut.typeId)) return;
     final occupied = _occupiedGridKeys();
-    final entry = _mapEntityManager.spawn(ProjectType.preyCoconut.typeId, occupied);
+    final entry = _mapEntityManager.spawn(
+      ProjectType.preyCoconut.typeId,
+      occupied,
+      isCellVisible: _isGridInCameraView,
+    );
     if (entry != null) world.add(entry.component);
   }
 

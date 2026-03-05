@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
 
 /// Mồi: vẽ [icon] (emoji). Hitbox passive — logic ăn xử lý trong game.
@@ -10,6 +11,7 @@ class Prey extends PositionComponent {
     required this.segmentSize,
     required this.icon,
     Vector2? position,
+    this.withSpawnEffect = false,
   }) : super(
           position: position ?? Vector2.zero(),
           size: Vector2.all(segmentSize),
@@ -18,10 +20,18 @@ class Prey extends PositionComponent {
 
   final double segmentSize;
   final String icon;
+  final bool withSpawnEffect;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    if (withSpawnEffect) {
+      scale = Vector2.zero();
+      add(ScaleEffect.to(
+        Vector2.all(1),
+        EffectController(duration: 0.15),
+      ));
+    }
     add(RectangleHitbox(
       collisionType: CollisionType.passive,
       isSolid: false,

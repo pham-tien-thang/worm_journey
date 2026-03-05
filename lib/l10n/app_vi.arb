@@ -11,8 +11,9 @@
   "gameOverEnd": "Kết thúc",
   "view": "Xem",
   "quantityShort": "x{quantity}",
-  "buyDiamonds": "Mua {price}💎",
+  "buyCoins": "Mua {price} 🪙",
   "receive": "Nhận",
+  "getCoins": "Nhận {amount} 🪙",
   "buttonJourney": "Hành trình",
   "buttonChallenge": "Thử thách",
   "buttonShop": "Cửa hàng",
@@ -28,5 +29,16 @@
   "itemBombName": "Bom",
   "itemBombDescription": "Phá huỷ chướng ngại vật và gây sát thương lên kẻ địch trong 3 ô.",
   "itemSeedName": "Hạt giống",
-  "itemSeedDescription": "Tạo thêm 3 lá cây."
+  "itemSeedDescription": "Tạo thêm 3 lá cây.",
+  "itemAntidoteName": "Thuốc giải",
+  "itemAntidoteDescription": "Loại bỏ toàn bộ trạng thái hiệu ứng đang có trên sâu.",
+  "itemSpeedName": "Tăng tốc",
+  "itemSpeedDescription": "Sâu di chuyển nhanh hơn trong thời gian ngắn.",
+  "itemClockName": "Đồng hồ",
+  "itemClockDescription": "Cộng thêm 10 giây cho thời gian ván chơi.",
+  "itemFreezeName": "Đóng băng",
+  "itemFreezeDescription": "Dừng game trong 5 giây.",
+  "exitGameWarningMessage": "Trò chơi sẽ kết thúc ?",
+  "exitGameConfirm": "Kết thúc",
+  "exitGameCancel": "Huỷ"
 }

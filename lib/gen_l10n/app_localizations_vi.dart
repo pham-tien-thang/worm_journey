@@ -26,10 +26,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String quantityShort(int quantity) => 'x$quantity';
 
   @override
-  String buyDiamonds(int price) => 'Mua $price💎';
+  String buyCoins(int price) => 'Mua $price 🪙';
 
   @override
   String get receive => 'Nhận';
+
+  @override
+  String getCoins(int amount) => 'Nhận $amount 🪙';
 
   @override
   String get buttonJourney => 'Hành trình';
@@ -85,6 +88,33 @@ class AppLocalizationsVi extends AppLocalizations {
   String get itemSeedDescription => 'Tạo thêm 3 lá cây.';
 
   @override
+  String get itemAntidoteName => 'Thuốc giải';
+
+  @override
+  String get itemAntidoteDescription =>
+      'Loại bỏ toàn bộ trạng thái hiệu ứng đang có trên sâu.';
+
+  @override
+  String get itemSpeedName => 'Tăng tốc';
+
+  @override
+  String get itemSpeedDescription =>
+      'Sâu di chuyển nhanh hơn trong thời gian ngắn.';
+
+  @override
+  String get itemClockName => 'Đồng hồ';
+
+  @override
+  String get itemClockDescription =>
+      'Cộng thêm 10 giây cho thời gian ván chơi.';
+
+  @override
+  String get itemFreezeName => 'Đóng băng';
+
+  @override
+  String get itemFreezeDescription => 'Dừng game trong 5 giây.';
+
+  @override
   String get entityPreyLeafName => 'Chiếc lá';
 
   @override
@@ -92,4 +122,13 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get entityXMarkName => 'Chướng ngại vật';
+
+  @override
+  String get exitGameWarningMessage => 'Trò chơi sẽ kết thúc ?';
+
+  @override
+  String get exitGameConfirm => 'Kết thúc';
+
+  @override
+  String get exitGameCancel => 'Huỷ';
 }

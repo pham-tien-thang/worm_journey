@@ -25,8 +25,8 @@
       }
     }
   },
-  "buyDiamonds": "Buy {price}💎",
-  "@buyDiamonds": {
+  "buyCoins": "Buy {price} 🪙",
+  "@buyCoins": {
     "placeholders": {
       "price": {
         "type": "int"
@@ -34,6 +34,12 @@
     }
   },
   "receive": "Receive",
+  "getCoins": "Get {amount} 🪙",
+  "@getCoins": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
   "buttonJourney": "Journey",
   "buttonChallenge": "Challenge",
   "buttonShop": "Shop",
@@ -49,5 +55,16 @@
   "itemBombName": "Bomb",
   "itemBombDescription": "Destroys obstacles and damages enemies in 3 tiles.",
   "itemSeedName": "Seed",
-  "itemSeedDescription": "Spawns 3 more leaves."
+  "itemSeedDescription": "Spawns 3 more leaves.",
+  "itemAntidoteName": "Antidote",
+  "itemAntidoteDescription": "Removes all active effects from the snake.",
+  "itemSpeedName": "Speed Boost",
+  "itemSpeedDescription": "Snake moves faster for a short duration.",
+  "itemClockName": "Clock",
+  "itemClockDescription": "Adds 10 seconds to the game timer.",
+  "itemFreezeName": "Freeze",
+  "itemFreezeDescription": "Freezes the game for 5 seconds.",
+  "exitGameWarningMessage": "The game will end?",
+  "exitGameConfirm": "End",
+  "exitGameCancel": "Cancel"
 }

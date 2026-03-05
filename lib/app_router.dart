@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import 'core/game_pause_observer.dart';
 import 'game/scene_level/game_screen.dart';
 import 'screens/challenge/challenge_screen.dart';
 import 'screens/level_selection/level_selection_screen.dart';
@@ -21,6 +22,7 @@ abstract final class AppRoutes {
 
 GoRouter createAppRouter() {
   return GoRouter(
+    observers: [GamePauseObserver()],
     routes: [
       GoRoute(
         path: AppRoutes.home,

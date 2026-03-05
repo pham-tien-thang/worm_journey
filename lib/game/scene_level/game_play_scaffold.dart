@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../common/debug_apply.dart';
+import '../../core/game_pause_observer.dart';
 import '../../core/app_colors.dart';
 import '../../core/services/shared_prefs_service.dart';
 import '../../gen_l10n/app_localizations.dart';
@@ -41,7 +42,7 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
   }
 
   Future<void> _loadQuantities() async {
-    final ids = commonItemList.map((e) => e.id).toList();
+    final ids = commonItemList.map((e) => e.effectTypeId).toList();
     final map = await SharedPrefsService.getItemQuantities(ids);
     for (final id in ids) {
       final hasKey = await SharedPrefsService.hasItemQuantityKey(id);
@@ -54,25 +55,19 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
   }
 
   void _onUseItem(ItemModel item) {
-    final q = _itemQuantities[item.id] ?? 0;
+    final q = _itemQuantities[item.effectTypeId] ?? 0;
     if (q <= 0) return;
-    setState(() => _itemQuantities[item.id] = q - 1);
-    SharedPrefsService.setItemQuantity(item.id, q - 1);
-    switch (item.effect) {
-      case ItemEffect.evilMode:
-        widget.game.triggerDevilModeByItem();
-        break;
-      case ItemEffect.none:
-        break;
-    }
+    setState(() => _itemQuantities[item.effectTypeId] = q - 1);
+    SharedPrefsService.setItemQuantity(item.effectTypeId, q - 1);
+    widget.game.useEffect(item.type);
   }
 
   void _onBuyItem(ItemModel item) {
     if (shouldApplyDebug) {
-      final q = _itemQuantities[item.id] ?? 0;
+      final q = _itemQuantities[item.effectTypeId] ?? 0;
       final next = q + 10;
-      setState(() => _itemQuantities[item.id] = next);
-      SharedPrefsService.setItemQuantity(item.id, next);
+      setState(() => _itemQuantities[item.effectTypeId] = next);
+      SharedPrefsService.setItemQuantity(item.effectTypeId, next);
     }
   }
 
@@ -108,58 +103,74 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                     ],
                   ),
                 ),
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    // image: DecorationImage(
-                    //   image: const AssetImage('assets/images/bottom_joystick.png'),
-                    //   fit: BoxFit.cover,
-                    //   alignment: Alignment.topCenter,
-                    // ),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 0,
-                    horizontal: 12,
-                  ),
-                  child: SafeArea(
-                    top: false,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ValueListenableBuilder<bool>(
+                  valueListenable: GamePauseObserver.dialogOpen,
+                  builder: (context, dialogOpen, child) {
+                    return Stack(
                       children: [
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 24),
-                              child: Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: commonItemList
-                                    .map((item) => _ItemSlot(
-                                          item: item,
-                                          quantity:
-                                              _itemQuantities[item.id] ?? 0,
-                                          onUse: () => _onUseItem(item),
-                                          onBuy: () => _onBuyItem(item),
-                                          onOpenDialog: () => _openItemDialog(
-                                            dialogContext,
-                                            item,
-                                          ),
-                                        ))
-                                    .toList(),
-                              ),
+                        Container(
+                          width: double.infinity,
+                          constraints: const BoxConstraints(minHeight: 200),
+                          decoration: const BoxDecoration(
+                            image: DecorationImage(
+                              image: AssetImage('assets/images/bottom_control.jpg'),
+                              fit: BoxFit.fill,
+                              alignment: Alignment.topCenter,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 20,
+                            horizontal: 12,
+                          ),
+                          child: SafeArea(
+                            top: false,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 16, left: 16),
+                                      child: Wrap(
+                                        spacing: 6,
+                                        runSpacing: 6,
+                                        children: commonItemList
+                                            .map((item) => _ItemSlot(
+                                                  item: item,
+                                                  quantity:
+                                                      _itemQuantities[item.effectTypeId] ?? 0,
+                                                  onUse: () => _onUseItem(item),
+                                                  onBuy: () => _onBuyItem(item),
+                                                  onOpenDialog: () => _openItemDialog(
+                                                    dialogContext,
+                                                    item,
+                                                  ),
+                                                ))
+                                            .toList(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                GameJoystick(
+                                  game: game,
+                                  size: 160,
+                                  baseRadius: 64,
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        GameJoystick(
-                          game: game,
-                          size: 160,
-                          baseRadius: 64,
-                        ),
+                        if (dialogOpen)
+                          Positioned.fill(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {},
+                            ),
+                          ),
                       ],
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -170,17 +181,13 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
   }
 
   void _openItemDialog(BuildContext dialogContext, ItemModel item) {
-    widget.game.setPaused(true);
+    GamePauseObserver.dialogOpen.value = true;
     ItemInfoDialog.show(
       dialogContext,
       item: item,
       onBuy: () => _onBuyItem(item),
       onReceive: () => _onUseItem(item),
-    ).then((_) {
-      Future.delayed(const Duration(seconds: 1), () {
-        widget.game.setPaused(false);
-      });
-    });
+    );
   }
 }
 
@@ -207,62 +214,69 @@ class _ItemSlot extends StatelessWidget {
     }
   }
 
+  static const double _slotWidth = 42;
+  static const double _slotHeight = 50;
+  static const Color _itemBrown = Color(0xFFB8956A);
+  static const Color _viewBrown = Color(0xFFD8C4A8);
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return Stack(
+      clipBehavior: Clip.none,
       children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Material(
-              color: Colors.white,
-              elevation: 1,
-              borderRadius: BorderRadius.circular(5),
-              child: InkWell(
-                onTap: () => _onItemTap(context),
-                borderRadius: BorderRadius.circular(5),
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  alignment: Alignment.center,
-                  child: Text(
+        Material(
+          color: _itemBrown,
+          elevation: 1,
+          borderRadius: BorderRadius.circular(5),
+          child: InkWell(
+            onTap: () => _onItemTap(context),
+            borderRadius: BorderRadius.circular(5),
+            child: SizedBox(
+              width: _slotWidth,
+              height: _slotHeight,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
                     item.icon,
                     style: const TextStyle(fontSize: 18),
                   ),
-                ),
+                  const SizedBox(height: 2),
+                  Material(
+                    color: _viewBrown,
+                    borderRadius: BorderRadius.circular(3),
+                    child: InkWell(
+                      onTap: onOpenDialog,
+                      borderRadius: BorderRadius.circular(3),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        child: Text(
+                          AppLocalizations.of(context).view,
+                          style: const TextStyle(
+                            fontSize: 8,
+                            color: Color(0xFF5D4037),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                ],
               ),
             ),
-            Positioned(
-              top: -2,
-              right: -2,
-              child: Text(
-                AppLocalizations.of(context).quantityShort(quantity),
-                style: const TextStyle(
-                  fontSize: 9,
-                  color: Colors.black,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 2),
-        Material(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(4),
-          child: InkWell(
-            onTap: onOpenDialog,
-            borderRadius: BorderRadius.circular(4),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Text(
-                AppLocalizations.of(context).view,
-                style: TextStyle(
-                  fontSize: 9,
-                  color: Colors.grey.shade800,
-                ),
-              ),
+        Positioned(
+          top: -7,
+          right: -2,
+          child: Text(
+            AppLocalizations.of(context).quantityShort(quantity),
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),
@@ -275,8 +289,8 @@ class _ItemSlot extends StatelessWidget {
 const double _adBadgeSize = 36;
 const double _adBadgeOverlap = 10;
 
-/// Overlay Flutter khi game over: nút Chơi lại dùng [GreenButton], icon 🎬 đè góc phải, chữ Kết thúc về màn chọn level.
-class _GameOverOverlayWidget extends StatelessWidget {
+/// Overlay Flutter khi game over: nút Chơi lại dùng [GreenButton] có hiệu ứng scale, icon 🎬 đè góc phải, chữ Kết thúc về màn chọn level.
+class _GameOverOverlayWidget extends StatefulWidget {
   const _GameOverOverlayWidget({
     required this.game,
     this.onGameOverEnd,
@@ -288,8 +302,36 @@ class _GameOverOverlayWidget extends StatelessWidget {
   final VoidCallback? onWatchAd;
 
   @override
+  State<_GameOverOverlayWidget> createState() => _GameOverOverlayWidgetState();
+}
+
+class _GameOverOverlayWidgetState extends State<_GameOverOverlayWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
+    _scaleAnimation = Tween<double>(begin: 0.97, end: 1.03).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final game = widget.game;
     return Material(
       color: const Color(0xCC000000),
       child: SafeArea(
@@ -310,19 +352,28 @@ class _GameOverOverlayWidget extends StatelessWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  GreenButton(
-                    text: l10n.gameOverPlayAgain,
-                    onPressed: () {
-                      game.restart();
+                  AnimatedBuilder(
+                    animation: _scaleAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _scaleAnimation.value,
+                        child: child,
+                      );
                     },
-                    height: 64,
-                    width: 200,
+                    child: GreenButton(
+                      text: l10n.gameOverPlayAgain,
+                      onPressed: () {
+                        game.restart();
+                      },
+                      height: 64,
+                      width: 200,
+                    ),
                   ),
                   Positioned(
                     top: -_adBadgeSize / 2 + _adBadgeOverlap,
                     right: -_adBadgeSize / 2 + _adBadgeOverlap,
                     child: GestureDetector(
-                      onTap: onWatchAd,
+                      onTap: widget.onWatchAd,
                       child: Container(
                         width: _adBadgeSize,
                         height: _adBadgeSize,
@@ -344,8 +395,8 @@ class _GameOverOverlayWidget extends StatelessWidget {
               const SizedBox(height: 16),
               GestureDetector(
                 onTap: () {
-                  game.overlays.remove('GameOver');
-                  onGameOverEnd?.call();
+                  widget.game.overlays.remove('GameOver');
+                  widget.onGameOverEnd?.call();
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(12),

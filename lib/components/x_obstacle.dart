@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
 
 /// Vật cản: vẽ [icon] (emoji). Hitbox isSolid — va chạm so độ cứng trong game.
@@ -10,6 +11,7 @@ class XObstacle extends PositionComponent {
     required double segmentSize,
     required this.icon,
     Vector2? position,
+    this.withSpawnEffect = false,
   }) : super(
           position: position ?? Vector2.zero(),
           size: Vector2.all(segmentSize),
@@ -17,10 +19,18 @@ class XObstacle extends PositionComponent {
         );
 
   final String icon;
+  final bool withSpawnEffect;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    if (withSpawnEffect) {
+      scale = Vector2.zero();
+      add(ScaleEffect.to(
+        Vector2.all(1),
+        EffectController(duration: 0.15),
+      ));
+    }
     add(RectangleHitbox(
       collisionType: CollisionType.passive,
       isSolid: true,

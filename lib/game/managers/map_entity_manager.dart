@@ -50,14 +50,25 @@ class MapEntityManager {
     return comp;
   }
 
-  PositionComponent _createComponent(String typeId, Vector2 grid) {
+  PositionComponent _createComponent(String typeId, Vector2 grid,
+      {bool withSpawnEffect = false}) {
     final position = gridToWorld(grid);
     final icon = EntityModels.icon(typeId);
     final category = typeObjConfig.getCategory(typeId);
     if (category == 'grey') {
-      return Prey(segmentSize: segmentSize, icon: icon, position: position);
+      return Prey(
+        segmentSize: segmentSize,
+        icon: icon,
+        position: position,
+        withSpawnEffect: withSpawnEffect,
+      );
     }
-    return XObstacle(segmentSize: segmentSize, icon: icon, position: position);
+    return XObstacle(
+      segmentSize: segmentSize,
+      icon: icon,
+      position: position,
+      withSpawnEffect: withSpawnEffect,
+    );
   }
 
   MapEntityEntry? getAt(Vector2 grid) {
@@ -94,7 +105,9 @@ class MapEntityManager {
     return entry;
   }
 
-  MapEntityEntry? spawn(String typeId, Set<String> occupied) {
+  /// [isCellVisible] nếu có: chỉ spawn ở ô trong tầm camera. Null = bỏ qua check.
+  MapEntityEntry? spawn(String typeId, Set<String> occupied,
+      {bool Function(Vector2 grid)? isCellVisible}) {
     if (!typeObjConfig.isEatable(typeId)) return null;
     for (var i = 0; i < 100; i++) {
       final pos = Vector2(
@@ -103,8 +116,9 @@ class MapEntityManager {
       );
       final key = '${pos.x.toInt()},${pos.y.toInt()}';
       if (occupied.contains(key)) continue;
+      if (isCellVisible != null && !isCellVisible(pos)) continue;
       occupied.add(key);
-      final comp = _createComponent(typeId, pos);
+      final comp = _createComponent(typeId, pos, withSpawnEffect: true);
       final entry = MapEntityEntry(grid: pos, typeId: typeId, component: comp);
       _entries.add(entry);
       return entry;

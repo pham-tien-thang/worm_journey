@@ -17,3 +17,4 @@ alwaysApply: false
 - Thêm key mới vào `lib/l10n/app_en.arb` và `lib/l10n/app_vi.arb`, rồi thêm getter tương ứng trong `lib/gen_l10n/` (app_localizations.dart, app_localizations_en.dart, app_localizations_vi.dart).
 - Trong widget: `final l10n = AppLocalizations.of(context);` rồi dùng `l10n.keyName`.
 - Text trong nút, label, title, message, mô tả item… đều dùng l10n.
+- **Item type (ItemType):** Tên và mô tả item lấy qua extension `ItemTypeExt` — `type.name(l10n)`, `type.description(l10n)`. Extension switch `ItemType` và gọi getter l10n tương ứng (itemCoconutName, itemSnailName, …). **Không được** dùng `l10n.itemName(id)` hoặc `l10n.itemDescription(id)` — không truyền string id vào l10n để lookup.

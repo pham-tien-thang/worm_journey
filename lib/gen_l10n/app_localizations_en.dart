@@ -26,10 +26,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String quantityShort(int quantity) => 'x$quantity';
 
   @override
-  String buyDiamonds(int price) => 'Buy $price💎';
+  String buyCoins(int price) => 'Buy $price 🪙';
 
   @override
   String get receive => 'Receive';
+
+  @override
+  String getCoins(int amount) => 'Get $amount 🪙';
 
   @override
   String get buttonJourney => 'Journey';
@@ -85,6 +88,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get itemSeedDescription => 'Spawns 3 more leaves.';
 
   @override
+  String get itemAntidoteName => 'Antidote';
+
+  @override
+  String get itemAntidoteDescription =>
+      'Removes all active effects from the snake.';
+
+  @override
+  String get itemSpeedName => 'Speed Boost';
+
+  @override
+  String get itemSpeedDescription =>
+      'Snake moves faster for a short duration.';
+
+  @override
+  String get itemClockName => 'Clock';
+
+  @override
+  String get itemClockDescription => 'Adds 10 seconds to the game timer.';
+
+  @override
+  String get itemFreezeName => 'Freeze';
+
+  @override
+  String get itemFreezeDescription => 'Freezes the game for 5 seconds.';
+
+  @override
   String get entityPreyLeafName => 'Leaf';
 
   @override
@@ -92,4 +121,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get entityXMarkName => 'Obstacle';
+
+  @override
+  String get exitGameWarningMessage => 'The game will end?';
+
+  @override
+  String get exitGameConfirm => 'End';
+
+  @override
+  String get exitGameCancel => 'Cancel';
 }

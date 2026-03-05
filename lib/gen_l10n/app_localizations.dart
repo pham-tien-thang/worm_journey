@@ -35,8 +35,9 @@ abstract class AppLocalizations {
   String get gameOverEnd;
   String get view;
   String quantityShort(int quantity);
-  String buyDiamonds(int price);
+  String buyCoins(int price);
   String get receive;
+  String getCoins(int amount);
   String get buttonJourney;
   String get buttonChallenge;
   String get buttonShop;
@@ -53,9 +54,20 @@ abstract class AppLocalizations {
   String get itemBombDescription;
   String get itemSeedName;
   String get itemSeedDescription;
+  String get itemAntidoteName;
+  String get itemAntidoteDescription;
+  String get itemSpeedName;
+  String get itemSpeedDescription;
+  String get itemClockName;
+  String get itemClockDescription;
+  String get itemFreezeName;
+  String get itemFreezeDescription;
   String get entityPreyLeafName;
   String get entityPreyCoconutName;
   String get entityXMarkName;
+  String get exitGameWarningMessage;
+  String get exitGameConfirm;
+  String get exitGameCancel;
 
   /// Tên hiển thị entity theo typeId — lấy từ ARB (entityPreyLeafName, ...).
   String entityDisplayName(String typeId) {
@@ -68,32 +80,6 @@ abstract class AppLocalizations {
         return entityXMarkName;
       default:
         return typeId;
-    }
-  }
-
-  String itemName(String id) {
-    switch (id) {
-      case 'coconut':
-      case 'prey_apple': return itemCoconutName;
-      case 'snail': return itemSnailName;
-      case 'magnet': return itemMagnetName;
-      case 'shield': return itemShieldName;
-      case 'bomb': return itemBombName;
-      case 'seed': return itemSeedName;
-      default: return id;
-    }
-  }
-
-  String itemDescription(String id) {
-    switch (id) {
-      case 'coconut':
-      case 'prey_apple': return itemCoconutDescription;
-      case 'snail': return itemSnailDescription;
-      case 'magnet': return itemMagnetDescription;
-      case 'shield': return itemShieldDescription;
-      case 'bomb': return itemBombDescription;
-      case 'seed': return itemSeedDescription;
-      default: return id;
     }
   }
 }
