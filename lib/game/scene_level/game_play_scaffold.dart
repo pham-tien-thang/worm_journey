@@ -113,14 +113,14 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                           constraints: const BoxConstraints(minHeight: 200),
                           decoration: const BoxDecoration(
                             image: DecorationImage(
-                              image: AssetImage('assets/images/bottom_control.jpg'),
+                              image: AssetImage('assets/images/bottom_control.png'),
                               fit: BoxFit.fill,
                               alignment: Alignment.topCenter,
                             ),
                           ),
                           padding: const EdgeInsets.symmetric(
                             vertical: 20,
-                            horizontal: 12,
+                            horizontal: 6,
                           ),
                           child: SafeArea(
                             top: false,
@@ -236,33 +236,39 @@ class _ItemSlot extends StatelessWidget {
               height: _slotHeight,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    item.icon,
-                    style: const TextStyle(fontSize: 18),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      item.icon,
+                      style: const TextStyle(fontSize: 18),
+                    ),
                   ),
-                  const SizedBox(height: 2),
                   Material(
                     color: _viewBrown,
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(4)),
                     child: InkWell(
                       onTap: onOpenDialog,
-                      borderRadius: BorderRadius.circular(3),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        child: Text(
-                          AppLocalizations.of(context).view,
-                          style: const TextStyle(
-                            fontSize: 8,
-                            color: Color(0xFF5D4037),
-                            fontWeight: FontWeight.bold,
+                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(4)),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Text(
+                              AppLocalizations.of(context).view,
+                              style: const TextStyle(
+                                fontSize: 8,
+                                color: Color(0xFF5D4037),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 1),
                 ],
               ),
             ),
