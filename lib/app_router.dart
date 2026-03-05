@@ -1,6 +1,6 @@
 import 'package:go_router/go_router.dart';
 
-import 'game/screens/game_screen.dart';
+import 'game/scene_level/game_screen.dart';
 import 'screens/challenge/challenge_screen.dart';
 import 'screens/level_selection/level_selection_screen.dart';
 import 'screens/main_menu/main_menu_screen.dart';

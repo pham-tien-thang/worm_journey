@@ -3,13 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../common/debug_apply.dart';
+import '../../core/app_colors.dart';
 import '../../core/services/shared_prefs_service.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/item_model.dart';
 import '../../widgets/game_hud.dart';
 import '../../widgets/game_joystick.dart';
+import '../../widgets/green_button.dart';
 import '../../widgets/item_info_dialog.dart';
-import '../worm_journey_game.dart';
+import '../game.dart';
 
 /// Scaffold chung cho màn chơi: nhận [game] đã tạo (theo level), hiển thị GameWidget + items + joystick.
 /// Mỗi level có màn riêng tạo game rồi truyền vào đây, về sau dễ init map design từng level.
@@ -18,10 +20,12 @@ class GamePlayScaffold extends StatefulWidget {
     super.key,
     required this.game,
     this.onGameOverEnd,
+    this.onGameOverWatchAd,
   });
 
   final WormJourneyGame game;
   final VoidCallback? onGameOverEnd;
+  final VoidCallback? onGameOverWatchAd;
 
   @override
   State<GamePlayScaffold> createState() => _GamePlayScaffoldState();
@@ -75,7 +79,6 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
   @override
   Widget build(BuildContext context) {
     final game = widget.game;
-    game.setOnGameOverEnd(widget.onGameOverEnd);
     return Builder(
       builder: (dialogContext) {
         return Scaffold(
@@ -86,7 +89,16 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      GameWidget(game: game),
+                      GameWidget(
+                        game: game,
+                        overlayBuilderMap: {
+                          'GameOver': (ctx, g) => _GameOverOverlayWidget(
+                            game: g as WormJourneyGame,
+                            onGameOverEnd: widget.onGameOverEnd,
+                            onWatchAd: widget.onGameOverWatchAd,
+                          ),
+                        },
+                      ),
                       Positioned(
                         left: 0,
                         right: 0,
@@ -238,35 +250,119 @@ class _ItemSlot extends StatelessWidget {
         const SizedBox(height: 2),
         Material(
           color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(4),
           child: InkWell(
             onTap: onOpenDialog,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(4),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.visibility_outlined,
-                    size: 10,
-                    color: Colors.grey.shade700,
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    AppLocalizations.of(context).view,
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                ],
+              child: Text(
+                AppLocalizations.of(context).view,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: Colors.grey.shade800,
+                ),
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Kích thước badge quảng cáo đè góc phải nút Chơi lại.
+const double _adBadgeSize = 36;
+const double _adBadgeOverlap = 10;
+
+/// Overlay Flutter khi game over: nút Chơi lại dùng [GreenButton], icon 🎬 đè góc phải, chữ Kết thúc về màn chọn level.
+class _GameOverOverlayWidget extends StatelessWidget {
+  const _GameOverOverlayWidget({
+    required this.game,
+    this.onGameOverEnd,
+    this.onWatchAd,
+  });
+
+  final WormJourneyGame game;
+  final VoidCallback? onGameOverEnd;
+  final VoidCallback? onWatchAd;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Material(
+      color: const Color(0xCC000000),
+      child: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.gameOver,
+                style: const TextStyle(
+                  color: AppColors.gameOverOrange,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  shadows: AppColors.textOutlineWhite,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  GreenButton(
+                    text: l10n.gameOverPlayAgain,
+                    onPressed: () {
+                      game.restart();
+                    },
+                    height: 64,
+                    width: 200,
+                  ),
+                  Positioned(
+                    top: -_adBadgeSize / 2 + _adBadgeOverlap,
+                    right: -_adBadgeSize / 2 + _adBadgeOverlap,
+                    child: GestureDetector(
+                      onTap: onWatchAd,
+                      child: Container(
+                        width: _adBadgeSize,
+                        height: _adBadgeSize,
+                        decoration: BoxDecoration(
+                          color: AppColors.gameOverOrange,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          '🎬',
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () {
+                  game.overlays.remove('GameOver');
+                  onGameOverEnd?.call();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    l10n.gameOverEnd,
+                    style: const TextStyle(
+                      color: AppColors.gameOverOrange,
+                      fontSize: 18,
+                      shadows: AppColors.textOutlineWhite,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

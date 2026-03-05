@@ -29,7 +29,7 @@ class LevelSelectionScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 IconButton(
-                  onPressed: () => context.pop(),
+                  onPressed: () => context.go(AppRoutes.home),
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.black26,

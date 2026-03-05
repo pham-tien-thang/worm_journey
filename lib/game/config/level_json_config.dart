@@ -145,6 +145,9 @@ class MapConfig {
   }
 }
 
+/// Loại boss màn. "none" = không hiện boss; các giá trị khác do game/scene xử lý (vd. "snake_boss", "dragon").
+const String levelBossTypeNone = 'none';
+
 /// Config đầy đủ một màn (từ JSON). Mỗi màn có file JSON riêng.
 class LevelJsonConfig {
   const LevelJsonConfig({
@@ -154,6 +157,7 @@ class LevelJsonConfig {
     this.mapConfig = const MapConfig(),
     this.gridColors = const GridColorsConfig(),
     this.outsideConfig = const OutsideConfig(),
+    this.bossType = levelBossTypeNone,
   });
 
   final List<MissionConfig> missions;
@@ -162,8 +166,13 @@ class LevelJsonConfig {
   final MapConfig mapConfig;
   final GridColorsConfig gridColors;
   final OutsideConfig outsideConfig;
+  /// Loại boss: [levelBossTypeNone] = không hiện; khác thì scene load theo type.
+  final String bossType;
 
-  /// Load toàn bộ từ [jsonConfig] (map, rule, missions, stats, grid, outside).
+  /// Có hiện boss hay không (theo config).
+  bool get hasBoss => bossType != levelBossTypeNone && bossType.isNotEmpty;
+
+  /// Load toàn bộ từ [jsonConfig] (map, rule, missions, stats, grid, outside, boss).
   static LevelJsonConfig loadAllConfig(Map<String, dynamic> jsonConfig) {
     return LevelJsonConfig(
       missions: loadMissionsConfig(jsonConfig),
@@ -172,7 +181,15 @@ class LevelJsonConfig {
       mapConfig: loadMapConfig(jsonConfig),
       gridColors: loadGridConfig(jsonConfig),
       outsideConfig: loadOutsideConfig(jsonConfig),
+      bossType: loadBossConfig(jsonConfig),
     );
+  }
+
+  /// Chỉ load boss. Key `boss` (string) trong JSON; null/empty/unknown → [levelBossTypeNone].
+  static String loadBossConfig(Map<String, dynamic> jsonConfig) {
+    final s = jsonConfig['boss'] as String? ?? jsonConfig['bossType'] as String?;
+    if (s == null || s.toString().trim().isEmpty) return levelBossTypeNone;
+    return s.toString().trim();
   }
 
   /// Chỉ load màu ô lưới (cell). Key `grid` trong JSON; null/empty → mặc định.

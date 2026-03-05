@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../common/debug_apply.dart';
 import '../game/entities/entity_models.dart';
-import '../game/worm_journey_game.dart';
+import '../game/game.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/item_model.dart';
 
@@ -126,13 +126,14 @@ class _LeftSection extends StatelessWidget {
           ),
           const SizedBox(height: 2),
         ],
-        Row(
-          children: [
-            Text('HP boss ', style: textStyle),
-            Text('👹', style: TextStyle(fontSize: textStyle?.fontSize ?? 12)),
-            Text(' ×${data.bossHp}', style: textStyle),
-          ],
-        ),
+        if (data.bossHpMax > 0)
+          Row(
+            children: [
+              Text('HP boss ', style: textStyle),
+              Text('👹', style: TextStyle(fontSize: textStyle?.fontSize ?? 12)),
+              Text(' ×${data.bossHp}/${data.bossHpMax}', style: textStyle),
+            ],
+          ),
         if (data.itemBuffs.isNotEmpty) ...[
           const SizedBox(height: 4),
           Wrap(

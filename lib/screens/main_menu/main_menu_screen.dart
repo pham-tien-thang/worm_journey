@@ -19,7 +19,7 @@ class MainMenuScreen extends StatelessWidget {
           DecoratedBox(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: const AssetImage('assets/images/main_menu_bg.jpg'),
+                image: const AssetImage('assets/images/main_menu_bg_2.jpg'),
                 fit: BoxFit.cover,
               ),
             ),

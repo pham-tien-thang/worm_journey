@@ -33,7 +33,7 @@ class GreenButton extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               Image.asset(
-                'assets/images/button_main_50.png',
+                'assets/images/button_main_50_2.png',
                 fit: width != null ? BoxFit.fill : BoxFit.contain,
                 width: width,
                 height: height,

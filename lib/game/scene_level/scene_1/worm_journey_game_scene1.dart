@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui' as ui;
 
 import 'package:flame/camera.dart';
 import 'package:flame/events.dart';
@@ -8,25 +7,24 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../components/debug_grid_coordinates.dart';
-import '../components/game_over_overlay.dart';
-import '../components/grid_background.dart';
-import '../components/pink_worm/pink_worm.dart';
-import '../components/pink_worm/pink_worm_config.dart';
-import '../components/worm/worm.dart';
-import '../components/worm/worm_direction.dart';
-import '../common/debug_apply.dart';
-import '../config/config.dart';
-import '../entities/entities.dart';
-import '../core/buff/buff_config.dart';
-import 'config/level_json_config.dart';
-import 'config/type_obj_config.dart';
-import 'entities/entity_models.dart';
-import 'managers/map_entity_manager.dart';
-import 'behavior/player_worm_behavior.dart';
-import 'behavior/worm_agents.dart';
-import 'behavior/worm_behavior.dart';
-import 'context/worm_game_context.dart';
+import '../../../components/debug_grid_coordinates.dart';
+import '../../../components/grid_background.dart';
+import '../../../components/pink_worm/pink_worm.dart';
+import '../../../components/pink_worm/pink_worm_config.dart';
+import '../../../components/worm/worm.dart';
+import '../../../components/worm/worm_direction.dart';
+import '../../../common/debug_apply.dart';
+import '../../../config/config.dart';
+import '../../../entities/entities.dart';
+import '../../../core/buff/buff_config.dart';
+import '../../config/level_json_config.dart';
+import '../../config/type_obj_config.dart';
+import '../../entities/entity_models.dart';
+import '../../managers/map_entity_manager.dart';
+import '../../behavior/player_worm_behavior.dart';
+import '../../behavior/worm_agents.dart';
+import '../../behavior/worm_behavior.dart';
+import '../../context/worm_game_context.dart';
 
 /// Loại va chạm nguy hiểm: tường, chướng ngại X, đuôi rắn, thân rắn.
 enum HazardType {
@@ -39,12 +37,9 @@ enum HazardType {
 /// Game rắn săn mồi. Full màn hình. Đâm tường/đuôi trừ 1 đốt; còn đầu+đuôi thì thua.
 class WormJourneyGame extends FlameGame
     with KeyboardEvents, TapCallbacks, HasCollisionDetection {
-  WormJourneyGame({this.level = 1, VoidCallback? onGameOverEnd}) : _onGameOverEnd = onGameOverEnd;
+  WormJourneyGame({this.level = 1});
 
   final int level;
-  VoidCallback? _onGameOverEnd;
-
-  void setOnGameOverEnd(VoidCallback? cb) => _onGameOverEnd = cb;
 
   @override
   Color backgroundColor() => const Color(0xFF1B3D2E);
@@ -330,20 +325,16 @@ class WormJourneyGame extends FlameGame
   void _setGameOver() {
     if (_gameOver) return;
     _gameOver = true;
-    final sz = camera.viewport.size;
-    // Thêm vào viewport → tọa độ đúng viewport, vẽ đè lên; có onTap để chạm tắt và chơi lại.
-    camera.viewport.add(GameOverOverlay(
-      size: Vector2(sz.x, sz.y),
-      locale: ui.PlatformDispatcher.instance.locale,
-      onTap: _restart,
-      onEnd: _onGameOverEnd,
-    ));
+    overlays.add('GameOver');
+  }
+
+  /// Gọi từ overlay Flutter "Chơi lại" hoặc nội bộ.
+  void restart() {
+    overlays.remove('GameOver');
+    _restart();
   }
 
   void _restart() {
-    for (final c in camera.viewport.children.whereType<GameOverOverlay>().toList()) {
-      c.removeFromParent();
-    }
     mainWorm.removeFromParent();
     for (final e in _mapEntityManager.entries) e.component.removeFromParent();
     _mapEntityManager.clear();
@@ -441,6 +432,17 @@ class WormJourneyGame extends FlameGame
   /// Chỉ đưa nhiệm vụ có target > 0 vào [missions] (chưa có thì ẩn).
   /// Trả về giá trị mặc định khi game chưa load (tránh LateInitializationError khi GameHud build trước onLoad).
   GameHudData get hudData {
+    if (!_loaded) {
+      return GameHudData(
+        timeRemainingSeconds: _timeLimit,
+        diamonds: 0,
+        missions: const [GameHudMission(id: 'leaves', typeId: 'prey_leaf', current: 0, target: 10)],
+        bossHp: 0,
+        bossHpMax: 0,
+        itemBuffs: const [],
+        startDelayRemaining: _startDelayRemaining,
+      );
+    }
     final missions = <GameHudMission>[];
     for (var i = 0; i < _missionConfigs.length && i < _missionCurrents.length; i++) {
       final m = _missionConfigs[i];
@@ -454,17 +456,9 @@ class WormJourneyGame extends FlameGame
         target: target,
       ));
     }
-    if (!_loaded) {
-      return GameHudData(
-        timeRemainingSeconds: _timeLimit,
-        diamonds: 0,
-        missions: missions.isEmpty ? [const GameHudMission(id: 'leaves', typeId: 'prey_leaf', current: 0, target: 10)] : missions,
-        bossHp: 0,
-        bossHpMax: 0,
-        itemBuffs: const [],
-        startDelayRemaining: _startDelayRemaining,
-      );
-    }
+    final hasBoss = _levelConfig.hasBoss;
+    final int bossHp = hasBoss ? 0 : 0; // TODO: cập nhật từ boss entity khi có
+    final int bossHpMax = hasBoss ? 100 : 0; // TODO: từ level JSON khi có boss
     final itemBuffs = mainWorm.itemEffects
         .where((e) => e.endTime != null)
         .map((e) => GameHudItemBuff(
@@ -476,8 +470,8 @@ class WormJourneyGame extends FlameGame
       timeRemainingSeconds: (_timeLimit - _gameTime).clamp(0.0, _timeLimit),
       diamonds: 0,
       missions: missions,
-      bossHp: 0,
-      bossHpMax: 0,
+      bossHp: bossHp,
+      bossHpMax: bossHpMax,
       itemBuffs: itemBuffs,
       startDelayRemaining: _startDelayRemaining,
     );
