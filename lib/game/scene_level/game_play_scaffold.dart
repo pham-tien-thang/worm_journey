@@ -119,8 +119,8 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                             ),
                           ),
                           padding: const EdgeInsets.symmetric(
-                            vertical: 20,
-                            horizontal: 6,
+                            vertical: 16,
+                            horizontal:0,
                           ),
                           child: SafeArea(
                             top: false,
@@ -132,8 +132,8 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                                     child: Padding(
                                       padding: const EdgeInsets.only(top: 16, left: 16),
                                       child: Wrap(
-                                        spacing: 6,
-                                        runSpacing: 6,
+                                        spacing: 8,
+                                        runSpacing: 8,
                                         children: commonItemList
                                             .map((item) => _ItemSlot(
                                                   item: item,

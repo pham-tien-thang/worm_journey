@@ -14,8 +14,8 @@ abstract class GameConfig {
   // Màu mồi (hình tròn xanh lá)
   static const Color preyGreen = Color(0xFF2E7D32);
 
-  // Tốc độ: giây giữa mỗi lần rắn di chuyển (càng lớn càng chậm)
-  static const double moveInterval = 0.28;
+  // Tốc độ: giây giữa mỗi lần rắn di chuyển (càng lớn càng chậm). 0.30 = mượt hơn 0.28.
+  static const double moveInterval = 0.25;
 
   // Số cột / hàng — lưới lớn hơn để vùng chơi to
   static const int gridColumns = 24;

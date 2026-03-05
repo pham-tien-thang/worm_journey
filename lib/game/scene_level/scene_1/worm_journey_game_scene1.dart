@@ -527,7 +527,7 @@ class WormJourneyGame extends FlameGame
 
     final interval = mainWorm.moveInterval;
     final raw = (_moveAccumulator / interval).clamp(0.0, 1.0);
-    final progress = Curves.easeInOutCubic.transform(raw);
+    final progress = Curves.linear.transform(raw);
     mainWorm.setVisualProgress(progress);
 
     _moveAccumulator += dt;
