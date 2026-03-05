@@ -17,6 +17,7 @@ class WormJourneyApp extends StatefulWidget {
 class _WormJourneyAppState extends State<WormJourneyApp> {
   Locale? _locale;
   late final GoRouter _router = createAppRouter();
+  bool _didPrecacheImages = false;
 
   static Locale _resolveLocale(Locale? locale, Iterable<Locale> supported) {
     if (locale == null) return supported.first;
@@ -52,6 +53,17 @@ class _WormJourneyAppState extends State<WormJourneyApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_didPrecacheImages) {
+      _didPrecacheImages = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          precacheImage(
+            const AssetImage('assets/images/select_level.png'),
+            context,
+          );
+        }
+      });
+    }
     final resolvedLocale = _locale ?? _deviceResolvedLocale();
     return MaterialApp.router(
       title: 'Worm Journey',
