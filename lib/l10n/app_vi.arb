@@ -39,6 +39,8 @@
   "itemClockDescription": "Cộng thêm 10 giây cho thời gian ván chơi.",
   "itemFreezeName": "Đóng băng",
   "itemFreezeDescription": "Dừng game trong 5 giây.",
+  "itemDizzyName": "Chóng mặt",
+  "itemDizzyDescription": "Đảo ngược hướng di chuyển của rắn.",
   "exitGameWarningMessage": "Trò chơi sẽ kết thúc ?",
   "exitGameConfirm": "Kết thúc",
   "exitGameCancel": "Huỷ"

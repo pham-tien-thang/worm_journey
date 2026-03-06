@@ -47,7 +47,7 @@ class DebugGridCoordinates extends PositionComponent {
 
   @override
   void render(Canvas canvas) {
-    if (!shouldApplyDebug) return;
+    if (!shouldShowGridCoordinates) return;
 
     const textStyle = TextStyle(
       color: Colors.black54,

@@ -2,7 +2,9 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../../config/config.dart';
+import '../../core/buff/buff_config.dart';
 import '../../entities/entities.dart';
+import '../../models/item_model.dart';
 import 'worm_body_segment.dart';
 import 'worm_config.dart';
 import 'worm_direction.dart';
@@ -54,11 +56,23 @@ class Worm extends PositionComponent {
   /// True = đang nửa chu kỳ “hiện”, false = nửa chu kỳ “ẩn”. Head/body/tail check qua [isBlinkVisible].
   bool _blinkVisible = true;
 
+  // --- Nhấp nháy khi freeze còn 1s (giống nhấp nháy mới vào trận) ---
+  bool _freezeEndBlink = false;
+  double _freezeBlinkPhase = 0;
+  bool _freezeBlinkVisible = true;
+
   late WormHead _head;
   final List<WormBodySegment> _bodySegments = [];
   late WormTail _tail;
 
   double? _cryEndTimeRemaining;
+
+  // --- Hiệu ứng nuốt mồi: tuần tự đầu → thân → đuôi, mỗi đốt to lên 1 nhịp rồi về ---
+  static const double _swallowBeatSeconds = 0.07;
+  static const double _swallowScalePeak = 1.5;
+  int _swallowSegmentIndex = -1;
+  int _swallowPhase = 0; // 0 = scale up, 1 = scale down
+  double _swallowElapsed = 0;
 
   // --- Item effects (buff/item đều là effect; [endTime] null = không hết hạn) ---
   final List<ItemEffectEntry> _itemEffects = [];
@@ -74,12 +88,33 @@ class Worm extends PositionComponent {
   void setGameTime(double t) => _gameTime = t;
   double? get gameTime => _gameTime;
 
-  /// Thêm hoặc ghi đè effect [itemId]. [endTime] null = không hết hạn; có giá trị = hết hạn tại game time đó.
+  /// Thêm hoặc ghi đè effect [itemId]. [endTime] null = không hết hạn.
+  /// Effect trong cùng nhóm mutual (vd. speed/snail) sẽ bị xóa trước khi thêm.
   void addItemEffect(String itemId, double? endTime) {
+    final toRemove = BuffConfig.getMutuallyExclusiveIdsToRemove(itemId);
+    if (toRemove != null) {
+      for (final id in toRemove) {
+        if (hasItemEffect(id)) {
+          onItemEffectRemoved(id);
+          _itemEffects.removeWhere((e) => e.itemId == id);
+        }
+      }
+    }
     final had = hasItemEffect(itemId);
     _itemEffects.removeWhere((e) => e.itemId == itemId);
     _itemEffects.add(ItemEffectEntry(itemId: itemId, endTime: endTime));
     if (!had) onItemEffectAdded(itemId);
+  }
+
+  /// Xóa mọi effect có [itemId] nằm trong [ids]. Gọi [onItemEffectRemoved] cho từng cái.
+  void removeItemEffects(Iterable<String> ids) {
+    final set = ids.toSet();
+    final toRemove =
+        _itemEffects.where((e) => set.contains(e.itemId)).toList();
+    for (final e in toRemove) {
+      onItemEffectRemoved(e.itemId);
+      _itemEffects.remove(e);
+    }
   }
 
   /// Xóa các effect có [endTime] != null và endTime <= currentTime; gọi [onItemEffectRemoved] trước khi xóa.
@@ -113,6 +148,9 @@ class Worm extends PositionComponent {
   /// Hướng hiện tại (đã áp next nếu có).
   WormDirection get currentDirection => _nextDirection ?? _direction;
 
+  /// Hướng dùng để di chuyển (cho peekNextHead / step). Dizzy chỉ đảo input khi setNextDirection, không đảo ở đây.
+  WormDirection get _effectiveDirection => _nextDirection ?? _direction;
+
   /// Số đốt (đầu + thân + đuôi).
   int get segmentCount => _gridPositions.length;
   /// Ô grid đuôi.
@@ -122,11 +160,13 @@ class Worm extends PositionComponent {
   Vector2 get headGridPosition =>
       _gridPositions.isNotEmpty ? _gridPositions.first : Vector2.zero();
 
+  /// Vị trí đầu rắn trong không gian local của Worm (để component con như radar bám theo).
+  Vector2 get headLocalPosition => _head.position;
+
   /// Ô grid đầu sẽ tới sau bước di chuyển tiếp theo (để game check va chạm trước khi step).
   Vector2 peekNextHead() {
     if (_gridPositions.isEmpty) return Vector2.zero();
-    final dir = _nextDirection ?? _direction;
-    return _gridPositions.first + dir.toVector();
+    return _gridPositions.first + _effectiveDirection.toVector();
   }
 
   /// Danh sách tất cả ô grid (đầu → đuôi).
@@ -181,8 +221,9 @@ class Worm extends PositionComponent {
     );
   }
 
-  /// Đặt hướng cho bước tiếp theo; không cho quay ngược 180°.
+  /// Đặt hướng cho bước tiếp theo; không cho quay ngược 180°. Khi dizzy: input bị đảo (kéo lên → đi xuống).
   void setNextDirection(WormDirection d) {
+    if (hasItemEffect(ItemType.dizzy.effectTypeId)) d = d.reversed;
     if (_direction == WormDirection.up && d == WormDirection.down) return;
     if (_direction == WormDirection.down && d == WormDirection.up) return;
     if (_direction == WormDirection.left && d == WormDirection.right) return;
@@ -192,6 +233,29 @@ class Worm extends PositionComponent {
 
   /// Đánh dấu thêm 1 đốt ở bước step tiếp theo (gọi khi ăn mồi).
   void grow() => _pendingGrow++;
+
+  /// Trả về component đốt tại [index] (0 = đầu, 1..length-2 = thân, length-1 = đuôi).
+  PositionComponent? _getSegmentAt(int index) {
+    if (_gridPositions.isEmpty) return null;
+    final n = _gridPositions.length;
+    if (index < 0 || index >= n) return null;
+    if (index == 0) return _head;
+    if (index == n - 1) return _tail;
+    final bodyIndex = index - 1;
+    if (bodyIndex >= _bodySegments.length) return null;
+    return _bodySegments[bodyIndex];
+  }
+
+  /// Phát hiệu ứng nuốt mồi: đầu → thân → đuôi lần lượt to lên một nhịp rồi về (rất nhanh).
+  void playSwallowPreyEffect() {
+    if (_gridPositions.isEmpty) return;
+    _head.scale.setValues(1.0, 1.0);
+    _tail.scale.setValues(1.0, 1.0);
+    for (final seg in _bodySegments) seg.scale.setValues(1.0, 1.0);
+    _swallowSegmentIndex = 0;
+    _swallowPhase = 0;
+    _swallowElapsed = 0;
+  }
 
   /// Bật/tắt nón (evil mode); [PinkWorm] override để đổi sprite.
   void setHasHelmet(bool value) {}
@@ -215,8 +279,18 @@ class Worm extends PositionComponent {
     }
   }
 
+  /// PinkWorm gọi khi freeze còn ≤1s (true) để nhấp nháy giống mới vào trận; else false.
+  void setFreezeEndBlink(bool value) {
+    _freezeEndBlink = value;
+    if (!value) {
+      _freezeBlinkPhase = 0;
+      _freezeBlinkVisible = true;
+    }
+  }
+
   /// Head/body/tail check trước khi vẽ: false = đang nửa chu kỳ ẩn → không vẽ.
-  bool get isBlinkVisible => !_waitingToStart || _blinkVisible;
+  bool get isBlinkVisible =>
+      (!_waitingToStart || _blinkVisible) && (!_freezeEndBlink || _freezeBlinkVisible);
 
   /// Tiến độ di chuyển 0..1 giữa hai ô (để lerp vị trí đầu/đuôi mượt).
   void setVisualProgress(double t) {
@@ -297,7 +371,7 @@ class Worm extends PositionComponent {
   }
 
   @override
-  /// Cập nhật cry face, nhấp nháy (nếu đợi ready), và đồng bộ vị trí head/body/tail.
+  /// Cập nhật cry face, nhấp nháy (nếu đợi ready), hiệu ứng nuốt mồi, và đồng bộ vị trí head/body/tail.
   void update(double dt) {
     super.update(dt);
     if (_cryEndTimeRemaining != null) {
@@ -311,7 +385,51 @@ class Worm extends PositionComponent {
     } else {
       _blinkVisible = true;
     }
+    if (_freezeEndBlink) {
+      _freezeBlinkPhase += dt;
+      const period = 0.12;
+      _freezeBlinkVisible = (_freezeBlinkPhase % period) < period * 0.5;
+    } else {
+      _freezeBlinkVisible = true;
+    }
+    _updateSwallowEffect(dt);
     _syncVisuals();
+  }
+
+  void _updateSwallowEffect(double dt) {
+    if (_swallowSegmentIndex < 0) return;
+    final n = _gridPositions.length;
+    if (_swallowSegmentIndex >= n) {
+      _swallowSegmentIndex = -1;
+      return;
+    }
+    final seg = _getSegmentAt(_swallowSegmentIndex);
+    if (seg == null) {
+      _swallowSegmentIndex = -1;
+      return;
+    }
+    _swallowElapsed += dt;
+    final beat = _swallowBeatSeconds;
+    if (_swallowPhase == 0) {
+      final t = (_swallowElapsed / beat).clamp(0.0, 1.0);
+      final s = 1.0 + t * (_swallowScalePeak - 1.0);
+      seg.scale.setValues(s, s);
+      if (_swallowElapsed >= beat) {
+        _swallowElapsed = 0;
+        _swallowPhase = 1;
+      }
+    } else {
+      final t = (_swallowElapsed / beat).clamp(0.0, 1.0);
+      final s = _swallowScalePeak - t * (_swallowScalePeak - 1.0);
+      seg.scale.setValues(s, s);
+      if (_swallowElapsed >= beat) {
+        seg.scale.setValues(1.0, 1.0);
+        _swallowSegmentIndex++;
+        _swallowPhase = 0;
+        _swallowElapsed = 0;
+        if (_swallowSegmentIndex >= n) _swallowSegmentIndex = -1;
+      }
+    }
   }
 
   @override
@@ -330,7 +448,7 @@ class Worm extends PositionComponent {
     _syncVisuals();
   }
 
-  /// Di chuyển 1 ô theo [_direction]: thêm đầu mới, bỏ đuôi (trừ khi [_pendingGrow] > 0). Trả về ô đầu mới.
+  /// Di chuyển 1 ô theo hướng hiệu dụng (có áp dizzy): thêm đầu mới, bỏ đuôi (trừ khi [_pendingGrow] > 0).
   Vector2? step() {
     if (_gridPositions.isEmpty) return null;
 
@@ -342,7 +460,7 @@ class Worm extends PositionComponent {
       _nextDirection = null;
     }
 
-    final move = _direction.toVector();
+    final move = _effectiveDirection.toVector();
     final newHead = _gridPositions.first + move;
 
     _gridPositions.insert(0, newHead);

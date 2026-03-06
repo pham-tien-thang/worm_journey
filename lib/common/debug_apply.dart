@@ -23,3 +23,25 @@ ValueNotifier<bool> get debugApplyNotifier {
 
 /// Trả về true chỉ khi đang build debug **và** user bật "apply debug". Dùng thay cho [kDebugMode] ở mọi chỗ cần áp dụng tính năng debug (overlay tọa độ, tap pause, v.v.).
 bool get shouldApplyDebug => kDebugMode && _debugApplyEnabled;
+
+// --- Ẩn/hiện tọa độ ô (chỉ khi [shouldApplyDebug]; nút toggle ở HUD). Mặc định ẩn. ---
+bool _showGridCoordinates = false;
+
+bool get showGridCoordinates => _showGridCoordinates;
+
+set showGridCoordinates(bool value) {
+  if (_showGridCoordinates == value) return;
+  _showGridCoordinates = value;
+  _gridCoordNotifier ??= ValueNotifier<bool>(_showGridCoordinates);
+  _gridCoordNotifier!.value = value;
+}
+
+ValueNotifier<bool>? _gridCoordNotifier;
+
+ValueNotifier<bool> get showGridCoordinatesNotifier {
+  _gridCoordNotifier ??= ValueNotifier<bool>(_showGridCoordinates);
+  return _gridCoordNotifier!;
+}
+
+/// Có vẽ tọa độ ô (A1, B1...) hay không. False khi tắt debug hoặc user bấm "Hide coordinates".
+bool get shouldShowGridCoordinates => shouldApplyDebug && _showGridCoordinates;

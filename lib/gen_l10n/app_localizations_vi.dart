@@ -118,6 +118,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get itemFreezeDescription => 'Dừng game trong 5 giây.';
 
   @override
+  String get itemDizzyName => 'Chóng mặt';
+
+  @override
+  String get itemDizzyDescription =>
+      'Đảo ngược hướng di chuyển của rắn.';
+
+  @override
   String get entityPreyLeafName => 'Chiếc lá';
 
   @override

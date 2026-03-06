@@ -63,6 +63,8 @@ abstract class AppLocalizations {
   String get itemClockDescription;
   String get itemFreezeName;
   String get itemFreezeDescription;
+  String get itemDizzyName;
+  String get itemDizzyDescription;
   String get entityPreyLeafName;
   String get entityPreyCoconutName;
   String get entityXMarkName;

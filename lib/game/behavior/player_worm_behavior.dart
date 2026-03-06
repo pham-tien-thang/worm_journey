@@ -1,22 +1,41 @@
 import '../../core/buff/buff_config.dart';
+import '../../models/item_model.dart';
 import '../entities/entity_model.dart';
 import 'worm_agents.dart';
 import 'worm_behavior.dart';
 import '../context/worm_game_context.dart';
 
-/// Hành vi sâu người chơi: ăn lá → grow + mission + spawn; ăn dừa → buff độ cứng.
+/// Hành vi sâu người chơi: ăn lá → grow + mission + spawn; ăn dừa → buff (effectTypeId từ entity).
 /// Va chạm: sâu <= độ cứng vật cản → trừ đuôi; sâu > độ cứng vật cản → phá.
 class PlayerWormBehavior extends WormBehavior {
   @override
-  void onEatEntity(WormAgent agent, String typeId, WormGameContext context) {
-    if (typeId == ProjectType.preyLeaf.typeId) {
+  void onEatEntity(WormAgent agent, GameEntityView entity, WormGameContext context) {
+    if (entity.projectType == ProjectType.preyLeaf) {
       agent.grow();
+      agent.worm.playSwallowPreyEffect();
       context.addMissionLeaves(1);
       context.spawnPrey();
-    } else if (typeId == ProjectType.preyCoconut.typeId) {
-      final duration = BuffConfig.durationSecondsFor(ProjectType.preyCoconut.typeId);
-      if (duration > 0) {
-        agent.addItemEffect(ProjectType.preyCoconut.typeId, context.gameTime + duration);
+    } else {
+      final effectId = entity.effectTypeId;
+      if (effectId != null) {
+        if (effectId == ItemType.antidote.effectTypeId) {
+          agent.removeItemEffects(BuffConfig.removableByAntidoteEffectIds);
+          agent.removeItemEffects([ItemType.antidote.effectTypeId]);
+        } else if (effectId == ItemType.magnet.effectTypeId) {
+          final duration = BuffConfig.durationSecondsFor(effectId);
+          if (duration > 0) {
+            agent.addItemEffect(effectId, context.gameTime + duration);
+          }
+          context.triggerMagnetPull();
+        } else if (effectId == ItemType.seed.effectTypeId) {
+          context.spawnPrey();
+          context.spawnPrey();
+        } else {
+          final duration = BuffConfig.durationSecondsFor(effectId);
+          if (duration > 0) {
+            agent.addItemEffect(effectId, context.gameTime + duration);
+          }
+        }
       }
     }
   }
@@ -24,19 +43,13 @@ class PlayerWormBehavior extends WormBehavior {
   @override
   HitResult onHitEntity(
     WormAgent agent,
-    ProjectType projectType,
-    int entityHardness,
+    GameEntityView entity,
     int wormHardness,
     WormGameContext context,
   ) {
-    if (wormHardness <= entityHardness) {
+    if (wormHardness <= entity.hardness) {
       return HitResult.loseSegment;
     }
     return HitResult.destroyAndStep;
-  }
-
-  @override
-  void onEatBuff(WormAgent agent, String buffId, double duration, WormGameContext context) {
-    agent.addItemEffect(buffId, context.gameTime + duration);
   }
 }

@@ -11,16 +11,13 @@ enum HitResult {
 
 /// Hành vi sâu: ăn entity, ăn buff, va chạm vật cản. Game gọi [onHitEntity] khi đâm vào entity chặn.
 abstract class WormBehavior {
-  void onEatEntity(WormAgent agent, String typeId, WormGameContext context);
+  void onEatEntity(WormAgent agent, GameEntityView entity, WormGameContext context);
 
-  /// Sâu đâm vào vật cản [projectType]. [entityHardness], [wormHardness] để behavior quyết định trừ đuôi hay phá.
+  /// Sâu đâm vào vật cản [entity]. [wormHardness] từ sâu; hardness lấy từ [entity.hardness].
   HitResult onHitEntity(
     WormAgent agent,
-    ProjectType projectType,
-    int entityHardness,
+    GameEntityView entity,
     int wormHardness,
     WormGameContext context,
   );
-
-  void onEatBuff(WormAgent agent, String buffId, double duration, WormGameContext context);
 }

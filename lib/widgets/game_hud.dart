@@ -60,7 +60,7 @@ class _GameHudState extends State<GameHud> {
     final textStyle = theme.textTheme.bodySmall?.copyWith(
       color: AppColors.hudTextBrown,
       fontWeight: FontWeight.bold,
-      fontSize: 12,
+      fontSize: 16,
     );
 
     return Container(
@@ -137,7 +137,7 @@ class _LeftSection extends StatelessWidget {
           Row(
             children: [
               Text('HP boss ', style: textStyle),
-              Text('👹', style: TextStyle(fontSize: textStyle?.fontSize ?? 12)),
+              Text('👹', style: TextStyle(fontSize: textStyle?.fontSize ?? 16)),
               Text(' ×${data.bossHp}/${data.bossHpMax}', style: textStyle),
             ],
           ),
@@ -151,7 +151,7 @@ class _LeftSection extends StatelessWidget {
               final icon = _itemIcon(b.itemId);
               return Text(
                 '$icon ${sec}s',
-                style: textStyle?.copyWith(fontSize: 10),
+                style: textStyle?.copyWith(fontSize: 13),
               );
             }).toList(),
           ),
@@ -309,12 +309,19 @@ class _RightSection extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('🪙', style: TextStyle(fontSize: textStyle?.fontSize ?? 14)),
+            Text('🪙', style: TextStyle(fontSize: textStyle?.fontSize ?? 16)),
             const SizedBox(width: 4),
             Text('${data.diamonds}', style: textStyle),
             if (kDebugMode) ...[
               const SizedBox(width: 12),
-              _DebugApplyToggle(textStyle: textStyle),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _DebugApplyToggle(textStyle: textStyle),
+                  const SizedBox(height: 4),
+                  _ShowCoordsToggle(textStyle: textStyle),
+                ],
+              ),
             ],
           ],
         ),
@@ -355,9 +362,53 @@ class _DebugApplyToggle extends StatelessWidget {
               child: Text(
                 isOn ? 'Debug ON' : 'Debug OFF',
                 style: (textStyle ?? const TextStyle()).copyWith(
-                  fontSize: 10,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: isOn ? Colors.black87 : Colors.orangeAccent,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Nút ẩn/hiện tọa độ ô (Hide/Show coords). Chỉ hiện khi [kDebugMode]; đặt dưới nút Debug.
+class _ShowCoordsToggle extends StatelessWidget {
+  const _ShowCoordsToggle({this.textStyle});
+
+  final TextStyle? textStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: showGridCoordinatesNotifier,
+      builder: (context, showCoords, _) {
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => showGridCoordinates = !showGridCoordinates,
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: showCoords
+                    ? Colors.blueAccent.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: showCoords ? Colors.blue : Colors.grey,
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                showCoords ? 'Coords ON' : 'Coords OFF',
+                style: (textStyle ?? const TextStyle()).copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: showCoords ? Colors.white : Colors.grey,
                 ),
               ),
             ),

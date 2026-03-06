@@ -1,12 +1,13 @@
 import 'package:flame/components.dart';
 
-/// Context game cho [WormBehavior]: spawn mồi, mission, phá entity, lose segment, gameTime.
+/// Context game cho [WormBehavior]: spawn mồi, mission, phá entity, lose segment, gameTime, triggerMagnetPull.
 abstract class WormGameContext {
   double get gameTime;
   void spawnPrey();
   void addMissionLeaves(int count);
   void destroyObstacleAt(Vector2 grid);
   void loseSegment();
+  void triggerMagnetPull();
 }
 
 class WormGameContextImpl extends WormGameContext {
@@ -16,6 +17,7 @@ class WormGameContextImpl extends WormGameContext {
     required this.addMissionLeavesCallback,
     required this.destroyObstacleAtCallback,
     required this.loseSegmentCallback,
+    required this.triggerMagnetPullCallback,
   });
 
   final double Function() gameTimeGetter;
@@ -23,6 +25,7 @@ class WormGameContextImpl extends WormGameContext {
   final void Function(int) addMissionLeavesCallback;
   final void Function(Vector2) destroyObstacleAtCallback;
   final void Function() loseSegmentCallback;
+  final void Function() triggerMagnetPullCallback;
 
   @override
   double get gameTime => gameTimeGetter();
@@ -38,4 +41,7 @@ class WormGameContextImpl extends WormGameContext {
 
   @override
   void loseSegment() => loseSegmentCallback();
+
+  @override
+  void triggerMagnetPull() => triggerMagnetPullCallback();
 }

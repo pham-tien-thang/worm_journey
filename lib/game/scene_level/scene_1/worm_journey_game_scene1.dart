@@ -92,17 +92,117 @@ class WormJourneyGame extends FlameGame
   /// Factory đặt entity tại ô: typeId (từ JSON) → hàm (grid). Mọi loại dùng chung [MapEntityManager.placeAt].
   final Map<String, void Function(Vector2 grid)> _placeEntityAt = {};
 
+  /// Magnet pull: mồi đang bay về đầu rắn (position + scale animation).
+  final List<_MagnetPull> _magnetPulls = [];
+  /// Thời điểm lần hút magnet gần nhất (để hút liên tục trong lúc effect còn).
+  double? _magnetLastPullTime;
+
   /// Pause / resume (vd. khi mở/đóng dialog).
   void setPaused(bool value) {
     _paused = value;
   }
 
-  /// Dùng item dừa: thêm buff (ProjectType.preyCoconut) +1 độ cứng. Hết thời gian buff thì độ cứng về base.
+  /// Dùng item: effect có duration → thêm vào list effect; instant (bomb, clock, seed) → xử lý ngay; antidote → add để PinkWorm.onItemEffectAdded xóa list.
   void useEffect(ItemType type) {
     if (_gameOver || !_loaded) return;
-    final duration = BuffConfig.durationSecondsFor(type.effectTypeId);
-    if (duration <= 0) return;
-    mainWorm.addItemEffect(type.effectTypeId, _gameTime + duration);
+    final id = type.effectTypeId;
+    if (BuffConfig.isInstantEffect(id)) {
+      _applyInstantEffect(type);
+      return;
+    }
+    if (id == ItemType.antidote.effectTypeId) {
+      mainWorm.addItemEffect(id, null);
+      return;
+    }
+    final duration = BuffConfig.durationSecondsFor(id);
+    if (duration > 0) {
+      mainWorm.addItemEffect(id, _gameTime + duration);
+      if (id == ItemType.magnet.effectTypeId) _triggerMagnetPull();
+    }
+  }
+
+  /// Instant effect: dùng 1 lần, không lưu vào list. Scale: thêm case theo [ItemType].
+  void _applyInstantEffect(ItemType type) {
+    switch (type) {
+      case ItemType.bomb:
+        _instantEffectBomb();
+        break;
+      case ItemType.clock:
+        _timeLimit += BuffConfig.clockAddSeconds;
+        break;
+      case ItemType.seed:
+        _spawnPrey();
+        _spawnPrey();
+        break;
+      default:
+        break;
+    }
+  }
+
+  /// Bom: phá entity trong bán kính [BuffConfig.bombRadiusTiles] ô quanh đầu rắn.
+  void _instantEffectBomb() {
+    final head = mainWorm.headGridPosition;
+    final r = BuffConfig.bombRadiusTiles;
+    for (var dy = -r; dy <= r; dy++) {
+      for (var dx = -r; dx <= r; dx++) {
+        if (dx == 0 && dy == 0) continue;
+        if (dx.abs() + dy.abs() > r) continue;
+        final grid = Vector2(head.x + dx, head.y + dy);
+        if (_mapEntityManager.hasBlockingEntityAt(grid)) {
+          _destroyEntityAt(grid);
+        }
+      }
+    }
+    if (mainWorm is PinkWorm) (mainWorm as PinkWorm).triggerBombExplosion();
+  }
+
+  /// Magnet: hút mồi trong phạm vi [BuffConfig.magnetRangeTiles] ô (Chebyshev) từ đầu rắn, thuộc [magnetAttractTypeIds].
+  void _triggerMagnetPull() {
+    final head = mainWorm.headGridPosition;
+    final range = BuffConfig.magnetRangeTiles;
+    final toPull = _mapEntityManager.entries.where((e) {
+      if (!BuffConfig.magnetAttractTypeIds.contains(e.typeId)) return false;
+      final dx = (e.grid.x - head.x).abs();
+      final dy = (e.grid.y - head.y).abs();
+      return dx <= range && dy <= range;
+    }).toList();
+    for (final entry in toPull) {
+      final removed = _mapEntityManager.removeAt(entry.grid);
+      if (removed != null) {
+        _magnetPulls.add(_MagnetPull(
+          entry: removed,
+          startPos: removed.component.position.clone(),
+          startTime: _gameTime,
+        ));
+      }
+    }
+  }
+
+  void _updateMagnetPulls(double dt) {
+    if (_magnetPulls.isEmpty) return;
+    final headWorld = _gridToWorld(mainWorm.headGridPosition);
+    const duration = BuffConfig.magnetPullDurationSeconds;
+    final toRemove = <_MagnetPull>[];
+    for (final pull in _magnetPulls) {
+      final t = ((_gameTime - pull.startTime) / duration).clamp(0.0, 1.0);
+      final comp = pull.entry.component;
+      comp.position.setFrom(pull.startPos + (headWorld - pull.startPos) * t);
+      comp.scale.setValues(1 - t, 1 - t);
+      if (t >= 1) {
+        comp.removeFromParent();
+        _applyEatEntity(pull.entry.typeId);
+        toRemove.add(pull);
+      }
+    }
+    for (final p in toRemove) _magnetPulls.remove(p);
+  }
+
+  /// Áp dụng logic ăn entity (grow, mission, buff) theo typeId — dùng khi magnet hút xong hoặc ăn trực tiếp.
+  void _applyEatEntity(String typeId) {
+    final view = EntityModels.view(typeId);
+    if (view != null) {
+      _playerAgent.behavior.onEatEntity(_playerAgent, view, _wormContext);
+    }
   }
 
   /// Tăng tiến độ nhiệm vụ có [id] (mặc định 'mission2').
@@ -136,10 +236,10 @@ class WormJourneyGame extends FlameGame
 
   /// Vùng chơi: A13–X49 (cột A–X, hàng 13–49). Chỉ vùng này là grid; ngoài ra trắng + 🟫.
   /// Camera chỉ hở thêm ~6 ô trên/dưới (outside), không hở nhiều bên ngoài.
-  static const int _extraRowsAboveBelow = 6;
-  static const int playableStartRow = _extraRowsAboveBelow; // 6
-  static const int playableRowCount = 37;  // 13..49
-  static const int totalWorldRows = _extraRowsAboveBelow + playableRowCount + _extraRowsAboveBelow; // 49
+  static const int _extraRowsAboveBelow = 8;
+  static const int playableStartRow = _extraRowsAboveBelow; // 8
+  static const int playableRowCount = 37;
+  static const int totalWorldRows = _extraRowsAboveBelow + playableRowCount + _extraRowsAboveBelow;
 
   @override
   void onGameResize(Vector2 size) {
@@ -215,6 +315,7 @@ class WormJourneyGame extends FlameGame
       },
       destroyObstacleAtCallback: _destroyEntityAt,
       loseSegmentCallback: _loseSegment,
+      triggerMagnetPullCallback: _triggerMagnetPull,
     );
 
     final worm = PinkWorm(
@@ -324,7 +425,7 @@ class WormJourneyGame extends FlameGame
   /// Tốc độ làm mượt camera (càng lớn càng bám nhanh). ~6 = mượt, ~15 = bám gần ngay.
   static const double _cameraSmoothSpeed = 8.0;
 
-  /// Di chuyển camera theo đầu rắn (trục Y), lerp mượt. Không cho camera xuống quá hàng 37 (cuối vùng chơi).
+  /// Di chuyển camera theo đầu rắn (trục Y), lerp mượt.
   void _updateCameraFollowSnake(double dt) {
     if (!_loaded) return;
     final viewportSize = camera.viewport.size;
@@ -359,6 +460,9 @@ class WormJourneyGame extends FlameGame
     mainWorm.removeFromParent();
     for (final e in _mapEntityManager.entries) e.component.removeFromParent();
     _mapEntityManager.clear();
+    for (final p in _magnetPulls) p.entry.component.removeFromParent();
+    _magnetPulls.clear();
+    _magnetLastPullTime = null;
 
     final worm = PinkWorm(
       config: PinkWormConfig(
@@ -426,13 +530,12 @@ class WormJourneyGame extends FlameGame
       case HazardType.obstacle: {
         final entry = _mapEntityManager.getAt(nextHead);
         if (entry == null) return true;
-        final projectType = EntityModels.projectType(entry.typeId) ?? ProjectType.xMark;
-        final entityHardness = EntityModels.hardness(entry.typeId);
+        final view = EntityModels.view(entry.typeId);
+        if (view == null) return true;
         final wormHardness = _getWormHardness();
         final result = _playerAgent.behavior.onHitEntity(
           _playerAgent,
-          projectType,
-          entityHardness,
+          view,
           wormHardness,
           _wormContext,
         );
@@ -526,6 +629,21 @@ class WormJourneyGame extends FlameGame
     mainWorm.setGameTime(_gameTime);
     mainWorm.removeExpiredItemEffects(_gameTime);
 
+    if (mainWorm.hasItemEffect(ItemType.freeze.effectTypeId)) return;
+
+    _updateMagnetPulls(dt);
+
+    if (mainWorm.hasItemEffect(ItemType.magnet.effectTypeId)) {
+      final now = _gameTime;
+      if (_magnetLastPullTime == null ||
+          (now - _magnetLastPullTime!) >= BuffConfig.magnetPullDurationSeconds) {
+        _triggerMagnetPull();
+        _magnetLastPullTime = now;
+      }
+    } else {
+      _magnetLastPullTime = null;
+    }
+
     for (final item in _levelConfig.spawnCycle.items) {
       if (!_typeObjConfig.isEatable(item.objType)) continue;
       final acc = _spawnCycleAccumulators[item.objType] ?? 0;
@@ -559,6 +677,14 @@ class WormJourneyGame extends FlameGame
     }
 
     if (_mapEntityManager.hasBlockingEntityAt(nextHead)) {
+      final entry = _mapEntityManager.getAt(nextHead);
+      if (entry != null) {
+        final view = EntityModels.view(entry.typeId);
+        if (view != null && view.wormCanPassThrough) {
+          mainWorm.step();
+          return;
+        }
+      }
       _onHitHazard(HazardType.obstacle, nextHead);
       return;
     }
@@ -585,7 +711,10 @@ class WormJourneyGame extends FlameGame
     final consumed = _mapEntityManager.consumeAt(newHead);
     if (consumed != null) {
       consumed.component.removeFromParent();
-      _playerAgent.behavior.onEatEntity(_playerAgent, consumed.typeId, _wormContext);
+      final view = EntityModels.view(consumed.typeId);
+      if (view != null) {
+        _playerAgent.behavior.onEatEntity(_playerAgent, view, _wormContext);
+      }
       return;
     }
   }
@@ -627,6 +756,13 @@ class WormJourneyGame extends FlameGame
       _paused = !_paused;
     }
   }
+}
+
+class _MagnetPull {
+  _MagnetPull({required this.entry, required this.startPos, required this.startTime});
+  final MapEntityEntry entry;
+  final Vector2 startPos;
+  final double startTime;
 }
 
 /// Một nhiệm vụ trên HUD (x/xx). Target = 0 thì không hiển thị. Icon và label lấy từ EntityModels + l10n theo [typeId].

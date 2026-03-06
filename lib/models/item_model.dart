@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../gen_l10n/app_localizations.dart';
 
 /// Loại item. [effectTypeId] dùng cho l10n (tên, mô tả), SharedPrefs, addItemEffect, BuffConfig.
@@ -11,7 +13,9 @@ enum ItemType {
   antidote('antidote'),
   speed('speed'),
   clock('clock'),
-  freeze('freeze');
+  freeze('freeze'),
+  /// Khi rắn dính item này sẽ đảo ngược chuyển động (chưa cần xử lý logic).
+  dizzy('dizzy');
 
   const ItemType(this.effectTypeId);
   final String effectTypeId;
@@ -32,6 +36,7 @@ extension ItemTypeExt on ItemType {
       case ItemType.speed: return l10n.itemSpeedName;
       case ItemType.clock: return l10n.itemClockName;
       case ItemType.freeze: return l10n.itemFreezeName;
+      case ItemType.dizzy: return l10n.itemDizzyName;
     }
   }
   String description(AppLocalizations l10n) {
@@ -46,6 +51,7 @@ extension ItemTypeExt on ItemType {
       case ItemType.speed: return l10n.itemSpeedDescription;
       case ItemType.clock: return l10n.itemClockDescription;
       case ItemType.freeze: return l10n.itemFreezeDescription;
+      case ItemType.dizzy: return l10n.itemDizzyDescription;
     }
   }
 }
@@ -82,7 +88,7 @@ final List<ItemModel> commonItemList = [
   const ItemModel(
     type: ItemType.snail,
     icon: '🐌',
-    price: 100,
+    price: 150,
   ),
   const ItemModel(
     type: ItemType.magnet,
@@ -97,7 +103,7 @@ final List<ItemModel> commonItemList = [
   const ItemModel(
     type: ItemType.seed,
     icon: '🌱',
-    price: 200,
+    price: 500,
   ),
   const ItemModel(
     type: ItemType.antidote,
@@ -107,16 +113,22 @@ final List<ItemModel> commonItemList = [
   const ItemModel(
     type: ItemType.speed,
     icon: '💨',
-    price: 200,
+    price: 150,
   ),
   const ItemModel(
     type: ItemType.clock,
     icon: '⏱',
-    price: 200,
+    price: 500,
   ),
   const ItemModel(
     type: ItemType.freeze,
     icon: '❄️',
+    price: 100,
+  ),
+  if(kDebugMode)
+  const ItemModel(
+    type: ItemType.dizzy,
+    icon: '😵‍💫',
     price: 100,
   ),
 ];

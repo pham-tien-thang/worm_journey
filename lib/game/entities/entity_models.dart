@@ -21,4 +21,10 @@ class EntityModels {
   static int hardness(String typeId) => get(typeId)?.hardness ?? 0;
 
   static ProjectType? projectType(String typeId) => get(typeId)?.type;
+
+  /// Tạo view cho onEatEntity / onHitEntity. Null nếu typeId không có trong registry.
+  static GameEntityView? view(String typeId) {
+    final model = get(typeId);
+    return model != null ? GameEntityView(typeId: typeId, model: model) : null;
+  }
 }

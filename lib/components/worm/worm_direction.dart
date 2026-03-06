@@ -27,6 +27,20 @@ enum WormDirection {
         (this == WormDirection.right && other == WormDirection.left);
   }
 
+  /// Hướng ngược lại (cho hiệu ứng dizzy).
+  WormDirection get reversed {
+    switch (this) {
+      case WormDirection.up:
+        return WormDirection.down;
+      case WormDirection.down:
+        return WormDirection.up;
+      case WormDirection.left:
+        return WormDirection.right;
+      case WormDirection.right:
+        return WormDirection.left;
+    }
+  }
+
   double get rotationRadians {
     switch (this) {
       case WormDirection.up:

@@ -35,7 +35,9 @@ class WormAgent {
   void grow() => worm.grow();
   void applyNextDirectionAndSyncVisuals() => worm.applyNextDirectionAndSyncVisuals();
   void showCryFace() => worm.showCryFace();
-  void addItemEffect(String itemId, double? endTime) => worm.addItemEffect(itemId, endTime);
+  void addItemEffect(String itemId, double? endTime) =>
+      worm.addItemEffect(itemId, endTime);
+  void removeItemEffects(Iterable<String> ids) => worm.removeItemEffects(ids);
   void setGameTime(double t) => worm.setGameTime(t);
   void removeExpiredItemEffects(double currentTime) => worm.removeExpiredItemEffects(currentTime);
   bool hasItemEffect(String itemId) => worm.hasItemEffect(itemId);

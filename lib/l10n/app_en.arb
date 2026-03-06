@@ -70,6 +70,8 @@
   "itemClockDescription": "Adds 10 seconds to the game timer.",
   "itemFreezeName": "Freeze",
   "itemFreezeDescription": "Freezes the game for 5 seconds.",
+  "itemDizzyName": "Dizzy",
+  "itemDizzyDescription": "Reverses the snake's movement direction.",
   "exitGameWarningMessage": "The game will end?",
   "exitGameConfirm": "End",
   "exitGameCancel": "Cancel"

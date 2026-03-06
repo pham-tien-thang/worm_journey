@@ -117,6 +117,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get itemFreezeDescription => 'Freezes the game for 5 seconds.';
 
   @override
+  String get itemDizzyName => 'Dizzy';
+
+  @override
+  String get itemDizzyDescription =>
+      'Reverses the snake\'s movement direction.';
+
+  @override
   String get entityPreyLeafName => 'Leaf';
 
   @override
