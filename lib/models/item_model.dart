@@ -7,7 +7,7 @@ enum ItemType {
   magnet('magnet'),
   bomb('bomb'),
   seed('seed'),
-  shield('shield'),
+  // shield('shield'),
   antidote('antidote'),
   speed('speed'),
   clock('clock'),
@@ -27,7 +27,7 @@ extension ItemTypeExt on ItemType {
       case ItemType.magnet: return l10n.itemMagnetName;
       case ItemType.bomb: return l10n.itemBombName;
       case ItemType.seed: return l10n.itemSeedName;
-      case ItemType.shield: return l10n.itemShieldName;
+     // case ItemType.shield: return l10n.itemShieldName;
       case ItemType.antidote: return l10n.itemAntidoteName;
       case ItemType.speed: return l10n.itemSpeedName;
       case ItemType.clock: return l10n.itemClockName;
@@ -41,7 +41,7 @@ extension ItemTypeExt on ItemType {
       case ItemType.magnet: return l10n.itemMagnetDescription;
       case ItemType.bomb: return l10n.itemBombDescription;
       case ItemType.seed: return l10n.itemSeedDescription;
-      case ItemType.shield: return l10n.itemShieldDescription;
+     // case ItemType.shield: return l10n.itemShieldDescription;
       case ItemType.antidote: return l10n.itemAntidoteDescription;
       case ItemType.speed: return l10n.itemSpeedDescription;
       case ItemType.clock: return l10n.itemClockDescription;
