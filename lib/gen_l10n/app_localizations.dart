@@ -29,6 +29,7 @@ abstract class AppLocalizations {
 
   String get appTitle;
   String levelLabel(int level);
+  String sceneLabel(int n);
   String get gameOver;
   String get tapToPlayAgain;
   String get gameOverPlayAgain;

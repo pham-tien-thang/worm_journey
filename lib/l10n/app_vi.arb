@@ -5,6 +5,7 @@
   "entityXMarkName": "Chướng ngại vật",
   "appTitle": "Worm Journey",
   "levelLabel": "Lv{level}",
+  "sceneLabel": "Cảnh {n}",
   "gameOver": "Game Over",
   "tapToPlayAgain": "Chạm để chơi lại",
   "gameOverPlayAgain": "Chơi lại",

@@ -159,6 +159,7 @@ class LevelJsonConfig {
     this.gridColors = const GridColorsConfig(),
     this.outsideConfig = const OutsideConfig(),
     this.bossType = levelBossTypeNone,
+    this.spawnCycle = const SpawnCycleConfig(),
   });
 
   final List<MissionConfig> missions;
@@ -171,11 +172,13 @@ class LevelJsonConfig {
   final OutsideConfig outsideConfig;
   /// Loại boss: [levelBossTypeNone] = không hiện; khác thì scene load theo type.
   final String bossType;
+  /// Sinh mồi theo chu kỳ: mỗi mục có objType + intervalSeconds. Mỗi map config khác nhau.
+  final SpawnCycleConfig spawnCycle;
 
   /// Có hiện boss hay không (theo config).
   bool get hasBoss => bossType != levelBossTypeNone && bossType.isNotEmpty;
 
-  /// Load toàn bộ từ [jsonConfig] (map, rule, missions, stats, grid, outside, boss).
+  /// Load toàn bộ từ [jsonConfig] (map, rule, missions, stats, grid, outside, boss, spawnCycle).
   static LevelJsonConfig loadAllConfig(Map<String, dynamic> jsonConfig) {
     final stats = loadStatsConfig(jsonConfig);
     return LevelJsonConfig(
@@ -187,7 +190,14 @@ class LevelJsonConfig {
       gridColors: loadGridConfig(jsonConfig),
       outsideConfig: loadOutsideConfig(jsonConfig),
       bossType: loadBossConfig(jsonConfig),
+      spawnCycle: loadSpawnCycleConfig(jsonConfig),
     );
+  }
+
+  /// Chỉ load sinh theo chu kỳ. Key `spawnCycle` (array): [{ objType, intervalSeconds }, ...].
+  static SpawnCycleConfig loadSpawnCycleConfig(Map<String, dynamic> jsonConfig) {
+    final list = jsonConfig['spawnCycle'] as List<dynamic>?;
+    return SpawnCycleConfig.fromJson(list);
   }
 
   /// Chỉ load boss. Key `boss` (string) trong JSON; null/empty/unknown → [levelBossTypeNone].
@@ -243,6 +253,46 @@ class LevelJsonConfig {
     return StatsConfig(
       timeLimitSeconds: time?.toDouble() ?? 120.0,
       timeUrgentThresholdSeconds: urgent?.toDouble() ?? 30.0,
+    );
+  }
+}
+
+/// Một mục sinh theo chu kỳ: loại entity + khoảng thời gian (giây). Từ JSON `spawnCycle` → [{ objType, intervalSeconds }].
+class SpawnCycleItem {
+  const SpawnCycleItem({
+    required this.objType,
+    required this.intervalSeconds,
+  });
+
+  /// typeId entity (vd. prey_coconut, prey_leaf). Phải là loại eatable (grey trong jsonTypeObj).
+  final String objType;
+  /// Chu kỳ sinh (giây). Mỗi intervalSeconds giây thử sinh 1 con (nếu thỏa điều kiện của từng loại).
+  final double intervalSeconds;
+
+  static SpawnCycleItem fromJson(Map<String, dynamic> json) {
+    final type = json['objType'] as String? ?? json['typeId'] as String?;
+    final interval = (json['intervalSeconds'] as num?)?.toDouble() ??
+        (json['interval'] as num?)?.toDouble() ??
+        10.0;
+    return SpawnCycleItem(
+      objType: type?.toString().trim() ?? 'prey_coconut',
+      intervalSeconds: interval.clamp(0.1, 3600.0),
+    );
+  }
+}
+
+/// Danh sách sinh theo chu kỳ. Mỗi map config khác nhau.
+class SpawnCycleConfig {
+  const SpawnCycleConfig({this.items = const []});
+
+  final List<SpawnCycleItem> items;
+
+  static SpawnCycleConfig fromJson(List<dynamic>? list) {
+    if (list == null || list.isEmpty) return const SpawnCycleConfig();
+    return SpawnCycleConfig(
+      items: list
+          .map((e) => SpawnCycleItem.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
     );
   }
 }

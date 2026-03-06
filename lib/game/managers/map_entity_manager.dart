@@ -106,9 +106,30 @@ class MapEntityManager {
   }
 
   /// [isCellVisible] nếu có: chỉ spawn ở ô trong tầm camera. Null = bỏ qua check.
+  /// Khi có isCellVisible: duyệt hết ô trong view + trống → chọn ngẫu nhiên 1 ô (đảm bảo sinh trong tầm nhìn).
   MapEntityEntry? spawn(String typeId, Set<String> occupied,
       {bool Function(Vector2 grid)? isCellVisible}) {
     if (!typeObjConfig.isEatable(typeId)) return null;
+
+    if (isCellVisible != null) {
+      final candidates = <Vector2>[];
+      for (var row = 0; row < gridRows; row++) {
+        for (var col = 0; col < gridColumns; col++) {
+          final pos = Vector2(col.toDouble(), row.toDouble());
+          if (occupied.contains('${col},$row')) continue;
+          if (!isCellVisible(pos)) continue;
+          candidates.add(pos);
+        }
+      }
+      if (candidates.isEmpty) return null;
+      final pos = candidates[_random.nextInt(candidates.length)];
+      occupied.add('${pos.x.toInt()},${pos.y.toInt()}');
+      final comp = _createComponent(typeId, pos, withSpawnEffect: true);
+      final entry = MapEntityEntry(grid: pos, typeId: typeId, component: comp);
+      _entries.add(entry);
+      return entry;
+    }
+
     for (var i = 0; i < 100; i++) {
       final pos = Vector2(
         _random.nextInt(gridColumns).toDouble(),
@@ -116,7 +137,6 @@ class MapEntityManager {
       );
       final key = '${pos.x.toInt()},${pos.y.toInt()}';
       if (occupied.contains(key)) continue;
-      if (isCellVisible != null && !isCellVisible(pos)) continue;
       occupied.add(key);
       final comp = _createComponent(typeId, pos, withSpawnEffect: true);
       final entry = MapEntityEntry(grid: pos, typeId: typeId, component: comp);

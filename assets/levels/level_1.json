@@ -2,7 +2,7 @@
   "missions": [
     { "id": "leaves", "typeId": "prey_leaf", "target": 10 }
   ],
-  "timeLimitSeconds": 30,
+  "timeLimitSeconds": 120,
   "timeUrgentThresholdSeconds": 10,
   "rule": "none",
   "grid": {
@@ -16,5 +16,8 @@
   "map": {
     "obstacles": [],
     "prey": []
-  }
+  },
+  "spawnCycle": [
+    { "objType": "prey_coconut", "intervalSeconds": 10 }
+  ]
 }

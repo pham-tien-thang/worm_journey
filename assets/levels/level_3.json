@@ -16,5 +16,8 @@
   "map": {
     "obstacles": [],
     "prey": []
-  }
+  },
+  "spawnCycle": [
+    { "objType": "prey_coconut", "intervalSeconds": 10 }
+  ]
 }

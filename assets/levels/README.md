@@ -20,6 +20,7 @@ Tất cả key đều tùy chọn. Thiếu hoặc `null` thì dùng giá trị m
 | `grid` | `object` | nâu nhạt | Màu ô lưới trong vùng chơi. |
 | `outside` | `object` | nâu + 🌱 | Màu và icon vùng ngoài grid. |
 | `map` | `object` | `{}` | Chướng ngại và mồi đặt sẵn theo tọa độ grid. |
+| `spawnCycle` | `array` | `[]` | Sinh mồi theo chu kỳ: mỗi phần tử `{ objType, intervalSeconds }`. Mỗi map config khác nhau. |
 
 ### `missions` (array)
 
@@ -63,7 +64,24 @@ Mỗi **key** = loại entity (typeId), **value** = list tọa độ grid `[[col
 - *(Tương thích cũ: `obstacles` → coi là `x_mark`, `prey` → coi là `prey_leaf`.)*
 - *Sau có thể thêm: `rock`, `water`, `prey_banana`, `small_bot`, ...*
 
+### `spawnCycle` (array)
+
+Sinh mồi theo chu kỳ: mỗi **intervalSeconds** giây game thử sinh 1 entity loại **objType** (trong tầm camera, ô trống). Dùng cho mồi quả dừa, sau có thể thêm loại khác. Mỗi map có thể config khác nhau.
+
+Mỗi phần tử là object:
+
+- `objType` (string): typeId entity eatable, vd. `"prey_coconut"`.
+- `intervalSeconds` (number): chu kỳ (giây). Có thể dùng key `interval` thay cho `intervalSeconds`.
+
 Ví dụ:
+
+```json
+"spawnCycle": [
+  { "objType": "prey_coconut", "intervalSeconds": 10 }
+]
+```
+
+Ví dụ map:
 
 ```json
 "map": {
@@ -93,7 +111,10 @@ Ví dụ:
   "map": {
     "obstacles": [],
     "prey": []
-  }
+  },
+  "spawnCycle": [
+    { "objType": "prey_coconut", "intervalSeconds": 10 }
+  ]
 }
 ```
 
@@ -101,6 +122,6 @@ Ví dụ:
 
 - Load cả màn: `await loadLevelJsonConfig(level)` → [LevelJsonConfig].
 - Parse từ Map: `LevelJsonConfig.loadAllConfig(json)`.
-- Load từng phần: `LevelJsonConfig.loadMapConfig(json)`, `loadRuleConfig(json)`, `loadMissionsConfig(json)`, `loadStatsConfig(json)`, `loadGridConfig(json)`, `loadOutsideConfig(json)`.
+- Load từng phần: `LevelJsonConfig.loadMapConfig(json)`, `loadRuleConfig(json)`, `loadMissionsConfig(json)`, `loadStatsConfig(json)`, `loadGridConfig(json)`, `loadOutsideConfig(json)`, `loadSpawnCycleConfig(json)`.
 
 Chi tiết API xem trong `lib/game/level_json_config.dart`.

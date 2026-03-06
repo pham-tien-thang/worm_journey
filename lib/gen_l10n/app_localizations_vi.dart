@@ -8,6 +8,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String levelLabel(int level) => 'Lv$level';
 
   @override
+  String sceneLabel(int n) => 'Cảnh $n';
+
+  @override
   String get gameOver => 'Game Over';
 
   @override

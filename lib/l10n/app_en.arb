@@ -5,6 +5,12 @@
   "entityXMarkName": "Obstacle",
   "appTitle": "Worm Journey",
   "levelLabel": "Lv{level}",
+  "sceneLabel": "Scene {n}",
+  "@sceneLabel": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
   "@levelLabel": {
     "placeholders": {
       "level": {

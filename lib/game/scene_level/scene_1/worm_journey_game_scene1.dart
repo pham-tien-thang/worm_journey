@@ -53,8 +53,8 @@ class WormJourneyGame extends FlameGame
   late TypeObjConfig _typeObjConfig;
   late MapEntityManager _mapEntityManager;
 
-  double _appleSpawnAccumulator = 0;
-  static const double _appleSpawnInterval = 10.0;
+  /// Accumulator theo typeId cho spawn theo chu kỳ (từ _levelConfig.spawnCycle).
+  final Map<String, double> _spawnCycleAccumulators = {};
 
   /// Thời gian đã chơi (giây), tăng mỗi frame. Dùng cho buff expiry, HUD còn lại = [ _timeLimit ] - [_gameTime].
   double _gameTime = 0;
@@ -276,11 +276,15 @@ class WormJourneyGame extends FlameGame
     if (entry != null) world.add(entry.component);
   }
 
-  void _spawnApple() {
-    if (_mapEntityManager.entries.any((e) => e.typeId == ProjectType.preyCoconut.typeId)) return;
+  /// Sinh một entity eatable theo [typeId] (từ config spawnCycle). Điều kiện đặc thù từng loại (vd. dừa: tối đa 1 quả, không sinh khi sâu đang buff dừa).
+  void _spawnByTypeId(String typeId) {
+    if (typeId == ProjectType.preyCoconut.typeId) {
+      if (mainWorm.hasItemEffect(ProjectType.preyCoconut.typeId)) return;
+      if (_mapEntityManager.entries.any((e) => e.typeId == typeId)) return;
+    }
     final occupied = _occupiedGridKeys();
     final entry = _mapEntityManager.spawn(
-      ProjectType.preyCoconut.typeId,
+      typeId,
       occupied,
       isCellVisible: _isGridInCameraView,
     );
@@ -376,7 +380,10 @@ class WormJourneyGame extends FlameGame
     _placeAllMapEntitiesFromConfig();
     if (!_mapEntityManager.entries.any((e) => _typeObjConfig.isEatable(e.typeId))) _spawnPrey();
 
-    _appleSpawnAccumulator = 0;
+    _spawnCycleAccumulators.clear();
+    for (final item in _levelConfig.spawnCycle.items) {
+      _spawnCycleAccumulators[item.objType] = 0;
+    }
     _gameTime = 0;
     _startDelayRemaining = startDelaySeconds;
     _timeLimit = _levelConfig.timeLimitSeconds;
@@ -519,11 +526,14 @@ class WormJourneyGame extends FlameGame
     mainWorm.setGameTime(_gameTime);
     mainWorm.removeExpiredItemEffects(_gameTime);
 
-    if (!mainWorm.hasItemEffect(ProjectType.preyCoconut.typeId)) {
-      _appleSpawnAccumulator += dt;
-      if (_appleSpawnAccumulator >= _appleSpawnInterval) {
-        _appleSpawnAccumulator -= _appleSpawnInterval;
-        _spawnApple();
+    for (final item in _levelConfig.spawnCycle.items) {
+      if (!_typeObjConfig.isEatable(item.objType)) continue;
+      final acc = _spawnCycleAccumulators[item.objType] ?? 0;
+      final next = acc + dt;
+      _spawnCycleAccumulators[item.objType] = next;
+      if (next >= item.intervalSeconds) {
+        _spawnCycleAccumulators[item.objType] = next - item.intervalSeconds;
+        _spawnByTypeId(item.objType);
       }
     }
 
