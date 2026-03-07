@@ -39,7 +39,7 @@ class _GameScreenState extends State<GameScreen> {
     final confirm = await ExitGameDialog.show(context);
     if (!mounted) return;
     if (confirm == true) {
-      context.go(AppRoutes.play);
+      context.pop();
     }
   }
 
@@ -53,7 +53,7 @@ class _GameScreenState extends State<GameScreen> {
       },
       child: GamePlayScaffold(
         game: _game,
-        onGameOverEnd: () => context.go(AppRoutes.play),
+        onGameOverEnd: () => context.pop(),
       ),
     );
   }
