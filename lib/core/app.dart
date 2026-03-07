@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../app_router.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../inject/injection.dart';
+import 'app_context.dart';
 
 class WormJourneyApp extends StatefulWidget {
   const WormJourneyApp({super.key});
@@ -16,7 +18,8 @@ class WormJourneyApp extends StatefulWidget {
 
 class _WormJourneyAppState extends State<WormJourneyApp> {
   Locale? _locale;
-  late final GoRouter _router = createAppRouter();
+  late final GoRouter _router =
+      createAppRouter(get<AppContext>().navigatorKey);
   bool _didPrecacheImages = false;
 
   static Locale _resolveLocale(Locale? locale, Iterable<Locale> supported) {

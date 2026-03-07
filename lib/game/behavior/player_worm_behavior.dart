@@ -14,7 +14,10 @@ class PlayerWormBehavior extends WormBehavior {
       agent.grow();
       agent.worm.playSwallowPreyEffect();
       context.addMissionLeaves(1);
-      context.spawnPrey();
+      // Chỉ spawn thêm lá khi vừa ăn lá cuối cùng (sau khi ăn, số lá trên map = 0).
+      if (context.preyLeafCountOnMap == 0) {
+        context.spawnPrey();
+      }
     } else {
       final effectId = entity.effectTypeId;
       if (effectId != null) {

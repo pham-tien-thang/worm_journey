@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../gen_l10n/app_localizations.dart';
+import '../inject/injection.dart';
 
 /// Dialog cảnh báo thoát game: ảnh nền [waring_dialog.png], chữ "Trò chơi sẽ kết thúc ?", 2 nút Kết thúc (đỏ) và Huỷ (cam).
 class ExitGameDialog extends StatelessWidget {
@@ -59,7 +59,7 @@ class _ExitGameDialogContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = L10n;
     return Stack(
       alignment: Alignment.bottomCenter,
       children: [

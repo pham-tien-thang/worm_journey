@@ -1,26 +1,26 @@
-import 'dart:ui';
-
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 
 import '../gen_l10n/app_localizations.dart';
+import '../inject/injection.dart';
 
 /// Overlay khi game over: nền mờ + "Game Over", nút Chơi lại (vẽ bằng code), icon 🎬 đè góc phải, chữ Kết thúc.
 class GameOverOverlay extends PositionComponent with TapCallbacks {
   GameOverOverlay({
     required Vector2 size,
-    required this.locale,
+    Locale? locale,
     this.onTap,
     this.onEnd,
     this.onWatchAd,
-  }) : super(
+  }) : _locale = locale,
+       super(
           position: Vector2.zero(),
           size: size,
           priority: 1000,
         );
 
-  final Locale locale;
+  final Locale? _locale;
   final VoidCallback? onTap;
   final VoidCallback? onEnd;
   final VoidCallback? onWatchAd;
@@ -58,7 +58,9 @@ class GameOverOverlay extends PositionComponent with TapCallbacks {
       Paint()..color = const Color(0xCC000000),
     );
 
-    final l10n = AppLocalizations.lookup(locale);
+    final l10n = _locale != null
+        ? lookupAppLocalizations(_locale!)
+        : L10n;
     final centerX = size.x / 2;
     final centerY = size.y / 2;
 

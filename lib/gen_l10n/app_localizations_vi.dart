@@ -1,14 +1,34 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
 
+// ignore_for_file: type=lint
+
+/// The translations for Vietnamese (`vi`).
 class AppLocalizationsVi extends AppLocalizations {
+  AppLocalizationsVi([String locale = 'vi']) : super(locale);
+
+  @override
+  String get entityPreyLeafName => 'Chiếc lá';
+
+  @override
+  String get entityPreyCoconutName => 'Quả dừa';
+
+  @override
+  String get entityXMarkName => 'Chướng ngại vật';
+
   @override
   String get appTitle => 'Worm Journey';
 
   @override
-  String levelLabel(int level) => 'Lv$level';
+  String levelLabel(int level) {
+    return 'Lv$level';
+  }
 
   @override
-  String sceneLabel(int n) => 'Cảnh $n';
+  String sceneLabel(int n) {
+    return 'Cảnh $n';
+  }
 
   @override
   String get gameOver => 'Game Over';
@@ -26,16 +46,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String get view => 'Xem';
 
   @override
-  String quantityShort(int quantity) => 'x$quantity';
+  String quantityShort(int quantity) {
+    return 'x$quantity';
+  }
 
   @override
-  String buyCoins(int price) => 'Mua $price 🪙';
+  String buyCoins(int price) {
+    return 'Mua $price 🪙';
+  }
 
   @override
   String get receive => 'Nhận';
 
   @override
-  String getCoins(int amount) => 'Nhận $amount 🪙';
+  String getCoins(int amount) {
+    return 'Nhận $amount 🪙';
+  }
 
   @override
   String get buttonJourney => 'Hành trình';
@@ -121,17 +147,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get itemDizzyName => 'Chóng mặt';
 
   @override
-  String get itemDizzyDescription =>
-      'Đảo ngược hướng di chuyển của rắn.';
-
-  @override
-  String get entityPreyLeafName => 'Chiếc lá';
-
-  @override
-  String get entityPreyCoconutName => 'Quả dừa';
-
-  @override
-  String get entityXMarkName => 'Chướng ngại vật';
+  String get itemDizzyDescription => 'Đảo ngược hướng di chuyển của rắn.';
 
   @override
   String get exitGameWarningMessage => 'Trò chơi sẽ kết thúc ?';

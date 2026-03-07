@@ -3,7 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../gen_l10n/app_localizations.dart';
+import '../inject/injection.dart';
 import '../models/item_model.dart';
 
 /// Dialog thông tin item: title (icon + tên, nâu), mô tả, nút Mua, nút Nhận (xanh, nháy scale).
@@ -75,7 +75,7 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = L10n;
     final item = widget.item;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

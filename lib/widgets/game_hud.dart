@@ -7,7 +7,7 @@ import '../common/debug_apply.dart';
 import '../core/app_colors.dart';
 import '../game/entities/entity_models.dart';
 import '../game/game.dart';
-import '../gen_l10n/app_localizations.dart';
+import '../inject/injection.dart';
 import '../models/item_model.dart';
 
 /// Thanh HUD phía trên màn chơi: thời gian giữa, kim cương bên phải, nhiệm vụ & hiệu ứng bên trái.
@@ -115,7 +115,7 @@ class _LeftSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = L10n;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,7 +124,8 @@ class _LeftSection extends StatelessWidget {
           Builder(
             builder: (_) {
               final icon = EntityModels.icon(m.typeId);
-              final label = l10n.entityDisplayName(m.typeId);
+              final type = EntityModels.projectType(m.typeId);
+              final label = type?.displayName(l10n) ?? m.typeId;
               return Text(
                 '$icon $label ${m.current}/${m.target}',
                 style: textStyle,

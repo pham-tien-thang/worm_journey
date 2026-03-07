@@ -316,6 +316,9 @@ class WormJourneyGame extends FlameGame
       destroyObstacleAtCallback: _destroyEntityAt,
       loseSegmentCallback: _loseSegment,
       triggerMagnetPullCallback: _triggerMagnetPull,
+      preyLeafCountOnMapGetter: () => _mapEntityManager.entries
+          .where((e) => e.typeId == ProjectType.preyLeaf.typeId)
+          .length,
     );
 
     final worm = PinkWorm(

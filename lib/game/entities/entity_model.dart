@@ -1,3 +1,4 @@
+import '../../gen_l10n/app_localizations.dart';
 import '../../models/item_model.dart';
 
 /// Loại entity dùng chung: mồi (prey_leaf, prey_coconut), vật cản (x_mark), và mỗi [ItemType] có [ProjectType] tương ứng.
@@ -80,9 +81,23 @@ extension ProjectTypeExtension on ProjectType {
 
   /// effectTypeId của [itemType]. Null nếu [itemType] null.
   String? get itemTypeId => itemType?.effectTypeId;
+
+  /// Tên hiển thị entity từ l10n. Entity có getter riêng (prey_leaf, prey_coconut, x_mark); loại item dùng [ItemTypeExt.name].
+  String displayName(AppLocalizations l10n) {
+    switch (this) {
+      case ProjectType.preyLeaf:
+        return l10n.entityPreyLeafName;
+      case ProjectType.preyCoconut:
+        return l10n.entityPreyCoconutName;
+      case ProjectType.xMark:
+        return l10n.entityXMarkName;
+      default:
+        return itemType?.name(l10n) ?? typeId;
+    }
+  }
 }
 
-/// Model gốc cho entity: icon, độ cứng, type. Tên hiển thị lấy từ ARB qua [AppLocalizations.entityDisplayName(typeId)].
+/// Model gốc cho entity: icon, độ cứng, type. Tên hiển thị lấy từ ARB qua [ProjectTypeExtension.displayName].
 abstract class EntityModel {
   String get icon;
   int get hardness;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app_router.dart';
-import '../../gen_l10n/app_localizations.dart';
+import '../../inject/injection.dart';
 import '../../widgets/green_button.dart';
 
 class MainMenuScreen extends StatelessWidget {
@@ -10,7 +10,7 @@ class MainMenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = L10n;
     return Scaffold(
       backgroundColor: const Color(0xFF1B3D2E),
       body: Stack(

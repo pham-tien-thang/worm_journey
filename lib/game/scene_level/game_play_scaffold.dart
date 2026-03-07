@@ -3,10 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../common/debug_apply.dart';
-import '../../core/game_pause_observer.dart';
 import '../../core/app_colors.dart';
+import '../../core/game_pause_observer.dart';
 import '../../core/services/shared_prefs_service.dart';
-import '../../gen_l10n/app_localizations.dart';
+import '../../inject/injection.dart';
 import '../../models/item_model.dart';
 import '../../widgets/game_hud.dart';
 import '../../widgets/game_joystick.dart';
@@ -257,7 +257,7 @@ class _ItemSlot extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 3),
                             child: Text(
-                              AppLocalizations.of(context).view,
+                              L10n.view,
                               style: const TextStyle(
                                 fontSize: 8,
                                 color: Color(0xFF5D4037),
@@ -278,7 +278,7 @@ class _ItemSlot extends StatelessWidget {
           top: -7,
           right: -2,
           child: Text(
-            AppLocalizations.of(context).quantityShort(quantity),
+            L10n.quantityShort(quantity),
             style: const TextStyle(
               fontSize: 12,
               color: Colors.black,
@@ -336,7 +336,7 @@ class _GameOverOverlayWidgetState extends State<_GameOverOverlayWidget>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = L10n;
     final game = widget.game;
     return Material(
       color: const Color(0xCC000000),

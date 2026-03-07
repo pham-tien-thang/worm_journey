@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app_router.dart';
-import '../../gen_l10n/app_localizations.dart';
+import '../../inject/injection.dart';
 
 /// Màn chọn level: nền full, ô vuông radius mạnh, grid 3 cột; chữ Cảnh 1,2,3... nâu viền trắng.
 class LevelSelectionScreen extends StatelessWidget {
@@ -101,7 +101,7 @@ class _LevelMapGrid extends StatelessWidget {
     int colCount,
     double itemSize,
   ) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = L10n;
     int idx = 0;
     final rows = <Widget>[];
     for (int r = 0; r < rowCount && idx < order.length; r++) {

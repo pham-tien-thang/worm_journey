@@ -1,14 +1,34 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
 
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
 class AppLocalizationsEn extends AppLocalizations {
+  AppLocalizationsEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get entityPreyLeafName => 'Leaf';
+
+  @override
+  String get entityPreyCoconutName => 'Coconut';
+
+  @override
+  String get entityXMarkName => 'Obstacle';
+
   @override
   String get appTitle => 'Worm Journey';
 
   @override
-  String levelLabel(int level) => 'Lv$level';
+  String levelLabel(int level) {
+    return 'Lv$level';
+  }
 
   @override
-  String sceneLabel(int n) => 'Scene $n';
+  String sceneLabel(int n) {
+    return 'Scene $n';
+  }
 
   @override
   String get gameOver => 'Game Over';
@@ -26,16 +46,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get view => 'View';
 
   @override
-  String quantityShort(int quantity) => 'x$quantity';
+  String quantityShort(int quantity) {
+    return 'x$quantity';
+  }
 
   @override
-  String buyCoins(int price) => 'Buy $price 🪙';
+  String buyCoins(int price) {
+    return 'Buy $price 🪙';
+  }
 
   @override
   String get receive => 'Receive';
 
   @override
-  String getCoins(int amount) => 'Get $amount 🪙';
+  String getCoins(int amount) {
+    return 'Get $amount 🪙';
+  }
 
   @override
   String get buttonJourney => 'Journey';
@@ -60,15 +86,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get itemSnailName => 'Snail';
 
   @override
-  String get itemSnailDescription =>
-      'Snake moves slowly, easier to control.';
+  String get itemSnailDescription => 'Snake moves slowly, easier to control.';
 
   @override
   String get itemMagnetName => 'Magnet';
 
   @override
-  String get itemMagnetDescription =>
-      'Attracts all leaves within 2 tiles.';
+  String get itemMagnetDescription => 'Attracts all leaves within 2 tiles.';
 
   @override
   String get itemShieldName => 'Shield';
@@ -101,8 +125,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get itemSpeedName => 'Speed Boost';
 
   @override
-  String get itemSpeedDescription =>
-      'Snake moves faster for a short duration.';
+  String get itemSpeedDescription => 'Snake moves faster for a short duration.';
 
   @override
   String get itemClockName => 'Clock';
@@ -122,15 +145,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get itemDizzyDescription =>
       'Reverses the snake\'s movement direction.';
-
-  @override
-  String get entityPreyLeafName => 'Leaf';
-
-  @override
-  String get entityPreyCoconutName => 'Coconut';
-
-  @override
-  String get entityXMarkName => 'Obstacle';
 
   @override
   String get exitGameWarningMessage => 'The game will end?';

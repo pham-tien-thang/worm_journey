@@ -8,6 +8,8 @@ abstract class WormGameContext {
   void destroyObstacleAt(Vector2 grid);
   void loseSegment();
   void triggerMagnetPull();
+  /// Số lá (prey_leaf) còn trên map. Dùng để chỉ spawn khi ăn lá cuối cùng.
+  int get preyLeafCountOnMap;
 }
 
 class WormGameContextImpl extends WormGameContext {
@@ -18,6 +20,7 @@ class WormGameContextImpl extends WormGameContext {
     required this.destroyObstacleAtCallback,
     required this.loseSegmentCallback,
     required this.triggerMagnetPullCallback,
+    required this.preyLeafCountOnMapGetter,
   });
 
   final double Function() gameTimeGetter;
@@ -26,6 +29,10 @@ class WormGameContextImpl extends WormGameContext {
   final void Function(Vector2) destroyObstacleAtCallback;
   final void Function() loseSegmentCallback;
   final void Function() triggerMagnetPullCallback;
+  final int Function() preyLeafCountOnMapGetter;
+
+  @override
+  int get preyLeafCountOnMap => preyLeafCountOnMapGetter();
 
   @override
   double get gameTime => gameTimeGetter();

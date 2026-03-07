@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/game_pause_observer.dart';
@@ -20,8 +21,9 @@ abstract final class AppRoutes {
   static String game(int level) => '/game/$level';
 }
 
-GoRouter createAppRouter() {
+GoRouter createAppRouter(GlobalKey<NavigatorState> navigatorKey) {
   return GoRouter(
+    navigatorKey: navigatorKey,
     observers: [GamePauseObserver()],
     routes: [
       GoRoute(
