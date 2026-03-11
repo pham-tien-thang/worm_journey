@@ -3,10 +3,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../core/app_constants.dart';
+import '../core/services/coin_service.dart';
 import '../inject/injection.dart';
 import '../models/item_model.dart';
 
 /// Dialog thông tin item: title (icon + tên, nâu), mô tả, nút Mua, nút Nhận (xanh, nháy scale).
+/// [onBuy] trả về Future<bool>: true = mua thành công (đóng dialog), false = không đủ vàng.
 class ItemInfoDialog extends StatefulWidget {
   const ItemInfoDialog({
     super.key,
@@ -16,13 +19,14 @@ class ItemInfoDialog extends StatefulWidget {
   });
 
   final ItemModel item;
-  final VoidCallback? onBuy;
+  /// Trả về true nếu mua thành công (đóng dialog), false nếu không đủ vàng.
+  final Future<bool> Function()? onBuy;
   final VoidCallback? onReceive;
 
   static Future<void> show(
     BuildContext context, {
     required ItemModel item,
-    VoidCallback? onBuy,
+    Future<bool> Function()? onBuy,
     VoidCallback? onReceive,
   }) {
     return showDialog<void>(
@@ -134,12 +138,14 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
                   Expanded(
                     child: FilledButton(
                       onPressed: widget.onBuy != null
-                          ? () {
-                              widget.onBuy!();
-                              Navigator.of(context).pop();
+                          ? () async {
+                              final ok = await widget.onBuy!();
+                              if (ok && context.mounted) {
+                                Navigator.of(context).pop();
+                              }
                             }
                           : null,
-                      child: Text(l10n.buyCoins(item.price)),
+                      child: Text(l10n.buyCoins(item.price, AppConstants.coinIcon)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -156,18 +162,19 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
                             );
                           },
                           child: FilledButton(
-                            onPressed: widget.onReceive != null
-                                ? () {
-                                    widget.onReceive!();
-                                    Navigator.of(context).pop();
-                                  }
-                                : null,
+                            onPressed: () async {
+                              await CoinService.instance.coinPlus(_getAmount);
+                              widget.onReceive?.call();
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
                             style: FilledButton.styleFrom(
                               backgroundColor: _receiveGreen,
                               foregroundColor: Colors.white,
                               side: const BorderSide(color: Colors.amber, width: 2),
                             ),
-                            child: Text(l10n.getCoins(_getAmount)),
+                            child: Text(l10n.getCoins(_getAmount, AppConstants.coinIcon)),
                           ),
                         ),
                         Positioned(
