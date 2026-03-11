@@ -31,19 +31,19 @@
       }
     }
   },
-  "buyCoins": "Buy {price} 🪙",
+  "buyCoins": "Buy {price} {coinIcon}",
   "@buyCoins": {
     "placeholders": {
-      "price": {
-        "type": "int"
-      }
+      "price": {"type": "int"},
+      "coinIcon": {"type": "String"}
     }
   },
   "receive": "Receive",
-  "getCoins": "Get {amount} 🪙",
+  "getCoins": "Get {amount} {coinIcon}",
   "@getCoins": {
     "placeholders": {
-      "amount": {"type": "int"}
+      "amount": {"type": "int"},
+      "coinIcon": {"type": "String"}
     }
   },
   "buttonJourney": "Journey",
@@ -74,5 +74,6 @@
   "itemDizzyDescription": "Reverses the snake's movement direction.",
   "exitGameWarningMessage": "The game will end?",
   "exitGameConfirm": "End",
-  "exitGameCancel": "Cancel"
+  "exitGameCancel": "Cancel",
+  "notEnoughCoins": "Not enough coins"
 }

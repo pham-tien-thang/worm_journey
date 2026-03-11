@@ -12,9 +12,21 @@
   "gameOverEnd": "Kết thúc",
   "view": "Xem",
   "quantityShort": "x{quantity}",
-  "buyCoins": "Mua {price} 🪙",
+  "buyCoins": "Mua {price} {coinIcon}",
+  "@buyCoins": {
+    "placeholders": {
+      "price": {"type": "int"},
+      "coinIcon": {"type": "String"}
+    }
+  },
   "receive": "Nhận",
-  "getCoins": "Nhận {amount} 🪙",
+  "getCoins": "Nhận {amount} {coinIcon}",
+  "@getCoins": {
+    "placeholders": {
+      "amount": {"type": "int"},
+      "coinIcon": {"type": "String"}
+    }
+  },
   "buttonJourney": "Hành trình",
   "buttonChallenge": "Thử thách",
   "buttonShop": "Cửa hàng",
@@ -43,5 +55,6 @@
   "itemDizzyDescription": "Đảo ngược hướng di chuyển của rắn.",
   "exitGameWarningMessage": "Trò chơi sẽ kết thúc ?",
   "exitGameConfirm": "Kết thúc",
-  "exitGameCancel": "Huỷ"
+  "exitGameCancel": "Huỷ",
+  "notEnoughCoins": "Không đủ vàng"
 }

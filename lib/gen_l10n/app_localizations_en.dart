@@ -51,16 +51,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String buyCoins(int price) {
-    return 'Buy $price 🪙';
+  String buyCoins(int price, String coinIcon) {
+    return 'Buy $price $coinIcon';
   }
 
   @override
   String get receive => 'Receive';
 
   @override
-  String getCoins(int amount) {
-    return 'Get $amount 🪙';
+  String getCoins(int amount, String coinIcon) {
+    return 'Get $amount $coinIcon';
   }
 
   @override
@@ -154,4 +154,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exitGameCancel => 'Cancel';
+
+  @override
+  String get notEnoughCoins => 'Not enough coins';
 }

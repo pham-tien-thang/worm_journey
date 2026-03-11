@@ -36,9 +36,9 @@ class LevelSelectionScreen extends StatelessWidget {
               children: [
                 IconButton(
                   onPressed: () => context.pop(),
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  icon:  Icon(Icons.arrow_back_ios_new, color: Colors.black,weight: 100,),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.black26,
+                    backgroundColor: Colors.white70,
                   ),
                 ),
                 const SizedBox(height: 16),

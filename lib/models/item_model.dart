@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 
 /// Loại item. [effectTypeId] dùng cho l10n (tên, mô tả), SharedPrefs, addItemEffect, BuffConfig.
@@ -68,13 +69,13 @@ class ItemModel {
 
   final ItemType type;
   final String icon;
-  /// Giá (đơn vị 🪙).
+  /// Giá (đơn vị [AppConstants.coinIcon]).
   final int price;
 
   String get effectTypeId => type.effectTypeId;
 
   @override
-  String toString() => 'ItemModel(${type.effectTypeId}, $icon, $price🪙)';
+  String toString() => 'ItemModel(${type.effectTypeId}, $icon, $price${AppConstants.coinIcon})';
 }
 
 /// Danh sách item mặc định — gọi từ các màn (shop, inventory, ...).

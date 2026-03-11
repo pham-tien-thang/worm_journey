@@ -10,7 +10,33 @@ class SharedPrefsService {
     _prefs ??= await SharedPreferences.getInstance();
   }
 
+  static const String _coinKey = 'coin';
+  static const String _firstTimeBonusKey = 'first_time_bonus_given';
   static const String _itemQtyPrefix = 'item_qty_';
+
+  /// Đã tặng bonus 100 coin lần đầu chưa (chỉ tặng 1 lần, trừ khi dev mode).
+  static Future<bool> hasFirstTimeBonusGiven() async {
+    await init();
+    return _prefs!.getBool(_firstTimeBonusKey) ?? false;
+  }
+
+  static Future<void> setFirstTimeBonusGiven() async {
+    await init();
+    await _prefs!.setBool(_firstTimeBonusKey, true);
+  }
+
+  /// Đọc coin. Null nếu chưa từng set (lần đầu).
+  static Future<int?> getCoin() async {
+    await init();
+    final v = _prefs!.getInt(_coinKey);
+    return v;
+  }
+
+  /// Lưu coin.
+  static Future<void> setCoin(int value) async {
+    await init();
+    await _prefs!.setInt(_coinKey, value);
+  }
 
   /// Số lượng item (mặc định 0).
   static Future<int> getItemQuantity(String itemId) async {

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../common/debug_apply.dart';
 import '../core/app_colors.dart';
+import '../core/app_constants.dart';
+import '../core/services/coin_service.dart';
 import '../game/entities/entity_models.dart';
 import '../game/game.dart';
 import '../inject/injection.dart';
@@ -307,24 +309,29 @@ class _RightSection extends StatelessWidget {
       alignment: Alignment.centerRight,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('🪙', style: TextStyle(fontSize: textStyle?.fontSize ?? 16)),
-            const SizedBox(width: 4),
-            Text('${data.diamonds}', style: textStyle),
-            if (kDebugMode) ...[
-              const SizedBox(width: 12),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _DebugApplyToggle(textStyle: textStyle),
-                  const SizedBox(height: 4),
-                  _ShowCoordsToggle(textStyle: textStyle),
+        child: ListenableBuilder(
+          listenable: CoinService.instance,
+          builder: (context, _) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(AppConstants.coinIcon, style: TextStyle(fontSize: textStyle?.fontSize ?? 16)),
+                const SizedBox(width: 4),
+                Text('${CoinService.instance.coin}', style: textStyle),
+                if (kDebugMode) ...[
+                  const SizedBox(width: 12),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _DebugApplyToggle(textStyle: textStyle),
+                      const SizedBox(height: 4),
+                      _ShowCoordsToggle(textStyle: textStyle),
+                    ],
+                  ),
                 ],
-              ),
-            ],
-          ],
+              ],
+            );
+          },
         ),
       ),
     );

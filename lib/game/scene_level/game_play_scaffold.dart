@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../common/debug_apply.dart';
 import '../../core/app_colors.dart';
 import '../../core/game_pause_observer.dart';
+import '../../core/services/coin_service.dart';
 import '../../core/services/shared_prefs_service.dart';
 import '../../inject/injection.dart';
 import '../../models/item_model.dart';
@@ -62,13 +63,28 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
     widget.game.useEffect(item.type);
   }
 
-  void _onBuyItem(ItemModel item) {
+  Future<bool> _onBuyItem(ItemModel item, BuildContext scaffoldContext) async {
     if (shouldApplyDebug) {
       final q = _itemQuantities[item.effectTypeId] ?? 0;
       final next = q + 10;
       setState(() => _itemQuantities[item.effectTypeId] = next);
       SharedPrefsService.setItemQuantity(item.effectTypeId, next);
+      return true;
     }
+    final ok = await CoinService.instance.coinMinus(item.price);
+    if (!ok) {
+      if (mounted && scaffoldContext.mounted) {
+        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+          SnackBar(content: Text(L10n.notEnoughCoins)),
+        );
+      }
+      return false;
+    }
+    final q = _itemQuantities[item.effectTypeId] ?? 0;
+    final next = q + 1;
+    setState(() => _itemQuantities[item.effectTypeId] = next);
+    SharedPrefsService.setItemQuantity(item.effectTypeId, next);
+    return true;
   }
 
   @override
@@ -140,7 +156,7 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                                                   quantity:
                                                       _itemQuantities[item.effectTypeId] ?? 0,
                                                   onUse: () => _onUseItem(item),
-                                                  onBuy: () => _onBuyItem(item),
+                                                  onBuy: () => _onBuyItem(item, dialogContext),
                                                   onOpenDialog: () => _openItemDialog(
                                                     dialogContext,
                                                     item,
@@ -185,7 +201,7 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
     ItemInfoDialog.show(
       dialogContext,
       item: item,
-      onBuy: () => _onBuyItem(item),
+      onBuy: () => _onBuyItem(item, dialogContext),
       onReceive: () => _onUseItem(item),
     );
   }

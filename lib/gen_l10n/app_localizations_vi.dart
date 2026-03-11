@@ -51,16 +51,16 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String buyCoins(int price) {
-    return 'Mua $price 🪙';
+  String buyCoins(int price, String coinIcon) {
+    return 'Mua $price $coinIcon';
   }
 
   @override
   String get receive => 'Nhận';
 
   @override
-  String getCoins(int amount) {
-    return 'Nhận $amount 🪙';
+  String getCoins(int amount, String coinIcon) {
+    return 'Nhận $amount $coinIcon';
   }
 
   @override
@@ -157,4 +157,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get exitGameCancel => 'Huỷ';
+
+  @override
+  String get notEnoughCoins => 'Không đủ vàng';
 }

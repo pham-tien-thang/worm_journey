@@ -173,8 +173,8 @@ abstract class AppLocalizations {
   /// No description provided for @buyCoins.
   ///
   /// In en, this message translates to:
-  /// **'Buy {price} 🪙'**
-  String buyCoins(int price);
+  /// **'Buy {price} {coinIcon}'**
+  String buyCoins(int price, String coinIcon);
 
   /// No description provided for @receive.
   ///
@@ -185,8 +185,8 @@ abstract class AppLocalizations {
   /// No description provided for @getCoins.
   ///
   /// In en, this message translates to:
-  /// **'Get {amount} 🪙'**
-  String getCoins(int amount);
+  /// **'Get {amount} {coinIcon}'**
+  String getCoins(int amount, String coinIcon);
 
   /// No description provided for @buttonJourney.
   ///
@@ -361,6 +361,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel'**
   String get exitGameCancel;
+
+  /// No description provided for @notEnoughCoins.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough coins'**
+  String get notEnoughCoins;
 }
 
 class _AppLocalizationsDelegate
