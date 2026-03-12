@@ -6,6 +6,7 @@ import 'game/scene_level/game_screen.dart';
 import 'screens/challenge/challenge_screen.dart';
 import 'screens/level_selection/level_selection_screen.dart';
 import 'screens/main_menu/main_menu_screen.dart';
+import 'screens/scene_selection/scene_selection_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/shop/shop_screen.dart';
 
@@ -15,10 +16,12 @@ abstract final class AppRoutes {
 
   static const String home = '/';
   static const String play = '/play';
+  static const String playSceneLevels = '/play/scene/:sceneIndex';
   static const String challenge = '/challenge';
   static const String shop = '/shop';
   static const String settings = '/settings';
   static String game(int level) => '/game/$level';
+  static String sceneLevels(int sceneIndex) => '/play/scene/$sceneIndex';
 }
 
 GoRouter createAppRouter(GlobalKey<NavigatorState> navigatorKey) {
@@ -32,7 +35,15 @@ GoRouter createAppRouter(GlobalKey<NavigatorState> navigatorKey) {
       ),
       GoRoute(
         path: AppRoutes.play,
-        builder: (_, __) => const LevelSelectionScreen(),
+        builder: (_, __) => const SceneSelectionScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.playSceneLevels,
+        builder: (context, state) {
+          final sceneIndex =
+              int.tryParse(state.pathParameters['sceneIndex'] ?? '1') ?? 1;
+          return LevelSelectionScreen(sceneIndex: sceneIndex);
+        },
       ),
       GoRoute(
         path: AppRoutes.challenge,

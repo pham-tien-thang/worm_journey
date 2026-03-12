@@ -13,6 +13,7 @@ class WormConfig {
     this.segmentSize = 28.0,
     this.moveInterval = 0.28,
     this.initialLength = 10,
+    this.maxLength,
     this.gridRows,
   });
 
@@ -22,6 +23,8 @@ class WormConfig {
   final double segmentSize;
   final double moveInterval;
   final int initialLength;
+  /// Độ dài tối đa (số đốt). Null = không giới hạn.
+  final int? maxLength;
   /// Null thì Worm dùng GameConfig.gridRows.
   final int? gridRows;
 }

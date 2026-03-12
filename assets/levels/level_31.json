@@ -1,0 +1,42 @@
+{
+  "itemBlock": [
+    "snail",
+    "magnet",
+    "bomb",
+    "antidote",
+    "speed",
+    "clock",
+    "freeze",
+    "dizzy"
+  ],
+  "missions": [
+    {
+      "id": "leaves",
+      "typeId": "prey_leaf",
+      "target": 10
+    }
+  ],
+  "timeLimitSeconds": 120,
+  "timeUrgentThresholdSeconds": 10,
+  "rule": "none",
+  "outside": {
+    "color": "0xFF8B7355",
+    "icon": ""
+  },
+  "map": {
+    "obstacles": [],
+    "prey": []
+  },
+  "spawnCycle": [
+    {
+      "objType": "prey_coconut",
+      "intervalSeconds": 10
+    }
+  ],
+  "grid": {
+    "colorLight": "0xFFF4A756",
+    "colorLighter": "0xFF730930"
+  },
+  "guide_vi": "",
+  "guide_en": ""
+}

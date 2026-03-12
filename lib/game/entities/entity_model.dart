@@ -5,6 +5,7 @@ import '../../models/item_model.dart';
 enum ProjectType {
   preyLeaf,
   preyCoconut,
+  preyFlag,
   xMark,
   // Mỗi ItemType có ProjectType tương ứng (effectTypeId = typeId)
   snail,
@@ -26,6 +27,8 @@ extension ProjectTypeExtension on ProjectType {
         return 'prey_leaf';
       case ProjectType.preyCoconut:
         return 'prey_coconut';
+      case ProjectType.preyFlag:
+        return 'prey_flag';
       case ProjectType.xMark:
         return 'x_mark';
       case ProjectType.snail:
@@ -56,6 +59,8 @@ extension ProjectTypeExtension on ProjectType {
         return ItemType.seed;
       case ProjectType.preyCoconut:
         return ItemType.coconut;
+      case ProjectType.preyFlag:
+        return null;
       case ProjectType.xMark:
         return null;
       case ProjectType.snail:
@@ -89,6 +94,8 @@ extension ProjectTypeExtension on ProjectType {
         return l10n.entityPreyLeafName;
       case ProjectType.preyCoconut:
         return l10n.entityPreyCoconutName;
+      case ProjectType.preyFlag:
+        return l10n.entityPreyFlagName;
       case ProjectType.xMark:
         return l10n.entityXMarkName;
       default:

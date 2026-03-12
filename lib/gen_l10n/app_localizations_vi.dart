@@ -18,6 +18,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get entityXMarkName => 'Chướng ngại vật';
 
   @override
+  String get entityPreyFlagName => 'Lá cờ';
+
+  @override
   String get appTitle => 'Worm Journey';
 
   @override
@@ -28,6 +31,11 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String sceneLabel(int n) {
     return 'Cảnh $n';
+  }
+
+  @override
+  String stageLabel(int n) {
+    return 'Chặng $n';
   }
 
   @override
@@ -114,7 +122,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get itemSeedName => 'Hạt giống';
 
   @override
-  String get itemSeedDescription => 'Tạo thêm 3 lá cây.';
+  String get itemSeedDescription => 'Tạo thêm lá cây.';
 
   @override
   String get itemAntidoteName => 'Thuốc giải';
@@ -160,4 +168,27 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get notEnoughCoins => 'Không đủ vàng';
+
+  @override
+  String waitCountdown(String time) {
+    return 'Chờ $time';
+  }
+
+  @override
+  String get itemBlockedInLevel => 'Item bị cấm ở màn này';
+
+  @override
+  String get understood => 'Đã hiểu';
+
+  @override
+  String get gameRulesTitle => 'Luật chơi';
+
+  @override
+  String get ready => 'Sẵn sàng';
+
+  @override
+  String get victory => 'Chiến thắng';
+
+  @override
+  String get victoryContinue => 'Tiếp tục';
 }

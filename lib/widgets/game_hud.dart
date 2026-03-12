@@ -277,7 +277,7 @@ class _CenterSectionState extends State<_CenterSection>
               return Transform.scale(
                 scale: isUrgent ? _scaleAnimation.value : 1,
                 child: Text(
-                  showReady ? 'Sẵn sàng' : timeStr,
+                  showReady ? L10n.ready : timeStr,
                   style: (widget.textStyle ?? const TextStyle()).copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

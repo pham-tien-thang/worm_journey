@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app_router.dart';
 import '../../core/game_pause_observer.dart';
 import '../../widgets/exit_game_dialog.dart';
+import '../../widgets/guide_game_dialog.dart';
 import 'game_play_scaffold.dart';
 import '../game.dart';
 
@@ -23,9 +24,38 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
-    _game = WormJourneyGame(level: widget.level);
+    _game = WormJourneyGame(
+      level: widget.level,
+      onGuideLoaded: (guideVi, guideEn) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _showGuideDialog(guideVi, guideEn);
+        });
+      },
+    );
     GamePauseObserver.onPauseChange = (paused) => _game.setPaused(paused);
     GamePauseObserver.dialogOpen.value = false;
+  }
+
+  Future<void> _showGuideDialog(String guideVi, String guideEn) async {
+    final locale = Localizations.localeOf(context);
+    final guideText = locale.languageCode == 'vi'
+        ? (guideVi.isNotEmpty ? guideVi : guideEn)
+        : (guideEn.isNotEmpty ? guideEn : guideVi);
+    if (guideText.isEmpty) return;
+    GamePauseObserver.dialogOpen.value = true;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => GuideGameDialog(
+        guideText: guideText,
+        onUnderstood: () {
+          Navigator.of(context).pop();
+          _game.dismissGuide();
+        },
+      ),
+    );
+    if (mounted) GamePauseObserver.dialogOpen.value = false;
   }
 
   @override

@@ -21,3 +21,11 @@ class PreyCoconutModel extends GreyModel {
   @override
   ProjectType get type => ProjectType.preyCoconut;
 }
+
+/// Lá cờ tam giác 🚩 (ăn để chiến thắng, không tính vào nhiệm vụ).
+class PreyFlagModel extends GreyModel {
+  @override
+  String get icon => '🚩';
+  @override
+  ProjectType get type => ProjectType.preyFlag;
+}

@@ -18,6 +18,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entityXMarkName => 'Obstacle';
 
   @override
+  String get entityPreyFlagName => 'Flag';
+
+  @override
   String get appTitle => 'Worm Journey';
 
   @override
@@ -28,6 +31,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String sceneLabel(int n) {
     return 'Scene $n';
+  }
+
+  @override
+  String stageLabel(int n) {
+    return 'Stage $n';
   }
 
   @override
@@ -112,7 +120,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get itemSeedName => 'Seed';
 
   @override
-  String get itemSeedDescription => 'Spawns 3 more leaves.';
+  String get itemSeedDescription => 'Spawns more leaves.';
 
   @override
   String get itemAntidoteName => 'Antidote';
@@ -157,4 +165,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notEnoughCoins => 'Not enough coins';
+
+  @override
+  String waitCountdown(String time) {
+    return 'Wait $time';
+  }
+
+  @override
+  String get itemBlockedInLevel => 'Item is blocked in this level';
+
+  @override
+  String get understood => 'Understood';
+
+  @override
+  String get gameRulesTitle => 'Game rules';
+
+  @override
+  String get ready => 'Ready';
+
+  @override
+  String get victory => 'Victory';
+
+  @override
+  String get victoryContinue => 'Continue';
 }

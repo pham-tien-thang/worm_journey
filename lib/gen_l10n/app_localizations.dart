@@ -116,6 +116,12 @@ abstract class AppLocalizations {
   /// **'Obstacle'**
   String get entityXMarkName;
 
+  /// No description provided for @entityPreyFlagName.
+  ///
+  /// In en, this message translates to:
+  /// **'Flag'**
+  String get entityPreyFlagName;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
@@ -133,6 +139,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Scene {n}'**
   String sceneLabel(int n);
+
+  /// No description provided for @stageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage {n}'**
+  String stageLabel(int n);
 
   /// No description provided for @gameOver.
   ///
@@ -281,7 +293,7 @@ abstract class AppLocalizations {
   /// No description provided for @itemSeedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Spawns 3 more leaves.'**
+  /// **'Spawns more leaves.'**
   String get itemSeedDescription;
 
   /// No description provided for @itemAntidoteName.
@@ -367,6 +379,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not enough coins'**
   String get notEnoughCoins;
+
+  /// No description provided for @waitCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait {time}'**
+  String waitCountdown(String time);
+
+  /// No description provided for @itemBlockedInLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Item is blocked in this level'**
+  String get itemBlockedInLevel;
+
+  /// No description provided for @understood.
+  ///
+  /// In en, this message translates to:
+  /// **'Understood'**
+  String get understood;
+
+  /// No description provided for @gameRulesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Game rules'**
+  String get gameRulesTitle;
+
+  /// No description provided for @ready.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get ready;
+
+  /// No description provided for @victory.
+  ///
+  /// In en, this message translates to:
+  /// **'Victory'**
+  String get victory;
+
+  /// No description provided for @victoryContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get victoryContinue;
 }
 
 class _AppLocalizationsDelegate

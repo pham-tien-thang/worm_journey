@@ -41,6 +41,7 @@ class PinkWormConfig extends WormConfig {
     double segmentSize = 28.0,
     double moveInterval = 0.28,
     int initialLength = 10,
+    int? maxLength,
     int? gridRows,
   }) : super(
           headConfig: PinkWormHeadConfig(),
@@ -49,6 +50,7 @@ class PinkWormConfig extends WormConfig {
           segmentSize: segmentSize,
           moveInterval: moveInterval,
           initialLength: initialLength,
+          maxLength: maxLength,
           gridRows: gridRows,
         );
 }

@@ -44,8 +44,10 @@ class MapEntityManager {
   List<MapEntityEntry> get entries => List.unmodifiable(_entries);
 
   /// Đặt entity tại ô [grid]. [typeId] phải có trong typeObjConfig. Trả về component để game [world.add].
-  PositionComponent placeAt(Vector2 grid, String typeId) {
-    final comp = _createComponent(typeId, grid);
+  /// [withSpawnEffect] true: scale 0→1 (vd. lá cờ khi vừa xuất hiện nhấp nháy 1 nhịp).
+  PositionComponent placeAt(Vector2 grid, String typeId,
+      {bool withSpawnEffect = false}) {
+    final comp = _createComponent(typeId, grid, withSpawnEffect: withSpawnEffect);
     _entries.add(MapEntityEntry(grid: grid, typeId: typeId, component: comp));
     return comp;
   }
@@ -56,11 +58,13 @@ class MapEntityManager {
     final icon = EntityModels.icon(typeId);
     final category = typeObjConfig.getCategory(typeId);
     if (category == 'grey') {
+      final isFlag = typeId == 'prey_flag';
       return Prey(
         segmentSize: segmentSize,
         icon: icon,
         position: position,
         withSpawnEffect: withSpawnEffect,
+        iconScale: isFlag ? 1.25 : 1.0,
       );
     }
     return XObstacle(

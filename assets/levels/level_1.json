@@ -1,6 +1,10 @@
 {
+  "guide_vi": "Ăn 10 🌿.\n\nPhá huỷ 5 🪦.\n\n🌿: sẽ giúp bạn tăng 1 độ dài.\n\n🥥: bạn sẽ có nón bảo hiểm - phá huỷ vật cản.\n\n🪦 (bia mộ): vật cản cần tránh.\n\n🌱: tạo ra thêm chiếc lá.\n\n🚩: nhận lá cờ để chiến thắng.",
+  "guide_en": "Eat 10 🌿.\n\nDestroy 5 🪦.\n\n🌿: increases your length by 1.\n\n🥥: you get a helmet - destroy obstacles.\n\n🪦 (gravestone): obstacle to avoid.\n\n🌱: creates an extra leaf.\n\n🚩: receive the flag to win.",
+  "itemBlock": ["snail", "magnet", "bomb", "antidote", "speed", "clock", "freeze", "dizzy"],
   "missions": [
-    { "id": "leaves", "typeId": "prey_leaf", "target": 10 }
+    { "id": "leaves", "typeId": "prey_leaf", "target": 10 },
+    { "id": "gravestones", "typeId": "x_mark", "target": 5 }
   ],
   "timeLimitSeconds": 120,
   "timeUrgentThresholdSeconds": 10,
@@ -14,8 +18,12 @@
     "icon": ""
   },
   "map": {
-    "obstacles": [],
-    "prey": []
+    "x_mark": [
+      [0, 22], [1, 22], [2, 22], [3, 22], [4, 22], [5, 22], [6, 22], [7, 22], [8, 22],
+      [14, 14], [15, 14], [16, 14], [17, 14], [18, 14], [19, 14], [20, 14], [21, 14], [22, 14], [23, 14]
+    ],
+    "prey": [],
+    "prey_flag": [[12, 25]]
   },
   "spawnCycle": [
     { "objType": "prey_coconut", "intervalSeconds": 10 }

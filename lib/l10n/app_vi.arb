@@ -3,9 +3,16 @@
   "entityPreyLeafName": "Chiếc lá",
   "entityPreyCoconutName": "Quả dừa",
   "entityXMarkName": "Chướng ngại vật",
+  "entityPreyFlagName": "Lá cờ",
   "appTitle": "Worm Journey",
   "levelLabel": "Lv{level}",
   "sceneLabel": "Cảnh {n}",
+  "stageLabel": "Chặng {n}",
+  "@stageLabel": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
   "gameOver": "Game Over",
   "tapToPlayAgain": "Chạm để chơi lại",
   "gameOverPlayAgain": "Chơi lại",
@@ -42,7 +49,7 @@
   "itemBombName": "Bom",
   "itemBombDescription": "Phá huỷ chướng ngại vật và gây sát thương lên kẻ địch trong 3 ô.",
   "itemSeedName": "Hạt giống",
-  "itemSeedDescription": "Tạo thêm 3 lá cây.",
+  "itemSeedDescription": "Tạo thêm lá cây.",
   "itemAntidoteName": "Thuốc giải",
   "itemAntidoteDescription": "Loại bỏ toàn bộ trạng thái hiệu ứng đang có trên sâu.",
   "itemSpeedName": "Tăng tốc",
@@ -56,5 +63,17 @@
   "exitGameWarningMessage": "Trò chơi sẽ kết thúc ?",
   "exitGameConfirm": "Kết thúc",
   "exitGameCancel": "Huỷ",
-  "notEnoughCoins": "Không đủ vàng"
+  "notEnoughCoins": "Không đủ vàng",
+  "waitCountdown": "Chờ {time}",
+  "@waitCountdown": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "itemBlockedInLevel": "Item bị cấm ở màn này",
+  "understood": "Đã hiểu",
+  "gameRulesTitle": "Luật chơi",
+  "ready": "Sẵn sàng",
+  "victory": "Chiến thắng",
+  "victoryContinue": "Tiếp tục"
 }

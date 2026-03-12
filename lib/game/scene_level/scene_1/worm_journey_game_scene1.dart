@@ -14,7 +14,9 @@ import '../../../components/pink_worm/pink_worm_config.dart';
 import '../../../components/worm/worm.dart';
 import '../../../components/worm/worm_direction.dart';
 import '../../../common/debug_apply.dart';
+import '../../../components/max_text_effect.dart';
 import '../../../config/config.dart';
+import '../../../core/services/shared_prefs_service.dart';
 import '../../../models/item_model.dart';
 import '../../../entities/entities.dart';
 import '../../../core/buff/buff_config.dart';
@@ -38,9 +40,11 @@ enum HazardType {
 /// Game rắn săn mồi. Full màn hình. Đâm tường/đuôi trừ 1 đốt; còn đầu+đuôi thì thua.
 class WormJourneyGame extends FlameGame
     with KeyboardEvents, TapCallbacks, HasCollisionDetection {
-  WormJourneyGame({this.level = 1});
+  WormJourneyGame({this.level = 1, this.onGuideLoaded});
 
   final int level;
+  /// Gọi khi load xong màn và guide không rỗng. UI show dialog; khi đóng dialog gọi [dismissGuide].
+  final void Function(String guideVi, String guideEn)? onGuideLoaded;
 
   @override
   Color backgroundColor() => const Color(0xFF1B3D2E);
@@ -61,6 +65,8 @@ class WormJourneyGame extends FlameGame
 
   double _moveAccumulator = 0;
   bool _gameOver = false;
+  bool _victoryTriggered = false;
+  bool _flagSpawned = false;
   bool _paused = false;
   bool _loaded = false;
 
@@ -71,8 +77,11 @@ class WormJourneyGame extends FlameGame
   /// Thời gian chơi tối đa (giây), từ [ _levelConfig.timeLimitSeconds ]. Ghi đè trong onLoad và _restart.
   double _timeLimit = 120.0;
 
-  /// Config màn load từ JSON (level_1.json, level_2.json, ...).
-  late LevelJsonConfig _levelConfig;
+  /// Config màn load từ JSON (level_1.json, level_2.json, ...). Mặc định trống, gán lại trong onLoad.
+  LevelJsonConfig _levelConfig = const LevelJsonConfig();
+
+  /// Danh sách effectTypeId item bị cấm trong màn (từ config itemBlock). Scaffold dùng để hiển thị cấm + báo khi bấm.
+  List<String> get blockedItemIds => _levelConfig.itemBlock;
   /// Nhiệm vụ từ config; [ _missionCurrents[i] ] = tiến độ của [ _missionConfigs[i] ].
   List<MissionConfig> _missionConfigs = const [MissionConfig.defaultLeaves];
   List<int> _missionCurrents = [0];
@@ -83,7 +92,7 @@ class WormJourneyGame extends FlameGame
   int _gridRows = GameConfig.gridRows;
   late GridBackground _gridBackground;
 
-  /// Overlay tọa độ ô (A1, B1...) chỉ khi kDebugMode.
+  /// Overlay tọa độ ô (A1, B1...) chỉ khi shouldApplyDebug (nút Debug ON ở HUD).
   DebugGridCoordinates? _debugGridCoordinates;
 
   /// Camera Y đang lerp (làm mượt, tránh giật).
@@ -100,6 +109,11 @@ class WormJourneyGame extends FlameGame
   /// Pause / resume (vd. khi mở/đóng dialog).
   void setPaused(bool value) {
     _paused = value;
+  }
+
+  /// Gọi sau khi user bấm Đã hiểu ở dialog hướng dẫn → bắt đầu chơi.
+  void dismissGuide() {
+    setPaused(false);
   }
 
   /// Dùng item: effect có duration → thêm vào list effect; instant (bomb, clock, seed) → xử lý ngay; antidote → add để PinkWorm.onItemEffectAdded xóa list.
@@ -270,10 +284,16 @@ class WormJourneyGame extends FlameGame
     }
   }
 
+  int _wormInitLength = 1;
+  int _wormMaxLength = 10;
+
   @override
   Future<void> onLoad() async {
     _gridRows = playableRowCount;
     camera.viewport = MaxViewport();
+
+    _wormInitLength = await SharedPrefsService.getWormInitLength();
+    _wormMaxLength = await SharedPrefsService.getWormMaxLength();
 
     _levelConfig = await loadLevelJsonConfig(level);
     _typeObjConfig = await TypeObjConfig.load();
@@ -313,6 +333,14 @@ class WormJourneyGame extends FlameGame
           _missionCurrents[i] = (_missionCurrents[i] + n).clamp(0, target);
         }
       },
+      addMissionProgressByTypeIdCallback: (typeId, n) {
+        final i = _missionConfigs.indexWhere((m) => m.typeId == typeId);
+        if (i >= 0 && i < _missionCurrents.length) {
+          final m = _missionConfigs[i];
+          final target = _missionTargetOverrides[m.id] ?? m.target;
+          _missionCurrents[i] = (_missionCurrents[i] + n).clamp(0, target);
+        }
+      },
       destroyObstacleAtCallback: _destroyEntityAt,
       loseSegmentCallback: _loseSegment,
       triggerMagnetPullCallback: _triggerMagnetPull,
@@ -321,11 +349,14 @@ class WormJourneyGame extends FlameGame
           .length,
     );
 
+    final initLen = shouldApplyDebug ? 10 : (_wormInitLength + 2);
+    final maxLen = shouldApplyDebug ? null : _wormMaxLength;
     final worm = PinkWorm(
       config: PinkWormConfig(
         segmentSize: _segmentSize,
         moveInterval: GameConfig.moveInterval,
-        initialLength: 10,
+        initialLength: initLen,
+        maxLength: maxLen,
         gridRows: _gridRows,
       ),
       info: WormInfo.playerDefault,
@@ -333,6 +364,7 @@ class WormJourneyGame extends FlameGame
       gridRowsOverride: _gridRows,
     );
     world.add(worm);
+    worm.setOnGrowAtMax(_onWormGrowAtMax);
     _playerAgent = WormAgent(
       worm: worm,
       behavior: PlayerWormBehavior(),
@@ -342,7 +374,7 @@ class WormJourneyGame extends FlameGame
     _placeAllMapEntitiesFromConfig();
     if (!_mapEntityManager.entries.any((e) => _typeObjConfig.isEatable(e.typeId))) _spawnPrey();
 
-    if (kDebugMode) {
+    if (shouldApplyDebug) {
       _debugGridCoordinates = DebugGridCoordinates(
         segmentSize: _segmentSize,
         gridColumns: GameConfig.gridColumns,
@@ -357,6 +389,10 @@ class WormJourneyGame extends FlameGame
     }
 
     _loaded = true;
+    if (_levelConfig.guideVi.isNotEmpty || _levelConfig.guideEn.isNotEmpty) {
+      _paused = true;
+      onGuideLoaded?.call(_levelConfig.guideVi, _levelConfig.guideEn);
+    }
   }
 
   Set<String> _occupiedGridKeys() =>
@@ -405,15 +441,32 @@ class WormJourneyGame extends FlameGame
     }
   }
 
-  /// Duyệt config map: typeId (string) → placeAt cho từng ô. TypeId không có trong typeObjConfig thì bỏ qua.
+  /// Duyệt config map: typeId (string) → placeAt cho từng ô. Bỏ qua prey_flag — cờ chỉ spawn khi hoàn thành nhiệm vụ.
   void _placeAllMapEntitiesFromConfig() {
     for (final entry in _levelConfig.mapConfig.placements.entries) {
+      if (entry.key == 'prey_flag') continue;
       final place = _placeEntityAt[entry.key];
       if (place == null) continue;
       for (final grid in entry.value) {
         place(grid);
       }
     }
+  }
+
+  void _onWormGrowAtMax() {
+    world.add(MaxTextEffectComponent(
+      position: mainWorm.headWorldPosition,
+      segmentSize: _segmentSize,
+    ));
+  }
+
+  /// Spawn lá cờ tại ô đầu tiên trong config (chỉ gọi khi đã hoàn thành nhiệm vụ). Có hiệu ứng nhấp nháy 1 nhịp.
+  void _spawnFlag() {
+    final grids = _levelConfig.mapConfig.placements['prey_flag'];
+    if (grids == null || grids.isEmpty) return;
+    final grid = grids.first;
+    final comp = _mapEntityManager.placeAt(grid, 'prey_flag', withSpawnEffect: true);
+    world.add(comp);
   }
 
   /// Chuyển ô logic (0..23, 0..36) sang tọa độ world. A1 = vị trí cũ A13.
@@ -453,6 +506,24 @@ class WormJourneyGame extends FlameGame
     overlays.add('GameOver');
   }
 
+  /// True khi mọi nhiệm vụ (có target > 0) đều đạt current >= target.
+  bool _allMissionsComplete() {
+    for (var i = 0; i < _missionConfigs.length && i < _missionCurrents.length; i++) {
+      final m = _missionConfigs[i];
+      final target = _missionTargetOverrides[m.id] ?? m.target;
+      if (target <= 0) continue;
+      if (_missionCurrents[i] < target) return false;
+    }
+    return true;
+  }
+
+  void _setVictory() {
+    if (_gameOver || _victoryTriggered) return;
+    _victoryTriggered = true;
+    _gameOver = true;
+    overlays.add('Victory');
+  }
+
   /// Gọi từ overlay Flutter "Chơi lại" hoặc nội bộ.
   void restart() {
     overlays.remove('GameOver');
@@ -467,11 +538,14 @@ class WormJourneyGame extends FlameGame
     _magnetPulls.clear();
     _magnetLastPullTime = null;
 
+    final initLen = shouldApplyDebug ? 10 : (_wormInitLength + 2);
+    final maxLen = shouldApplyDebug ? null : _wormMaxLength;
     final worm = PinkWorm(
       config: PinkWormConfig(
         segmentSize: _segmentSize,
         moveInterval: GameConfig.moveInterval,
-        initialLength: 10,
+        initialLength: initLen,
+        maxLength: maxLen,
         gridRows: _gridRows,
       ),
       info: WormInfo.playerDefault,
@@ -479,6 +553,7 @@ class WormJourneyGame extends FlameGame
       gridRowsOverride: _gridRows,
     );
     world.add(worm);
+    worm.setOnGrowAtMax(_onWormGrowAtMax);
     _playerAgent = WormAgent(
       worm: worm,
       behavior: PlayerWormBehavior(),
@@ -497,6 +572,8 @@ class WormJourneyGame extends FlameGame
     _missionCurrents = List.filled(_missionConfigs.length, 0);
 
     _gameOver = false;
+    _victoryTriggered = false;
+    _flagSpawned = false;
     _paused = false;
     _moveAccumulator = 0;
     _cameraY = null;
@@ -547,6 +624,7 @@ class WormJourneyGame extends FlameGame
             _loseSegment();
             break;
           case HitResult.destroyAndStep:
+            _wormContext.addMissionProgressByTypeId(entry.typeId, 1);
             _destroyEntityAt(nextHead);
             mainWorm.step();
             break;
@@ -714,11 +792,28 @@ class WormJourneyGame extends FlameGame
     final consumed = _mapEntityManager.consumeAt(newHead);
     if (consumed != null) {
       consumed.component.removeFromParent();
+      if (consumed.typeId == 'prey_flag') {
+        final view = EntityModels.view(consumed.typeId);
+        if (view != null) {
+          _playerAgent.behavior.onEatEntity(_playerAgent, view, _wormContext);
+        }
+        _setVictory();
+        return;
+      }
       final view = EntityModels.view(consumed.typeId);
       if (view != null) {
         _playerAgent.behavior.onEatEntity(_playerAgent, view, _wormContext);
       }
+      if (_allMissionsComplete() && !_flagSpawned) {
+        _spawnFlag();
+        _flagSpawned = true;
+      }
       return;
+    }
+
+    if (_allMissionsComplete() && !_flagSpawned) {
+      _spawnFlag();
+      _flagSpawned = true;
     }
   }
 

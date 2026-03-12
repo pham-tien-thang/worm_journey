@@ -10,6 +10,9 @@ import '../context/worm_game_context.dart';
 class PlayerWormBehavior extends WormBehavior {
   @override
   void onEatEntity(WormAgent agent, GameEntityView entity, WormGameContext context) {
+    if (entity.projectType == ProjectType.preyFlag) {
+      return;
+    }
     if (entity.projectType == ProjectType.preyLeaf) {
       agent.grow();
       agent.worm.playSwallowPreyEffect();

@@ -1,4 +1,6 @@
 {
+  "guide_vi": "luật màn 3",
+  "guide_en": "Level 3 rules",
   "missions": [
     { "id": "leaves", "typeId": "prey_leaf", "target": 10 }
   ],

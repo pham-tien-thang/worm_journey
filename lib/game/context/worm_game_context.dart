@@ -5,6 +5,8 @@ abstract class WormGameContext {
   double get gameTime;
   void spawnPrey();
   void addMissionLeaves(int count);
+  /// Cộng tiến độ nhiệm vụ theo typeId entity (vd. x_mark khi phá bia mộ).
+  void addMissionProgressByTypeId(String typeId, int count);
   void destroyObstacleAt(Vector2 grid);
   void loseSegment();
   void triggerMagnetPull();
@@ -17,6 +19,7 @@ class WormGameContextImpl extends WormGameContext {
     required this.gameTimeGetter,
     required this.spawnPreyCallback,
     required this.addMissionLeavesCallback,
+    required this.addMissionProgressByTypeIdCallback,
     required this.destroyObstacleAtCallback,
     required this.loseSegmentCallback,
     required this.triggerMagnetPullCallback,
@@ -26,6 +29,7 @@ class WormGameContextImpl extends WormGameContext {
   final double Function() gameTimeGetter;
   final void Function() spawnPreyCallback;
   final void Function(int) addMissionLeavesCallback;
+  final void Function(String typeId, int count) addMissionProgressByTypeIdCallback;
   final void Function(Vector2) destroyObstacleAtCallback;
   final void Function() loseSegmentCallback;
   final void Function() triggerMagnetPullCallback;
@@ -42,6 +46,10 @@ class WormGameContextImpl extends WormGameContext {
 
   @override
   void addMissionLeaves(int count) => addMissionLeavesCallback(count);
+
+  @override
+  void addMissionProgressByTypeId(String typeId, int count) =>
+      addMissionProgressByTypeIdCallback(typeId, count);
 
   @override
   void destroyObstacleAt(Vector2 grid) => destroyObstacleAtCallback(grid);
