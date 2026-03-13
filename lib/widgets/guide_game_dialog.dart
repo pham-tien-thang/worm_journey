@@ -78,7 +78,7 @@ class _GuideGameDialogState extends State<GuideGameDialog> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  SizedBox(height: 64,),
+                  const SizedBox(height: 64),
                   SizedBox(
                     height: 40,
                     child: Align(
@@ -96,39 +96,32 @@ class _GuideGameDialogState extends State<GuideGameDialog> {
 
                   const SizedBox(height: 12),
                   Expanded(
-                    child: Stack(
-                      alignment: Alignment.topCenter,
-                      children: [
-                        SingleChildScrollView(
-                          controller: _scrollController,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 4, 8, 24),
-                            child: Text(
-                              widget.guideText,
-                              style: const TextStyle(
-                                color: brown,
-                                fontSize: 15,
-                                height: 1.4,
-                              ),
-                              textAlign: TextAlign.start,
-                            ),
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 24),
+                        child: Text(
+                          widget.guideText,
+                          style: const TextStyle(
+                            color: brown,
+                            fontSize: 15,
+                            height: 1.4,
                           ),
+                          textAlign: TextAlign.start,
                         ),
-                        if (_canScrollDown)
-                          IgnorePointer(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Icon(
-                                Icons.keyboard_arrow_down,
-                                color: brown,
-                                size: 28,
-                              ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  if (_canScrollDown)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Icon(
+                        Icons.keyboard_arrow_down,
+                        color: brown,
+                        size: 22,
+                      ),
+                    ),
                   SizedBox(
                     width: double.infinity,
                     child: AppButton(
