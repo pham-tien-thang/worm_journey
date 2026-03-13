@@ -6,6 +6,7 @@ enum ProjectType {
   preyLeaf,
   preyCoconut,
   preyFlag,
+  preyCoin,
   xMark,
   // Mỗi ItemType có ProjectType tương ứng (effectTypeId = typeId)
   snail,
@@ -29,6 +30,8 @@ extension ProjectTypeExtension on ProjectType {
         return 'prey_coconut';
       case ProjectType.preyFlag:
         return 'prey_flag';
+      case ProjectType.preyCoin:
+        return 'prey_coin';
       case ProjectType.xMark:
         return 'x_mark';
       case ProjectType.snail:
@@ -60,6 +63,8 @@ extension ProjectTypeExtension on ProjectType {
       case ProjectType.preyCoconut:
         return ItemType.coconut;
       case ProjectType.preyFlag:
+        return null;
+      case ProjectType.preyCoin:
         return null;
       case ProjectType.xMark:
         return null;
@@ -96,6 +101,8 @@ extension ProjectTypeExtension on ProjectType {
         return l10n.entityPreyCoconutName;
       case ProjectType.preyFlag:
         return l10n.entityPreyFlagName;
+      case ProjectType.preyCoin:
+        return l10n.entityCoinName;
       case ProjectType.xMark:
         return l10n.entityXMarkName;
       default:

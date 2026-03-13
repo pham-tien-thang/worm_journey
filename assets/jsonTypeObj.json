@@ -1,4 +1,4 @@
 {
   "obtain": ["x_mark"],
-  "grey": ["prey_leaf", "prey_coconut", "prey_flag"]
+  "grey": ["prey_leaf", "prey_coconut", "prey_flag", "prey_coin"]
 }

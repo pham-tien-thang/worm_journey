@@ -29,3 +29,11 @@ class PreyFlagModel extends GreyModel {
   @override
   ProjectType get type => ProjectType.preyFlag;
 }
+
+/// Đồng xu 🪙 (ăn để cộng thưởng victory).
+class PreyCoinModel extends GreyModel {
+  @override
+  String get icon => '🪙';
+  @override
+  ProjectType get type => ProjectType.preyCoin;
+}

@@ -122,6 +122,9 @@ abstract class AppLocalizations {
   /// **'Flag'**
   String get entityPreyFlagName;
 
+  /// No description provided for @entityCoinName.
+  String get entityCoinName;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
@@ -427,6 +430,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue'**
   String get victoryContinue;
+
+  /// No description provided for @victoryClaimReward.
+  String victoryClaimReward(int amount);
+
+  /// No description provided for @victoryExit.
+  String get victoryExit;
+
+  /// No description provided for @victoryExitLoseRewardWarning.
+  String get victoryExitLoseRewardWarning;
+
+  /// No description provided for @victoryRewardLevelLabel.
+  String get victoryRewardLevelLabel;
+
+  /// No description provided for @victoryRewardTimeLabel.
+  String get victoryRewardTimeLabel;
+
+  /// No description provided for @victoryRewardCoinsLabel.
+  String get victoryRewardCoinsLabel;
 }
 
 class _AppLocalizationsDelegate

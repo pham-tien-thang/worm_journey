@@ -148,6 +148,27 @@ class MapConfig {
 /// Loại boss màn. "none" = không hiện boss; các giá trị khác do game/scene xử lý (vd. "snake_boss", "dragon").
 const String levelBossTypeNone = 'none';
 
+/// Config spawn đồng xu: đồng xu đầu sau Xs, các đồng xu sau 10s kể từ khi đồng xu trước bị ăn. Từ JSON `coin`.
+class CoinSpawnConfig {
+  const CoinSpawnConfig({
+    this.firstSpawnDelaySeconds = 10.0,
+    this.spawnDelayAfterEatenSeconds = 10.0,
+  });
+
+  final double firstSpawnDelaySeconds;
+  final double spawnDelayAfterEatenSeconds;
+
+  static CoinSpawnConfig? fromJson(Map<String, dynamic>? json) {
+    if (json == null || json.isEmpty) return null;
+    final first = (json['firstSpawnDelaySeconds'] as num?)?.toDouble() ?? 10.0;
+    final after = (json['spawnDelayAfterEatenSeconds'] as num?)?.toDouble() ?? 10.0;
+    return CoinSpawnConfig(
+      firstSpawnDelaySeconds: first,
+      spawnDelayAfterEatenSeconds: after,
+    );
+  }
+}
+
 /// Config đầy đủ một màn (từ JSON). Mỗi màn có file JSON riêng.
 class LevelJsonConfig {
   const LevelJsonConfig({
@@ -164,6 +185,7 @@ class LevelJsonConfig {
     this.guideVi = '',
     this.guideEn = '',
     this.respawnHeadDirection = 'none',
+    this.coinSpawnConfig,
   });
 
   final List<MissionConfig> missions;
@@ -186,6 +208,8 @@ class LevelJsonConfig {
   final String guideEn;
   /// Hướng đầu sâu khi hồi sinh: "none" (giữ logic tự chọn), "top", "r", "l", "b". Từ JSON `respawnHeadDirection`.
   final String respawnHeadDirection;
+  /// Config spawn đồng xu. Null = màn không có đồng xu. Từ JSON `coin`.
+  final CoinSpawnConfig? coinSpawnConfig;
 
   /// Có hiện boss hay không (theo config).
   bool get hasBoss => bossType != levelBossTypeNone && bossType.isNotEmpty;
@@ -207,6 +231,9 @@ class LevelJsonConfig {
       guideVi: _guideViWithFallback(jsonConfig),
       guideEn: loadGuideConfig(jsonConfig, 'guide_en'),
       respawnHeadDirection: loadRespawnHeadDirection(jsonConfig),
+      coinSpawnConfig: CoinSpawnConfig.fromJson(
+        jsonConfig['coin'] as Map<String, dynamic>?,
+      ),
     );
   }
 

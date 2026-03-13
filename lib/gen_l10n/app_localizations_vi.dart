@@ -21,6 +21,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get entityPreyFlagName => 'Lá cờ';
 
   @override
+  String get entityCoinName => 'Đồng xu';
+
+  @override
   String get appTitle => 'Worm Journey';
 
   @override
@@ -194,4 +197,22 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get victoryContinue => 'Tiếp tục';
+
+  @override
+  String victoryClaimReward(int amount) => 'Nhận thưởng $amount xu';
+
+  @override
+  String get victoryExit => 'Thoát';
+
+  @override
+  String get victoryExitLoseRewardWarning => 'Bạn sẽ mất phần thưởng lớn';
+
+  @override
+  String get victoryRewardLevelLabel => 'Level';
+
+  @override
+  String get victoryRewardTimeLabel => 'Thời gian';
+
+  @override
+  String get victoryRewardCoinsLabel => 'Xu';
 }

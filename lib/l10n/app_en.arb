@@ -4,6 +4,7 @@
   "entityPreyCoconutName": "Coconut",
   "entityXMarkName": "Obstacle",
   "entityPreyFlagName": "Flag",
+  "entityCoinName": "Coin",
   "appTitle": "Worm Journey",
   "levelLabel": "Lv{level}",
   "sceneLabel": "Scene {n}",
@@ -95,5 +96,16 @@
   "gameRulesTitle": "Game rules",
   "ready": "Ready",
   "victory": "Victory",
-  "victoryContinue": "Continue"
+  "victoryContinue": "Continue",
+  "victoryClaimReward": "Claim {amount} coins",
+  "@victoryClaimReward": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "victoryExit": "Exit",
+  "victoryExitLoseRewardWarning": "You will lose the large reward",
+  "victoryRewardLevelLabel": "Level",
+  "victoryRewardTimeLabel": "Time",
+  "victoryRewardCoinsLabel": "Coins"
 }

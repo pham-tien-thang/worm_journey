@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app_router.dart';
 import '../../core/services/shared_prefs_service.dart' show SharedPrefsService, unlockNotifier;
 import '../../models/scene_model.dart';
+import '../../widgets/coin_hud.dart';
 
 /// Màn chọn scene: 12 scene, mỗi scene có list level (indexId*1 đến indexId*5). Unlock theo SharedPrefs.
 class SceneSelectionScreen extends StatefulWidget {
@@ -65,16 +66,32 @@ class _SceneSelectionScreenState extends State<SceneSelectionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  onPressed: () => context.pop(),
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.black,
-                    weight: 100,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.white70,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      onPressed: () => context.pop(),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: Colors.black,
+                        weight: 100,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white70,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16, top: 8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.45),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: CoinHud(),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Expanded(

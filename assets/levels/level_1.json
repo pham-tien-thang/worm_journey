@@ -28,5 +28,9 @@
   },
   "spawnCycle": [
     { "objType": "prey_coconut", "intervalSeconds": 10 }
-  ]
+  ],
+  "coin": {
+    "firstSpawnDelaySeconds": 10,
+    "spawnDelayAfterEatenSeconds": 10
+  }
 }

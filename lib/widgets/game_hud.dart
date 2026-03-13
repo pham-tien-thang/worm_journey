@@ -315,9 +315,7 @@ class _RightSection extends StatelessWidget {
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(AppConstants.coinIcon, style: TextStyle(fontSize: textStyle?.fontSize ?? 16)),
-                const SizedBox(width: 4),
-                Text('${CoinService.instance.coin}', style: textStyle),
+                _AnimatedCoinDisplay(textStyle: textStyle),
                 if (kDebugMode) ...[
                   const SizedBox(width: 12),
                   Column(
@@ -334,6 +332,121 @@ class _RightSection extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// Hiển thị số xu + icon; khi [CoinService.instance.coin] đổi thì đếm lên/xuống nhanh và scale icon to rồi nhỏ lại.
+class _AnimatedCoinDisplay extends StatefulWidget {
+  const _AnimatedCoinDisplay({this.textStyle});
+
+  final TextStyle? textStyle;
+
+  @override
+  State<_AnimatedCoinDisplay> createState() => _AnimatedCoinDisplayState();
+}
+
+class _AnimatedCoinDisplayState extends State<_AnimatedCoinDisplay>
+    with TickerProviderStateMixin {
+  int _displayedValue = 0;
+  int _prevCoin = -1;
+  late AnimationController _numberController;
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+  VoidCallback? _numberListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayedValue = CoinService.instance.coin;
+    _prevCoin = CoinService.instance.coin;
+    _numberController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        weight: 0.5,
+        tween: Tween<double>(begin: 1.0, end: 1.25),
+      ),
+      TweenSequenceItem(
+        weight: 0.5,
+        tween: Tween<double>(begin: 1.25, end: 1.0),
+      ),
+    ]).animate(CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    if (_numberListener != null) {
+      // listener may be on an old animation; controller is disposed anyway
+    }
+    _numberController.dispose();
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  void _tick(int newCoin) {
+    if (newCoin == _prevCoin) return;
+    final from = _prevCoin >= 0 ? _prevCoin : newCoin;
+    _prevCoin = newCoin;
+
+    _numberController.stop();
+    if (_numberListener != null) {
+      // cannot remove by ref from a Tween animation; reset is enough
+      _numberListener = null;
+    }
+    final numberAnimation = Tween<double>(
+      begin: from.toDouble(),
+      end: newCoin.toDouble(),
+    ).animate(CurvedAnimation(
+      parent: _numberController,
+      curve: Curves.easeOut,
+    ));
+    _numberListener = () {
+      if (mounted) setState(() => _displayedValue = numberAnimation.value.round());
+    };
+    numberAnimation.addListener(_numberListener!);
+
+    _scaleController.reset();
+    _scaleController.forward();
+    _numberController.reset();
+    _numberController.forward();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentCoin = CoinService.instance.coin;
+    if (_prevCoin >= 0 && currentCoin != _prevCoin && !_numberController.isAnimating) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _tick(currentCoin);
+      });
+    } else if (_prevCoin < 0) {
+      _prevCoin = currentCoin;
+      _displayedValue = currentCoin;
+    }
+
+    final fs = widget.textStyle?.fontSize ?? 16.0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ScaleTransition(
+          scale: _scaleAnimation,
+          child: Text(
+            AppConstants.coinIcon,
+            style: TextStyle(fontSize: fs),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(AppConstants.formatCoin(_displayedValue), style: widget.textStyle),
+      ],
     );
   }
 }

@@ -21,6 +21,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entityPreyFlagName => 'Flag';
 
   @override
+  String get entityCoinName => 'Coin';
+
+  @override
   String get appTitle => 'Worm Journey';
 
   @override
@@ -191,4 +194,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get victoryContinue => 'Continue';
+
+  @override
+  String victoryClaimReward(int amount) => 'Claim $amount coins';
+
+  @override
+  String get victoryExit => 'Exit';
+
+  @override
+  String get victoryExitLoseRewardWarning => 'You will lose the large reward';
+
+  @override
+  String get victoryRewardLevelLabel => 'Level';
+
+  @override
+  String get victoryRewardTimeLabel => 'Time';
+
+  @override
+  String get victoryRewardCoinsLabel => 'Coins';
 }

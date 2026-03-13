@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flame/camera.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -104,6 +103,8 @@ class WormJourneyGame extends FlameGame
 
   /// Thời gian chơi tối đa (giây), từ [ _levelConfig.timeLimitSeconds ]. Ghi đè trong onLoad và _restart.
   double _timeLimit = 120.0;
+  /// Tổng thời gian màn (để overlay Victory tính thưởng thời gian).
+  double get timeLimitSeconds => _timeLimit;
 
   /// Config màn load từ JSON (level_1.json, level_2.json, ...). Mặc định trống, gán lại trong onLoad.
   LevelJsonConfig _levelConfig = const LevelJsonConfig();
@@ -121,6 +122,16 @@ class WormJourneyGame extends FlameGame
 
   /// Đã hồi sinh một lần trong ván này; chết lần hai không hiện nút Hồi sinh (trừ debug mode).
   bool _hasRevivedOnce = false;
+
+  /// Số đồng xu đã ăn trong ván (để cộng thưởng victory: +1 per coin).
+  int _coinsCollectedThisRun = 0;
+  /// Thời điểm game (giây) khi đồng xu gần nhất bị ăn; âm = chưa ăn lần nào.
+  double _lastCoinEatenGameTime = -999.0;
+  /// Đã spawn đồng xu đầu tiên chưa (để dùng firstSpawnDelay vs delayAfterEaten).
+  bool _firstCoinSpawned = false;
+
+  /// Số xu ăn được trong ván (overlay Victory cộng thưởng = coinsCollectedThisRun * 1).
+  int get coinsCollectedThisRun => _coinsCollectedThisRun;
 
   double _segmentSize = 28.0;
   int _gridRows = GameConfig.gridRows;
@@ -325,6 +336,9 @@ class WormJourneyGame extends FlameGame
   Future<void> onLoad() async {
     _deathSnapshot = null;
     _hasRevivedOnce = false;
+    _coinsCollectedThisRun = 0;
+    _lastCoinEatenGameTime = -999.0;
+    _firstCoinSpawned = false;
     _gridRows = playableRowCount;
     camera.viewport = MaxViewport();
 
@@ -467,6 +481,30 @@ class WormJourneyGame extends FlameGame
     if (entry != null) world.add(entry.component);
   }
 
+  static const String _preyCoinTypeId = 'prey_coin';
+
+  /// Spawn đồng xu nếu config bật và chưa có xu trên map; đồng xu đầu sau firstSpawnDelay, các lần sau sau spawnDelayAfterEaten kể từ khi xu trước bị ăn.
+  void _trySpawnCoin() {
+    final config = _levelConfig.coinSpawnConfig;
+    if (config == null) return;
+    if (_mapEntityManager.entries.any((e) => e.typeId == _preyCoinTypeId)) return;
+
+    final canSpawn = !_firstCoinSpawned
+        ? (_gameTime >= config.firstSpawnDelaySeconds)
+        : (_gameTime - _lastCoinEatenGameTime >= config.spawnDelayAfterEatenSeconds);
+
+    if (!canSpawn) return;
+
+    _firstCoinSpawned = true;
+    final occupied = _occupiedGridKeys();
+    final entry = _mapEntityManager.spawn(
+      _preyCoinTypeId,
+      occupied,
+      isCellVisible: _isGridInCameraView,
+    );
+    if (entry != null) world.add(entry.component);
+  }
+
   /// Đăng ký typeId từ typeObjConfig → placeAt(grid, typeId) + world.add.
   void _registerMapEntityPlacers() {
     for (final typeId in _typeObjConfig.allTypeIds) {
@@ -478,13 +516,18 @@ class WormJourneyGame extends FlameGame
   }
 
   /// Duyệt config map: typeId (string) → placeAt cho từng ô. Bỏ qua prey_flag — cờ chỉ spawn khi hoàn thành nhiệm vụ.
+  /// Không đặt entity lên ô đang bị thân sâu hoặc entity khác chiếm.
   void _placeAllMapEntitiesFromConfig() {
+    Set<String> occupied = _occupiedGridKeys();
     for (final entry in _levelConfig.mapConfig.placements.entries) {
       if (entry.key == 'prey_flag') continue;
       final place = _placeEntityAt[entry.key];
       if (place == null) continue;
       for (final grid in entry.value) {
+        final key = '${grid.x.toInt()},${grid.y.toInt()}';
+        if (occupied.contains(key)) continue;
         place(grid);
+        occupied.add(key);
       }
     }
   }
@@ -496,12 +539,31 @@ class WormJourneyGame extends FlameGame
     ));
   }
 
-  /// Spawn lá cờ tại ô đầu tiên trong config (chỉ gọi khi đã hoàn thành nhiệm vụ). Có hiệu ứng nhấp nháy 1 nhịp.
+  /// Spawn lá cờ tại ô ưu tiên từ config, hoặc ô trống bất kỳ trong view nếu ô config bị sâu/entity chiếm. Có hiệu ứng nhấp nháy 1 nhịp.
   void _spawnFlag() {
-    final grids = _levelConfig.mapConfig.placements['prey_flag'];
-    if (grids == null || grids.isEmpty) return;
-    final grid = grids.first;
-    final comp = _mapEntityManager.placeAt(grid, 'prey_flag', withSpawnEffect: true);
+    final occupied = _occupiedGridKeys();
+    final preferred = _levelConfig.mapConfig.placements['prey_flag'];
+    Vector2? targetGrid;
+    if (preferred != null && preferred.isNotEmpty) {
+      final freePreferred = preferred.where(
+        (g) => !occupied.contains('${g.x.toInt()},${g.y.toInt()}'),
+      );
+      if (freePreferred.isNotEmpty) targetGrid = freePreferred.first;
+    }
+    if (targetGrid == null) {
+      final candidates = <Vector2>[];
+      for (var row = 0; row < _gridRows; row++) {
+        for (var col = 0; col < GameConfig.gridColumns; col++) {
+          final pos = Vector2(col.toDouble(), row.toDouble());
+          if (occupied.contains('$col,$row')) continue;
+          if (!_isGridInCameraView(pos)) continue;
+          candidates.add(pos);
+        }
+      }
+      if (candidates.isEmpty) return;
+      targetGrid = candidates[Random().nextInt(candidates.length)];
+    }
+    final comp = _mapEntityManager.placeAt(targetGrid, 'prey_flag', withSpawnEffect: true);
     world.add(comp);
   }
 
@@ -569,6 +631,24 @@ class WormJourneyGame extends FlameGame
       if (_missionCurrents[i] < target) return false;
     }
     return true;
+  }
+
+  /// Phần thưởng thoát victory (overlay set khi build). GameScreen dùng để thoát khi bấm back + xác nhận, không show thêm dialog end game.
+  int? _victoryExitReward;
+  int? get victoryExitReward => _victoryExitReward;
+  void setVictoryExitReward(int r) => _victoryExitReward = r;
+
+  /// Unlock level/scene và gỡ overlay Victory. Gọi sau khi user xác nhận thoát victory (từ overlay hoặc từ GameScreen khi bấm back).
+  Future<void> performVictoryUnlockAndDismiss() async {
+    final currentMaxLevel = await SharedPrefsService.getMaxLevelIndexUnlock();
+    final newLevel = currentMaxLevel < level + 1 ? level + 1 : currentMaxLevel;
+    await SharedPrefsService.setMaxLevelIndexUnlock(newLevel);
+    final newSceneFromLevel = ((newLevel - 1) ~/ 5) + 1;
+    final currentMaxScene = await SharedPrefsService.getMaxSceneIndexUnlock();
+    if (newSceneFromLevel > currentMaxScene) {
+      await SharedPrefsService.setMaxSceneIndexUnlock(newSceneFromLevel);
+    }
+    overlays.remove('Victory');
   }
 
   void _setVictory() {
@@ -951,6 +1031,9 @@ class WormJourneyGame extends FlameGame
     for (final item in _levelConfig.spawnCycle.items) {
       _spawnCycleAccumulators[item.objType] = 0;
     }
+    _coinsCollectedThisRun = 0;
+    _lastCoinEatenGameTime = -999.0;
+    _firstCoinSpawned = false;
     if (snapshot.cause != _GameOverCause.timeUp) {
       _gameTime = 0;
     }
@@ -998,6 +1081,9 @@ class WormJourneyGame extends FlameGame
     for (final item in _levelConfig.spawnCycle.items) {
       _spawnCycleAccumulators[item.objType] = 0;
     }
+    _coinsCollectedThisRun = 0;
+    _lastCoinEatenGameTime = -999.0;
+    _firstCoinSpawned = false;
     _gameTime = 0;
     _startDelayRemaining = startDelaySeconds;
     _timeLimit = _levelConfig.timeLimitSeconds;
@@ -1169,6 +1255,8 @@ class WormJourneyGame extends FlameGame
       }
     }
 
+    _trySpawnCoin();
+
     final interval = mainWorm.moveInterval;
     final raw = (_moveAccumulator / interval).clamp(0.0, 1.0);
     final progress = Curves.linear.transform(raw);
@@ -1225,6 +1313,10 @@ class WormJourneyGame extends FlameGame
     final consumed = _mapEntityManager.consumeAt(newHead);
     if (consumed != null) {
       consumed.component.removeFromParent();
+      if (consumed.typeId == _preyCoinTypeId) {
+        _coinsCollectedThisRun++;
+        _lastCoinEatenGameTime = _gameTime;
+      }
       if (consumed.typeId == 'prey_flag') {
         final view = EntityModels.view(consumed.typeId);
         if (view != null) {

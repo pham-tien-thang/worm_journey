@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
@@ -12,10 +13,12 @@ import '../../core/services/coin_service.dart';
 import '../../core/services/shared_prefs_service.dart';
 import '../../inject/injection.dart';
 import '../../models/item_model.dart';
+import '../../widgets/exit_game_dialog.dart';
 import '../../widgets/game_hud.dart';
 import '../../widgets/game_joystick.dart';
 import '../../widgets/green_button.dart';
 import '../../widgets/item_info_dialog.dart';
+import '../../widgets/lucky_wheel.dart';
 import '../game.dart';
 
 /// Scaffold chung cho màn chơi: nhận [game] đã tạo (theo level), hiển thị GameWidget + items + joystick.
@@ -387,8 +390,13 @@ class _ItemSlot extends StatelessWidget {
 const double _adBadgeSize = 36;
 const double _adBadgeOverlap = 10;
 
-/// Overlay Flutter khi chiến thắng: cập nhật level + scene unlock, nút Tiếp tục về màn trước.
-class _VictoryOverlayWidget extends StatelessWidget {
+/// Hằng số thưởng chiến thắng: base 20, thưởng level = base*level, thưởng thời gian = (remaining/totalTime)*base.
+const int _victoryRewardBase = 20;
+/// Tốc độ quay kim wheel; claim nhảy random tỉ lệ thuận (cùng tốc độ chậm/nhanh).
+const double _victoryWheelSpeed = 0.38;
+
+/// Overlay Flutter khi chiến thắng: nút Claim nhảy random số (1.5x/2x/3x) + icon đồng xu, Exit chỉ "Thoát xx 🪙", bấm Exit hiện warning. Thiết kế giống dialog hồi sinh.
+class _VictoryOverlayWidget extends StatefulWidget {
   const _VictoryOverlayWidget({
     required this.game,
     this.onContinue,
@@ -397,51 +405,420 @@ class _VictoryOverlayWidget extends StatelessWidget {
   final WormJourneyGame game;
   final VoidCallback? onContinue;
 
-  Future<void> _onContinueTap() async {
-    final currentMaxLevel = await SharedPrefsService.getMaxLevelIndexUnlock();
-    final newLevel = currentMaxLevel < game.level + 1 ? game.level + 1 : currentMaxLevel;
-    await SharedPrefsService.setMaxLevelIndexUnlock(newLevel);
-    final newSceneFromLevel = ((newLevel - 1) ~/ 5) + 1;
-    final currentMaxScene = await SharedPrefsService.getMaxSceneIndexUnlock();
-    if (newSceneFromLevel > currentMaxScene) {
-      await SharedPrefsService.setMaxSceneIndexUnlock(newSceneFromLevel);
+  @override
+  State<_VictoryOverlayWidget> createState() => _VictoryOverlayWidgetState();
+}
+
+class _VictoryOverlayWidgetState extends State<_VictoryOverlayWidget>
+    with TickerProviderStateMixin {
+  late final AnimationController _statsController;
+  late final AnimationController _claimEffectController;
+  late final int _totalReward;
+  late final int _levelReward;
+  late final int _timeReward;
+  late final int _coinReward;
+  double _pointerAngle = -pi / 2;
+  bool _isClaiming = false;
+  int _claimAmount = 0;
+  Offset? _burstOrigin;
+  final GlobalKey _wheelKey = GlobalKey();
+
+  int get _claimSegmentIndex => LuckyWheel.segmentIndexFromAngle(_pointerAngle);
+  String get _claimMultiplierLabel => LuckyWheel.labelForSegmentIndex(_claimSegmentIndex);
+
+  int get _displayedClaimAmount {
+    final idx = LuckyWheel.segmentIndexFromAngle(_pointerAngle);
+    final mul = LuckyWheel.segmentMultipliers[idx];
+    final value = _totalReward * mul;
+    return value.ceil();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      GamePauseObserver.dialogOpen.value = true;
+    });
+    final level = widget.game.level;
+    final timeLimit = widget.game.timeLimitSeconds;
+    final remaining = widget.game.hudData.timeRemainingSeconds;
+    _levelReward = _victoryRewardBase * level;
+    final timeRatio = timeLimit > 0 ? (remaining / timeLimit).clamp(0.0, 1.0) : 0.0;
+    _timeReward = (timeRatio * _victoryRewardBase).round();
+    _coinReward = widget.game.coinsCollectedThisRun * 1;
+    _totalReward = _levelReward + _timeReward + _coinReward;
+    widget.game.setVictoryExitReward(_totalReward);
+
+    const totalStatsDuration = Duration(milliseconds: 2400);
+    _statsController = AnimationController(
+      vsync: this,
+      duration: totalStatsDuration,
+    )..forward();
+
+    _claimEffectController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+    _claimEffectController.addStatusListener((status) {
+      if (status == AnimationStatus.completed && _isClaiming && mounted) {
+        CoinService.instance.coinPlus(_claimAmount);
+        _unlockAndDismiss();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      GamePauseObserver.dialogOpen.value = false;
+    });
+    _statsController.dispose();
+    _claimEffectController.dispose();
+    super.dispose();
+  }
+
+  int _displayedForPhase(double progress, int phase) {
+    const step = 1 / 3;
+    final phaseStart = phase * step;
+    final phaseEnd = (phase + 1) * step;
+    if (progress <= phaseStart) return 0;
+    if (progress >= phaseEnd) {
+      switch (phase) {
+        case 0:
+          return _levelReward;
+        case 1:
+          return _timeReward;
+        case 2:
+          return _coinReward;
+        default:
+          return 0;
+      }
     }
-    game.overlays.remove('Victory');
-    onContinue?.call();
+    final t = (progress - phaseStart) / (phaseEnd - phaseStart);
+    final target = phase == 0 ? _levelReward : (phase == 1 ? _timeReward : _coinReward);
+    return (t * target).round();
+  }
+
+  Future<void> _unlockAndDismiss() async {
+    await widget.game.performVictoryUnlockAndDismiss();
+    widget.onContinue?.call();
+  }
+
+  void _onClaimTap() {
+    if (_isClaiming) return;
+    setState(() {
+      _isClaiming = true;
+      _claimAmount = _displayedClaimAmount;
+      _burstOrigin = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = _wheelKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box != null) {
+        const w = 210.0, h = 88.0;
+        const pointerLen = 40.0;
+        final tipX = w / 2 + pointerLen * sin(_pointerAngle);
+        final tipY = h - 10 - pointerLen * cos(_pointerAngle);
+        setState(() => _burstOrigin = box.localToGlobal(Offset(tipX, tipY)));
+      }
+      _claimEffectController.forward(from: 0);
+    });
+  }
+
+  Future<void> _onExitTap() async => _runExitFlow();
+
+  /// Thoát bằng back/exit: hiện warning, nếu xác nhận thì cộng _totalReward và đóng overlay. Chỉ khi bấm Claim thì cộng số claim, không warning.
+  Future<void> _runExitFlow() async {
+    final l10n = L10n;
+    final confirmed = await ExitGameDialog.show(
+      context,
+      message: l10n.victoryExitLoseRewardWarning,
+      exitRewardAmount: _totalReward,
+    );
+    if (!mounted || confirmed != true) return;
+    await CoinService.instance.coinPlus(_totalReward);
+    await _unlockAndDismiss();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n;
-    return Material(
-      color: const Color(0xCC000000),
-      child: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.victory,
-                style: const TextStyle(
-                  color: AppColors.gameOverOrange,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  shadows: AppColors.textOutlineWhite,
+    const rewardStyle = TextStyle(
+      color: AppColors.gameOverOrange,
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+      shadows: AppColors.textOutlineWhite,
+    );
+    const statsRowWidth = 260.0;
+
+    final content = Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.victory,
+                  style: const TextStyle(
+                    color: AppColors.gameOverOrange,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    shadows: AppColors.textOutlineWhite,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: 100,
+                    maxWidth: statsRowWidth,
+                    minWidth: statsRowWidth,
+                  ),
+                  child: AnimatedBuilder(
+                    animation: _statsController,
+                    builder: (context, _) {
+                      final p = _statsController.value;
+                      const step = 1 / 3;
+                      final line1Visible = p > 0;
+                      final line2Visible = p >= step;
+                      final line3Visible = p >= step * 2;
+                      final d1 = _displayedForPhase(p, 0);
+                      final d2 = _displayedForPhase(p, 1);
+                      final d3 = _displayedForPhase(p, 2);
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            height: 32,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('🎯', style: TextStyle(fontSize: 18)),
+                                    const SizedBox(width: 6),
+                                    Text('${l10n.victoryRewardLevelLabel}:', style: rewardStyle),
+                                  ],
+                                ),
+                                Text(line1Visible ? '$d1 ${AppConstants.coinIcon}' : ' ', style: rewardStyle),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 32,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('🕐', style: TextStyle(fontSize: 18)),
+                                    const SizedBox(width: 6),
+                                    Text('${l10n.victoryRewardTimeLabel}:', style: rewardStyle),
+                                  ],
+                                ),
+                                Text(line2Visible ? '$d2 ${AppConstants.coinIcon}' : ' ', style: rewardStyle),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 32,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(AppConstants.coinIcon, style: rewardStyle),
+                                    const SizedBox(width: 6),
+                                    Text('${l10n.victoryRewardCoinsLabel}:', style: rewardStyle),
+                                  ],
+                                ),
+                                Text(line3Visible ? '$d3 ${AppConstants.coinIcon}' : ' ', style: rewardStyle),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 16),
+              SizedBox(
+                key: _wheelKey,
+                width: 210,
+                height: 88,
+                child: LuckyWheel(
+                  size: const Size(210, 88),
+                  rotationSpeed: _victoryWheelSpeed,
+                  onPointerAngle: (angle) => setState(() => _pointerAngle = angle),
+                  pausePointer: _isClaiming,
                 ),
               ),
               const SizedBox(height: 24),
-              GreenButton(
-                text: l10n.victoryContinue,
-                onPressed: _onContinueTap,
-                height: 64,
-                width: 200,
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  GreenButton(
+                    text: l10n.victoryClaimReward(_displayedClaimAmount)
+                        .replaceAll(' xu', ' ${AppConstants.coinIcon}')
+                        .replaceAll(' coins', ' ${AppConstants.coinIcon}'),
+                    onPressed: _onClaimTap,
+                    height: 64,
+                    width: 200,
+                  ),
+                  Positioned(
+                    top: -_adBadgeSize / 2 + _adBadgeOverlap,
+                    right: -_adBadgeSize / 2 + _adBadgeOverlap,
+                    child: Container(
+                      width: _adBadgeSize,
+                      height: _adBadgeSize,
+                      decoration: BoxDecoration(
+                        color: AppColors.gameOverOrange,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '🎬',
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _onExitTap,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    '${l10n.victoryExit}  $_totalReward ${AppConstants.coinIcon}',
+                    style: const TextStyle(
+                      color: AppColors.gameOverOrange,
+                      fontSize: 18,
+                      shadows: AppColors.textOutlineWhite,
+                    ),
+                  ),
+                ),
               ),
             ],
+          );
+
+    return Material(
+      color: const Color(0xCC000000),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          SafeArea(child: Center(child: content)),
+          if (_isClaiming)
+            AnimatedBuilder(
+              animation: _claimEffectController,
+              builder: (_, __) => _VictoryClaimEffect(
+                progress: _claimEffectController.value,
+                multiplierLabel: _claimMultiplierLabel,
+                burstOrigin: _burstOrigin,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Hiệu ứng claim: chữ X nổ scale to mờ dần + sao toả ra từ đầu kim, rơi xuống.
+class _VictoryClaimEffect extends StatelessWidget {
+  const _VictoryClaimEffect({
+    required this.progress,
+    required this.multiplierLabel,
+    this.burstOrigin,
+  });
+
+  final double progress;
+  final String multiplierLabel;
+  final Offset? burstOrigin;
+
+  static const int _starCount = 8;
+  static const double _starFallDistance = 140;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final center = burstOrigin ?? Offset(size.width / 2, size.height / 2 - 20);
+
+    final textScale = 0.3 + progress * 1.2;
+    final textOpacity = progress < 0.5 ? 1.0 : (1 - (progress - 0.5) * 2).clamp(0.0, 1.0);
+
+    return IgnorePointer(
+      child: CustomPaint(
+        size: size,
+        painter: _ClaimEffectPainter(
+          burstOrigin: center,
+          progress: progress,
+          starCount: _starCount,
+          fallDistance: _starFallDistance,
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 60),
+            child: Opacity(
+              opacity: textOpacity,
+              child: Transform.scale(
+                scale: textScale,
+                child: Text(
+                  multiplierLabel.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 56,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFFFD700),
+                    shadows: [
+                      Shadow(color: Colors.orange, blurRadius: 12, offset: Offset(0, 0)),
+                      Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(2, 2)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _ClaimEffectPainter extends CustomPainter {
+  _ClaimEffectPainter({
+    required this.burstOrigin,
+    required this.progress,
+    this.starCount = 8,
+    this.fallDistance = 140,
+  });
+
+  final Offset burstOrigin;
+  final double progress;
+  final int starCount;
+  final double fallDistance;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var i = 0; i < starCount; i++) {
+      final angle = (i / starCount) * 2 * pi;
+      final burst = progress.clamp(0.0, 1.0);
+      final dist = burst * 100;
+      final dy = burst * fallDistance;
+      final x = burstOrigin.dx + cos(angle) * dist;
+      final y = burstOrigin.dy + sin(angle) * dist + dy;
+      final opacity = (1 - burst * 0.8).clamp(0.0, 1.0);
+      final starOpacity = (opacity * 255).round().clamp(0, 255);
+      final paint = Paint()..color = Color.fromARGB(starOpacity, 255, 215, 0);
+      canvas.drawCircle(Offset(x, y), 10, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ClaimEffectPainter old) =>
+      old.progress != progress || old.burstOrigin != burstOrigin;
 }
 
 /// Overlay Flutter khi game over: nút Chơi lại dùng [GreenButton] có hiệu ứng scale, icon 🎬 đè góc phải, chữ Kết thúc về màn chọn level.
@@ -468,6 +845,9 @@ class _GameOverOverlayWidgetState extends State<_GameOverOverlayWidget>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      GamePauseObserver.dialogOpen.value = true;
+    });
     _scaleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -479,6 +859,9 @@ class _GameOverOverlayWidgetState extends State<_GameOverOverlayWidget>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      GamePauseObserver.dialogOpen.value = false;
+    });
     _scaleController.dispose();
     super.dispose();
   }
@@ -575,7 +958,7 @@ class _GameOverOverlayWidgetState extends State<_GameOverOverlayWidget>
 }
 
 /// Overlay game over khi đã hồi sinh một lần (hoặc không có nút Hồi sinh): chỉ "Game Over" + "Kết thúc". Debug mode vẫn dùng [GameOver] có nút.
-class _GameOverNoReviveOverlayWidget extends StatelessWidget {
+class _GameOverNoReviveOverlayWidget extends StatefulWidget {
   const _GameOverNoReviveOverlayWidget({
     required this.game,
     this.onGameOverEnd,
@@ -585,8 +968,30 @@ class _GameOverNoReviveOverlayWidget extends StatelessWidget {
   final VoidCallback? onGameOverEnd;
 
   @override
+  State<_GameOverNoReviveOverlayWidget> createState() => _GameOverNoReviveOverlayWidgetState();
+}
+
+class _GameOverNoReviveOverlayWidgetState extends State<_GameOverNoReviveOverlayWidget> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      GamePauseObserver.dialogOpen.value = true;
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      GamePauseObserver.dialogOpen.value = false;
+    });
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = L10n;
+    final game = widget.game;
     return Material(
       color: const Color(0xCC000000),
       child: SafeArea(
@@ -608,7 +1013,7 @@ class _GameOverNoReviveOverlayWidget extends StatelessWidget {
                 onTap: () {
                   game.overlays.remove('GameOver');
                   game.overlays.remove('GameOverNoRevive');
-                  onGameOverEnd?.call();
+                  widget.onGameOverEnd?.call();
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(12),

@@ -4,6 +4,7 @@
   "entityPreyCoconutName": "Quả dừa",
   "entityXMarkName": "Chướng ngại vật",
   "entityPreyFlagName": "Lá cờ",
+  "entityCoinName": "Đồng xu",
   "appTitle": "Worm Journey",
   "levelLabel": "Lv{level}",
   "sceneLabel": "Cảnh {n}",
@@ -76,5 +77,16 @@
   "gameRulesTitle": "Luật chơi",
   "ready": "Sẵn sàng",
   "victory": "Chiến thắng",
-  "victoryContinue": "Tiếp tục"
+  "victoryContinue": "Tiếp tục",
+  "victoryClaimReward": "Nhận thưởng {amount} xu",
+  "@victoryClaimReward": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "victoryExit": "Thoát",
+  "victoryExitLoseRewardWarning": "Bạn sẽ mất phần thưởng lớn",
+  "victoryRewardLevelLabel": "Level",
+  "victoryRewardTimeLabel": "Thời gian",
+  "victoryRewardCoinsLabel": "Xu"
 }

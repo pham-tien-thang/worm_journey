@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flame/components.dart';
 
+import '../../components/coin_prey.dart';
 import '../../components/prey.dart';
 import '../../components/x_obstacle.dart';
 import '../config/type_obj_config.dart';
@@ -58,6 +59,16 @@ class MapEntityManager {
     final icon = EntityModels.icon(typeId);
     final category = typeObjConfig.getCategory(typeId);
     if (category == 'grey') {
+      if (typeId == 'prey_coin') {
+        return CoinPrey(
+          segmentSize: segmentSize,
+          icon: icon,
+          position: position,
+          withSpawnEffect: withSpawnEffect,
+          iconScale: 1.0,
+          rotateSpeed: 14.0,
+        );
+      }
       final isFlag = typeId == 'prey_flag';
       return Prey(
         segmentSize: segmentSize,
