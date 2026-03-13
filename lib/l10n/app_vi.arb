@@ -16,6 +16,7 @@
   "gameOver": "Game Over",
   "tapToPlayAgain": "Chạm để chơi lại",
   "gameOverPlayAgain": "Chơi lại",
+  "gameOverRevive": "Hồi sinh",
   "gameOverEnd": "Kết thúc",
   "view": "Xem",
   "quantityShort": "x{quantity}",

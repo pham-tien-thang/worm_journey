@@ -1,5 +1,8 @@
+import 'package:flame/components.dart';
+
 import '../worm/worm_body_config.dart';
 import '../worm/worm_config.dart';
+import '../worm/worm_direction.dart';
 import '../worm/worm_head_config.dart';
 import '../worm/worm_tail_config.dart';
 
@@ -43,6 +46,8 @@ class PinkWormConfig extends WormConfig {
     int initialLength = 10,
     int? maxLength,
     int? gridRows,
+    List<Vector2>? initialGridPositions,
+    WormDirection? initialDirection,
   }) : super(
           headConfig: PinkWormHeadConfig(),
           bodyConfig: PinkWormBodyConfig(),
@@ -52,5 +57,7 @@ class PinkWormConfig extends WormConfig {
           initialLength: initialLength,
           maxLength: maxLength,
           gridRows: gridRows,
+          initialGridPositions: initialGridPositions,
+          initialDirection: initialDirection,
         );
 }

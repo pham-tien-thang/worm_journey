@@ -48,6 +48,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get gameOverPlayAgain => 'Chơi lại';
 
   @override
+  String get gameOverRevive => 'Hồi sinh';
+
+  @override
   String get gameOverEnd => 'Kết thúc';
 
   @override

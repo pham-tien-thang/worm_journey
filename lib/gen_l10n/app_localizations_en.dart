@@ -48,6 +48,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameOverPlayAgain => 'Play again';
 
   @override
+  String get gameOverRevive => 'Revive';
+
+  @override
   String get gameOverEnd => 'End';
 
   @override

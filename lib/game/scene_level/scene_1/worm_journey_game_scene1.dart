@@ -37,6 +37,34 @@ enum HazardType {
   body,
 }
 
+/// Nguyên nhân game over: hết giờ hoặc mất hết thân (va chạm).
+enum _GameOverCause {
+  timeUp,
+  bodyGone,
+}
+
+/// Snapshot khi sâu chết: map, nhiệm vụ, nguyên nhân; nếu timeUp thêm vị trí/hướng sâu; nếu bodyGone thêm thời gian còn lại.
+class _DeathSnapshot {
+  _DeathSnapshot({
+    required this.entries,
+    required this.missionCurrents,
+    required this.cause,
+    this.wormPositions,
+    this.wormDirection,
+    this.remainingTimeAtDeath,
+  });
+
+  final List<({Vector2 grid, String typeId})> entries;
+  final List<int> missionCurrents;
+  final _GameOverCause cause;
+  /// Chỉ có khi [cause] == timeUp: vị trí grid head→tail để hồi sinh tại chỗ.
+  final List<Vector2>? wormPositions;
+  /// Chỉ có khi [cause] == timeUp.
+  final WormDirection? wormDirection;
+  /// Chỉ có khi [cause] == bodyGone: thời gian còn lại lúc chết (để set tối thiểu 30s nếu < 30).
+  final double? remainingTimeAtDeath;
+}
+
 /// Game rắn săn mồi. Full màn hình. Đâm tường/đuôi trừ 1 đốt; còn đầu+đuôi thì thua.
 class WormJourneyGame extends FlameGame
     with KeyboardEvents, TapCallbacks, HasCollisionDetection {
@@ -87,6 +115,12 @@ class WormJourneyGame extends FlameGame
   List<int> _missionCurrents = [0];
   /// Ghi đè target theo id (vd. setMission2Target gọi khi load level).
   final Map<String, int> _missionTargetOverrides = {};
+
+  /// Snapshot khi game over: map + tiến trình nhiệm vụ (không có thời gian). Dùng khi bấm "Hồi sinh".
+  _DeathSnapshot? _deathSnapshot;
+
+  /// Đã hồi sinh một lần trong ván này; chết lần hai không hiện nút Hồi sinh (trừ debug mode).
+  bool _hasRevivedOnce = false;
 
   double _segmentSize = 28.0;
   int _gridRows = GameConfig.gridRows;
@@ -289,6 +323,8 @@ class WormJourneyGame extends FlameGame
 
   @override
   Future<void> onLoad() async {
+    _deathSnapshot = null;
+    _hasRevivedOnce = false;
     _gridRows = playableRowCount;
     camera.viewport = MaxViewport();
 
@@ -500,10 +536,28 @@ class WormJourneyGame extends FlameGame
     camera.viewfinder.position = Vector2(worldWidth / 2, _cameraY!);
   }
 
-  void _setGameOver() {
+  void _setGameOver(_GameOverCause cause) {
     if (_gameOver) return;
     _gameOver = true;
-    overlays.add('GameOver');
+    _deathSnapshot = _DeathSnapshot(
+      entries: _mapEntityManager.entries
+          .map((e) => (grid: e.grid.clone(), typeId: e.typeId))
+          .toList(),
+      missionCurrents: List.from(_missionCurrents),
+      cause: cause,
+      wormPositions: cause == _GameOverCause.timeUp
+          ? mainWorm.allGridPositions.map((v) => v.clone()).toList()
+          : null,
+      wormDirection: cause == _GameOverCause.timeUp ? mainWorm.currentDirection : null,
+      remainingTimeAtDeath: cause == _GameOverCause.bodyGone
+          ? (_timeLimit - _gameTime).clamp(0.0, double.infinity)
+          : null,
+    );
+    if (_hasRevivedOnce && !shouldApplyDebug) {
+      overlays.add('GameOverNoRevive');
+    } else {
+      overlays.add('GameOver');
+    }
   }
 
   /// True khi mọi nhiệm vụ (có target > 0) đều đạt current >= target.
@@ -524,10 +578,388 @@ class WormJourneyGame extends FlameGame
     overlays.add('Victory');
   }
 
-  /// Gọi từ overlay Flutter "Chơi lại" hoặc nội bộ.
+  /// Gọi từ overlay Flutter "Hồi sinh" hoặc nội bộ.
   void restart() {
     overlays.remove('GameOver');
-    _restart();
+    overlays.remove('GameOverNoRevive');
+    if (_deathSnapshot != null) {
+      _hasRevivedOnce = true;
+      _restartFromDeath();
+    } else {
+      _restart();
+    }
+  }
+
+  /// Ô trong lưới và hoàn toàn trống (không có entity).
+  bool _isCellEmpty(Vector2 grid) {
+    const cols = GameConfig.gridColumns;
+    final rows = _gridRows;
+    if (grid.x < 0 || grid.x >= cols || grid.y < 0 || grid.y >= rows) return false;
+    return _mapEntityManager.getAt(grid) == null;
+  }
+
+  /// Ô trong lưới và trống, hoặc có vật cản độ cứng 1 (chỉ dùng khi không còn vùng an toàn).
+  bool _isCellUsableForSpawn(Vector2 grid) {
+    const cols = GameConfig.gridColumns;
+    final rows = _gridRows;
+    if (grid.x < 0 || grid.x >= cols || grid.y < 0 || grid.y >= rows) return false;
+    final entry = _mapEntityManager.getAt(grid);
+    if (entry == null) return true;
+    return _typeObjConfig.isBlocking(entry.typeId) &&
+        EntityModels.hardness(entry.typeId) == 1;
+  }
+
+  /// Số ô liên tiếp theo [dir] từ [head] (không tính head) hoàn toàn trống.
+  int _countStrictEmptyAhead(Vector2 head, WormDirection dir) {
+    const cols = GameConfig.gridColumns;
+    final rows = _gridRows;
+    final step = dir.toVector();
+    var pos = head + step;
+    var count = 0;
+    while (pos.x >= 0 && pos.x < cols && pos.y >= 0 && pos.y < rows) {
+      if (_mapEntityManager.getAt(pos) != null) break;
+      count++;
+      pos += step;
+    }
+    return count;
+  }
+
+  /// Số ô liên tiếp theo [dir] từ [head] là trống hoặc vật cản độ cứng 1 (dùng khi đã phải phá chỗ).
+  int _countEmptyOrClearableAhead(Vector2 head, WormDirection dir) {
+    const cols = GameConfig.gridColumns;
+    final rows = _gridRows;
+    final step = dir.toVector();
+    var pos = head + step;
+    var count = 0;
+    while (pos.x >= 0 && pos.x < cols && pos.y >= 0 && pos.y < rows) {
+      final entry = _mapEntityManager.getAt(pos);
+      if (entry == null) {
+        count++;
+      } else if (_typeObjConfig.isBlocking(entry.typeId) &&
+          EntityModels.hardness(entry.typeId) == 1) {
+        count++;
+      } else {
+        break;
+      }
+      pos += step;
+    }
+    return count;
+  }
+
+  /// Độ dài sâu khi hồi sinh (3 + 2 đơn vị).
+  static const int _respawnWormLength = 5;
+
+  static const List<WormDirection> _allDirections = [
+    WormDirection.right,
+    WormDirection.left,
+    WormDirection.down,
+    WormDirection.up,
+  ];
+
+  WormDirection? _respawnHeadDirectionFromConfig() {
+    final s = _levelConfig.respawnHeadDirection;
+    if (s == 'none' || s.isEmpty) return null;
+    switch (s) {
+      case 'top':
+        return WormDirection.up;
+      case 'r':
+        return WormDirection.right;
+      case 'l':
+        return WormDirection.left;
+      case 'b':
+        return WormDirection.down;
+      default:
+        return null;
+    }
+  }
+
+  /// Tìm **vị trí an toàn** để hồi sinh sâu (độ dài 5).
+  /// - Config "none": sâu xếp thẳng hàng, hướng đầu chọn theo nhiều ô trống phía trước nhất (logic hiện tại).
+  /// - Config "top"/"r"/"l"/"b": sâu có thể ngoằn nghoèo (path 5 ô nối tiếp), hướng đầu cố định từ config.
+  /// Trả về (positions: head→tail, direction, needDestroy).
+  ({List<Vector2> positions, WormDirection direction, bool needDestroy})? _findSafeSpawn() {
+    final configDir = _respawnHeadDirectionFromConfig();
+    if (configDir == null) return _findSafeSpawnLinear();
+    return _findSafeSpawnWinding(configDir);
+  }
+
+  /// Sâu xếp thẳng hàng; hướng đầu chọn theo nhiều ô trống phía trước nhất (config "none").
+  ({List<Vector2> positions, WormDirection direction, bool needDestroy})? _findSafeSpawnLinear() {
+    const cols = GameConfig.gridColumns;
+    final rows = _gridRows;
+    const bodyCount = _respawnWormLength - 1;
+
+    ({Vector2 head, WormDirection direction, int ahead})? bestEmpty;
+    for (var row = 0; row < rows; row++) {
+      for (var col = 0; col < cols; col++) {
+        final head = Vector2(col.toDouble(), row.toDouble());
+        for (final dir in _allDirections) {
+          final step = dir.toVector();
+          final body1 = head - step;
+          var ok = _isCellEmpty(head) && _isCellEmpty(body1);
+          var pos = body1;
+          for (var i = 0; i < bodyCount - 1 && ok; i++) {
+            pos = pos - step;
+            if (pos.x < 0 || pos.x >= cols || pos.y < 0 || pos.y >= rows) {
+              ok = false;
+              break;
+            }
+            if (!_isCellEmpty(pos)) ok = false;
+          }
+          if (!ok) continue;
+          final front = head + step;
+          if (front.x < 0 || front.x >= cols || front.y < 0 || front.y >= rows) continue;
+          if (!_isCellEmpty(front)) continue;
+
+          final ahead = _countStrictEmptyAhead(head, dir);
+          if (bestEmpty == null || ahead > bestEmpty.ahead) {
+            bestEmpty = (head: head, direction: dir, ahead: ahead);
+          }
+        }
+      }
+    }
+    if (bestEmpty != null) {
+      final step = bestEmpty.direction.toVector();
+      final positions = [
+        bestEmpty.head,
+        bestEmpty.head - step,
+        bestEmpty.head - step * 2,
+        bestEmpty.head - step * 3,
+        bestEmpty.head - step * 4,
+      ];
+      return (positions: positions, direction: bestEmpty.direction, needDestroy: false);
+    }
+
+    ({Vector2 head, WormDirection direction, int ahead})? bestUsable;
+    for (var row = 0; row < rows; row++) {
+      for (var col = 0; col < cols; col++) {
+        final head = Vector2(col.toDouble(), row.toDouble());
+        for (final dir in _allDirections) {
+          final step = dir.toVector();
+          var pos = head;
+          var ok = _isCellUsableForSpawn(pos);
+          for (var i = 0; i < bodyCount && ok; i++) {
+            pos = pos - step;
+            if (pos.x < 0 || pos.x >= cols || pos.y < 0 || pos.y >= rows) {
+              ok = false;
+              break;
+            }
+            if (!_isCellUsableForSpawn(pos)) ok = false;
+          }
+          if (!ok) continue;
+
+          final ahead = _countEmptyOrClearableAhead(head, dir);
+          if (bestUsable == null || ahead > bestUsable.ahead) {
+            bestUsable = (head: head, direction: dir, ahead: ahead);
+          }
+        }
+      }
+    }
+    if (bestUsable != null) {
+      final step = bestUsable.direction.toVector();
+      final positions = [
+        bestUsable.head,
+        bestUsable.head - step,
+        bestUsable.head - step * 2,
+        bestUsable.head - step * 3,
+        bestUsable.head - step * 4,
+      ];
+      return (positions: positions, direction: bestUsable.direction, needDestroy: true);
+    }
+    return null;
+  }
+
+  /// Sâu có thể ngoằn nghoèo (path 5 ô nối tiếp); hướng đầu cố định [headDirection] từ config.
+  ({List<Vector2> positions, WormDirection direction, bool needDestroy})? _findSafeSpawnWinding(WormDirection headDirection) {
+    const cols = GameConfig.gridColumns;
+    final rows = _gridRows;
+    final frontStep = headDirection.toVector();
+
+    bool inBounds(Vector2 p) =>
+        p.x >= 0 && p.x < cols && p.y >= 0 && p.y < rows;
+
+    ({List<Vector2> path, bool useHeadAtStart})? bestEmpty;
+    ({List<Vector2> path, bool useHeadAtStart})? bestUsable;
+    var bestEmptyAhead = -1;
+    var bestUsableAhead = -1;
+
+    void tryPath(List<Vector2> path, bool headAtStart) {
+      final head = headAtStart ? path.first : path.last;
+      final front = head + frontStep;
+      if (!inBounds(front)) return;
+
+      final emptyOk = path.every(_isCellEmpty) && _isCellEmpty(front);
+      final usableOk = path.every(_isCellUsableForSpawn) && _isCellUsableForSpawn(front);
+      if (!emptyOk && !usableOk) return;
+
+      final ahead = emptyOk
+          ? _countStrictEmptyAhead(head, headDirection)
+          : _countEmptyOrClearableAhead(head, headDirection);
+
+      if (emptyOk && (bestEmpty == null || ahead > bestEmptyAhead)) {
+        bestEmpty = (path: List.from(path), useHeadAtStart: headAtStart);
+        bestEmptyAhead = ahead;
+      }
+      if (usableOk && (bestUsable == null || ahead > bestUsableAhead)) {
+        bestUsable = (path: List.from(path), useHeadAtStart: headAtStart);
+        bestUsableAhead = ahead;
+      }
+    }
+
+    void dfs(List<Vector2> path, Set<String> used) {
+      if (path.length == _respawnWormLength) {
+        tryPath(path, true);
+        tryPath(path, false);
+        return;
+      }
+      final last = path.last;
+      for (final d in _allDirections) {
+        final next = last + d.toVector();
+        if (!inBounds(next)) continue;
+        final key = '${next.x.toInt()},${next.y.toInt()}';
+        if (used.contains(key)) continue;
+        used.add(key);
+        path.add(next);
+        dfs(path, used);
+        path.removeLast();
+        used.remove(key);
+      }
+    }
+
+    for (var row = 0; row < rows; row++) {
+      for (var col = 0; col < cols; col++) {
+        final start = Vector2(col.toDouble(), row.toDouble());
+        final key = '${col},$row';
+        dfs([start], {key});
+      }
+    }
+
+    if (bestEmpty != null) {
+      final b = bestEmpty!;
+      final path = b.useHeadAtStart ? b.path : b.path.reversed.toList();
+      return (positions: path, direction: headDirection, needDestroy: false);
+    }
+    if (bestUsable != null) {
+      final b = bestUsable!;
+      final path = b.useHeadAtStart ? b.path : b.path.reversed.toList();
+      return (positions: path, direction: headDirection, needDestroy: true);
+    }
+    return null;
+  }
+
+  /// Vị trí mặc định khi không tìm được spawn (giữa lưới, thẳng hàng theo [dir]).
+  List<Vector2> _defaultRespawnPositions(WormDirection dir) {
+    const cols = GameConfig.gridColumns;
+    final rows = _gridRows;
+    final step = dir.toVector();
+    final head = Vector2((cols / 2).floorToDouble(), (rows / 2).floorToDouble());
+    return [
+      head,
+      head - step,
+      head - step * 2,
+      head - step * 3,
+      head - step * 4,
+    ];
+  }
+
+  /// Phá entity tại [grid] nếu là vật cản độ cứng 1 (để giải chỗ cho sâu hồi sinh).
+  void _destroyObstacleIfHardness1(Vector2 grid) {
+    final entry = _mapEntityManager.getAt(grid);
+    if (entry == null) return;
+    if (!_typeObjConfig.isBlocking(entry.typeId)) return;
+    if (EntityModels.hardness(entry.typeId) != 1) return;
+    _destroyEntityAt(grid);
+  }
+
+  void _restartFromDeath() {
+    final snapshot = _deathSnapshot!;
+    mainWorm.removeFromParent();
+    for (final e in _mapEntityManager.entries) e.component.removeFromParent();
+    _mapEntityManager.clear();
+    for (final p in _magnetPulls) p.entry.component.removeFromParent();
+    _magnetPulls.clear();
+    _magnetLastPullTime = null;
+
+    for (final e in snapshot.entries) {
+      final place = _placeEntityAt[e.typeId];
+      if (place != null) place(e.grid);
+    }
+    _missionCurrents = List.from(snapshot.missionCurrents);
+
+    final List<Vector2> initialPositions;
+    final WormDirection dir;
+    final int wormLength;
+
+    if (snapshot.cause == _GameOverCause.timeUp &&
+        snapshot.wormPositions != null &&
+        snapshot.wormPositions!.length >= 2 &&
+        snapshot.wormDirection != null) {
+      initialPositions = snapshot.wormPositions!;
+      dir = snapshot.wormDirection!;
+      wormLength = initialPositions.length;
+      _timeLimit += 30;
+    } else {
+      final safe = _findSafeSpawn();
+      initialPositions = safe?.positions ??
+          _defaultRespawnPositions(WormDirection.right);
+      dir = safe?.direction ?? WormDirection.right;
+      wormLength = _respawnWormLength;
+
+      if (safe?.needDestroy == true) {
+        final headGrid = initialPositions.first;
+        final front = headGrid + dir.toVector();
+        for (final grid in [...initialPositions, front]) {
+          _destroyObstacleIfHardness1(grid);
+        }
+      }
+
+      final remaining = snapshot.remainingTimeAtDeath ?? 0;
+      _timeLimit = remaining < 30 ? 30 : remaining;
+      _gameTime = 0;
+    }
+
+    final worm = PinkWorm(
+      config: PinkWormConfig(
+        segmentSize: _segmentSize,
+        moveInterval: GameConfig.moveInterval,
+        initialLength: wormLength,
+        maxLength: _wormMaxLength,
+        gridRows: _gridRows,
+        initialGridPositions: initialPositions,
+        initialDirection: dir,
+      ),
+      info: WormInfo.playerDefault,
+      position: Vector2(0, playableStartRow * _segmentSize),
+      gridRowsOverride: _gridRows,
+    );
+    world.add(worm);
+    worm.setOnGrowAtMax(_onWormGrowAtMax);
+    _playerAgent = WormAgent(
+      worm: worm,
+      behavior: PlayerWormBehavior(),
+    );
+
+    final headWorld = _gridToWorld(initialPositions.first);
+    final worldWidth = GameConfig.gridColumns * _segmentSize;
+    final halfViewY = camera.viewport.size.y / 2;
+    final bottomOfPlayable = (playableStartRow + playableRowCount) * _segmentSize;
+    final maxCameraY = bottomOfPlayable - halfViewY;
+    _cameraY = headWorld.y.clamp(halfViewY, maxCameraY.clamp(halfViewY, double.infinity));
+    camera.viewfinder.position = Vector2(worldWidth / 2, _cameraY!);
+
+    _spawnCycleAccumulators.clear();
+    for (final item in _levelConfig.spawnCycle.items) {
+      _spawnCycleAccumulators[item.objType] = 0;
+    }
+    if (snapshot.cause != _GameOverCause.timeUp) {
+      _gameTime = 0;
+    }
+    _startDelayRemaining = startDelaySeconds;
+    _gameOver = false;
+    _victoryTriggered = false;
+    _flagSpawned = false;
+    _paused = false;
+    _moveAccumulator = 0;
   }
 
   void _restart() {
@@ -577,6 +1009,7 @@ class WormJourneyGame extends FlameGame
     _paused = false;
     _moveAccumulator = 0;
     _cameraY = null;
+    _hasRevivedOnce = false;
   }
 
   /// Trừ 1 đốt đuôi và để lại dấu X tại vị trí đuôi.
@@ -586,7 +1019,7 @@ class WormJourneyGame extends FlameGame
     mainWorm.removeTail();
     final comp = _mapEntityManager.placeAt(tailGrid, 'x_mark');
     world.add(comp);
-    if (mainWorm.segmentCount <= 2) _setGameOver();
+    if (mainWorm.segmentCount <= 2) _setGameOver(_GameOverCause.bodyGone);
   }
 
   /// Phá entity tại ô [grid] (khi độ cứng sâu > độ cứng vật cản).
@@ -703,7 +1136,7 @@ class WormJourneyGame extends FlameGame
     _gameTime += dt;
 
     if (_gameTime >= _timeLimit) {
-      _setGameOver();
+      _setGameOver(_GameOverCause.timeUp);
       return;
     }
 

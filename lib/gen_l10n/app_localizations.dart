@@ -164,6 +164,12 @@ abstract class AppLocalizations {
   /// **'Play again'**
   String get gameOverPlayAgain;
 
+  /// No description provided for @gameOverRevive.
+  ///
+  /// In en, this message translates to:
+  /// **'Revive'**
+  String get gameOverRevive;
+
   /// No description provided for @gameOverEnd.
   ///
   /// In en, this message translates to:

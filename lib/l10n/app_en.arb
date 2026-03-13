@@ -28,6 +28,7 @@
   "gameOver": "Game Over",
   "tapToPlayAgain": "Tap to play again",
   "gameOverPlayAgain": "Play again",
+  "gameOverRevive": "Revive",
   "gameOverEnd": "End",
   "view": "View",
   "quantityShort": "x{quantity}",

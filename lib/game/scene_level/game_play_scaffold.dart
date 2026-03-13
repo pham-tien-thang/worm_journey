@@ -125,6 +125,10 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                             onGameOverEnd: widget.onGameOverEnd,
                             onWatchAd: widget.onGameOverWatchAd,
                           ),
+                          'GameOverNoRevive': (ctx, g) => _GameOverNoReviveOverlayWidget(
+                            game: g as WormJourneyGame,
+                            onGameOverEnd: widget.onGameOverEnd,
+                          ),
                           'Victory': (ctx, g) => _VictoryOverlayWidget(
                             game: g as WormJourneyGame,
                             onContinue: widget.onGameOverEnd,
@@ -512,7 +516,7 @@ class _GameOverOverlayWidgetState extends State<_GameOverOverlayWidget>
                       );
                     },
                     child: GreenButton(
-                      text: l10n.gameOverPlayAgain,
+                      text: l10n.gameOverRevive,
                       onPressed: () {
                         game.restart();
                       },
@@ -547,7 +551,64 @@ class _GameOverOverlayWidgetState extends State<_GameOverOverlayWidget>
               GestureDetector(
                 onTap: () {
                   widget.game.overlays.remove('GameOver');
+                  widget.game.overlays.remove('GameOverNoRevive');
                   widget.onGameOverEnd?.call();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    l10n.gameOverEnd,
+                    style: const TextStyle(
+                      color: AppColors.gameOverOrange,
+                      fontSize: 18,
+                      shadows: AppColors.textOutlineWhite,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Overlay game over khi đã hồi sinh một lần (hoặc không có nút Hồi sinh): chỉ "Game Over" + "Kết thúc". Debug mode vẫn dùng [GameOver] có nút.
+class _GameOverNoReviveOverlayWidget extends StatelessWidget {
+  const _GameOverNoReviveOverlayWidget({
+    required this.game,
+    this.onGameOverEnd,
+  });
+
+  final WormJourneyGame game;
+  final VoidCallback? onGameOverEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n;
+    return Material(
+      color: const Color(0xCC000000),
+      child: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.gameOver,
+                style: const TextStyle(
+                  color: AppColors.gameOverOrange,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  shadows: AppColors.textOutlineWhite,
+                ),
+              ),
+              const SizedBox(height: 32),
+              GestureDetector(
+                onTap: () {
+                  game.overlays.remove('GameOver');
+                  game.overlays.remove('GameOverNoRevive');
+                  onGameOverEnd?.call();
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(12),

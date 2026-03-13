@@ -163,6 +163,7 @@ class LevelJsonConfig {
     this.itemBlock = const [],
     this.guideVi = '',
     this.guideEn = '',
+    this.respawnHeadDirection = 'none',
   });
 
   final List<MissionConfig> missions;
@@ -183,6 +184,8 @@ class LevelJsonConfig {
   final String guideVi;
   /// Chuỗi hướng dẫn đầu game (tiếng Anh). Không bao gồm title.
   final String guideEn;
+  /// Hướng đầu sâu khi hồi sinh: "none" (giữ logic tự chọn), "top", "r", "l", "b". Từ JSON `respawnHeadDirection`.
+  final String respawnHeadDirection;
 
   /// Có hiện boss hay không (theo config).
   bool get hasBoss => bossType != levelBossTypeNone && bossType.isNotEmpty;
@@ -203,7 +206,15 @@ class LevelJsonConfig {
       itemBlock: loadItemBlockConfig(jsonConfig),
       guideVi: _guideViWithFallback(jsonConfig),
       guideEn: loadGuideConfig(jsonConfig, 'guide_en'),
+      respawnHeadDirection: loadRespawnHeadDirection(jsonConfig),
     );
+  }
+
+  /// Chỉ load hướng đầu khi hồi sinh. Key `respawnHeadDirection`: "none", "top", "r", "l", "b". Null/empty → "none".
+  static String loadRespawnHeadDirection(Map<String, dynamic> jsonConfig) {
+    final s = jsonConfig['respawnHeadDirection'] as String?;
+    if (s == null || s.toString().trim().isEmpty) return 'none';
+    return s.toString().trim().toLowerCase();
   }
 
   static String _guideViWithFallback(Map<String, dynamic> jsonConfig) {
