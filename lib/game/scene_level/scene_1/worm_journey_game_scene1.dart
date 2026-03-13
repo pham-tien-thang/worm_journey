@@ -279,7 +279,7 @@ class WormJourneyGame extends FlameGame
     if (t <= 0) return;
     _missionTargetOverrides['mission2'] = t;
     if (_missionConfigs.every((m) => m.id != 'mission2')) {
-      _missionConfigs = [..._missionConfigs, const MissionConfig(id: 'mission2', typeId: 'prey_leaf', target: 0)];
+      _missionConfigs = [..._missionConfigs, MissionConfig(id: 'mission2', typeId: ProjectType.preyLeaf.typeId, target: 0)];
       _missionCurrents = [..._missionCurrents, 0];
     }
   }
@@ -487,13 +487,11 @@ class WormJourneyGame extends FlameGame
     if (entry != null) world.add(entry.component);
   }
 
-  static const String _preyCoinTypeId = 'prey_coin';
-
   /// Spawn đồng xu nếu config bật và chưa có xu trên map; đồng xu đầu sau firstSpawnDelay, các lần sau sau spawnDelayAfterEaten kể từ khi xu trước bị ăn.
   void _trySpawnCoin() {
     final config = _levelConfig.coinSpawnConfig;
     if (config == null) return;
-    if (_mapEntityManager.entries.any((e) => e.typeId == _preyCoinTypeId)) return;
+    if (_mapEntityManager.entries.any((e) => e.typeId == ProjectType.preyCoin.typeId)) return;
 
     final canSpawn = !_firstCoinSpawned
         ? (_gameTime >= config.firstSpawnDelaySeconds)
@@ -504,7 +502,7 @@ class WormJourneyGame extends FlameGame
     _firstCoinSpawned = true;
     final occupied = _occupiedGridKeys();
     final entry = _mapEntityManager.spawn(
-      _preyCoinTypeId,
+      ProjectType.preyCoin.typeId,
       occupied,
       isCellVisible: _isGridInCameraView,
     );
@@ -526,7 +524,7 @@ class WormJourneyGame extends FlameGame
   void _placeAllMapEntitiesFromConfig() {
     Set<String> occupied = _occupiedGridKeys();
     for (final entry in _levelConfig.mapConfig.placements.entries) {
-      if (entry.key == 'prey_flag') continue;
+      if (entry.key == ProjectType.preyFlag.typeId) continue;
       final place = _placeEntityAt[entry.key];
       if (place == null) continue;
       for (final grid in entry.value) {
@@ -548,7 +546,7 @@ class WormJourneyGame extends FlameGame
   /// Spawn lá cờ tại ô ưu tiên từ config, hoặc ô trống bất kỳ trong view nếu ô config bị sâu/entity chiếm. Có hiệu ứng nhấp nháy 1 nhịp.
   void _spawnFlag() {
     final occupied = _occupiedGridKeys();
-    final preferred = _levelConfig.mapConfig.placements['prey_flag'];
+    final preferred = _levelConfig.mapConfig.placements[ProjectType.preyFlag.typeId];
     Vector2? targetGrid;
     if (preferred != null && preferred.isNotEmpty) {
       final freePreferred = preferred.where(
@@ -569,7 +567,7 @@ class WormJourneyGame extends FlameGame
       if (candidates.isEmpty) return;
       targetGrid = candidates[Random().nextInt(candidates.length)];
     }
-    final comp = _mapEntityManager.placeAt(targetGrid, 'prey_flag', withSpawnEffect: true);
+    final comp = _mapEntityManager.placeAt(targetGrid, ProjectType.preyFlag.typeId, withSpawnEffect: true);
     world.add(comp);
   }
 
@@ -1047,7 +1045,7 @@ class WormJourneyGame extends FlameGame
     _gameOver = false;
     _victoryTriggered = false;
     // Giữ đúng trạng thái lá cờ từ snapshot: nếu snapshot đã có prey_flag thì không spawn thêm.
-    _flagSpawned = snapshot.entries.any((e) => e.typeId == 'prey_flag');
+    _flagSpawned = snapshot.entries.any((e) => e.typeId == ProjectType.preyFlag.typeId);
     _paused = false;
     _moveAccumulator = 0;
   }
@@ -1170,7 +1168,7 @@ class WormJourneyGame extends FlameGame
       return GameHudData(
         timeRemainingSeconds: _timeLimit,
         diamonds: 0,
-        missions: const [GameHudMission(id: 'leaves', typeId: 'prey_leaf', current: 0, target: 10)],
+        missions: [GameHudMission(id: 'leaves', typeId: ProjectType.preyLeaf.typeId, current: 0, target: 10)],
         bossHp: 0,
         bossHpMax: 0,
         itemBuffs: const [],
@@ -1320,11 +1318,11 @@ class WormJourneyGame extends FlameGame
     final consumed = _mapEntityManager.consumeAt(newHead);
     if (consumed != null) {
       consumed.component.removeFromParent();
-      if (consumed.typeId == _preyCoinTypeId) {
+      if (consumed.typeId == ProjectType.preyCoin.typeId) {
         _coinsCollectedThisRun++;
         _lastCoinEatenGameTime = _gameTime;
       }
-      if (consumed.typeId == 'prey_flag') {
+      if (consumed.typeId == ProjectType.preyFlag.typeId) {
         final view = EntityModels.view(consumed.typeId);
         if (view != null) {
           _playerAgent.behavior.onEatEntity(_playerAgent, view, _wormContext);
