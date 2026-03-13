@@ -121,14 +121,16 @@ class MapEntityManager {
   }
 
   /// [isCellVisible] nếu có: chỉ spawn ở ô trong tầm camera. Null = bỏ qua check.
+  /// [minRow] nếu có: chỉ xét ô có row >= minRow (grid.y). VD: lá đầu spawn từ hàng 6 → minRow: 5.
   /// Khi có isCellVisible: duyệt hết ô trong view + trống → chọn ngẫu nhiên 1 ô (đảm bảo sinh trong tầm nhìn).
   MapEntityEntry? spawn(String typeId, Set<String> occupied,
-      {bool Function(Vector2 grid)? isCellVisible}) {
+      {bool Function(Vector2 grid)? isCellVisible, int? minRow}) {
     if (!typeObjConfig.isEatable(typeId)) return null;
 
     if (isCellVisible != null) {
       final candidates = <Vector2>[];
       for (var row = 0; row < gridRows; row++) {
+        if (minRow != null && row < minRow) continue;
         for (var col = 0; col < gridColumns; col++) {
           final pos = Vector2(col.toDouble(), row.toDouble());
           if (occupied.contains('${col},$row')) continue;
@@ -145,10 +147,12 @@ class MapEntityManager {
       return entry;
     }
 
+    final rowMin = minRow ?? 0;
+    final rowCount = (gridRows - rowMin).clamp(1, gridRows);
     for (var i = 0; i < 100; i++) {
       final pos = Vector2(
         _random.nextInt(gridColumns).toDouble(),
-        _random.nextInt(gridRows).toDouble(),
+        (rowMin + _random.nextInt(rowCount)).toDouble(),
       );
       final key = '${pos.x.toInt()},${pos.y.toInt()}';
       if (occupied.contains(key)) continue;

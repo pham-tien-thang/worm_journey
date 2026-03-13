@@ -1,9 +1,11 @@
+import 'dart:io' show Platform;
+
 /// Hằng số dùng chung trong app (icon, số, v.v.).
 abstract final class AppConstants {
   AppConstants._();
 
-  /// Ký tự đồng tiền vàng (🪙). Dùng cho HUD, l10n, mô tả giá item.
-  static const String coinIcon = '🪙';
+  /// Icon đồng xu: Android giữ 🪙, iOS dùng 🟡. Lấy qua getter này cho thống nhất.
+  static String get coinIcon => Platform.isIOS ? '🟡' : '🪙';
 
   /// Ký tự item bị cấm. Dùng stack lên ô item khi màn chơi cấm item đó.
   static const String itemBlockedIcon = '🚫';

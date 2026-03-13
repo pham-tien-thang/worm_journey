@@ -199,7 +199,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get victoryContinue => 'Tiếp tục';
 
   @override
-  String victoryClaimReward(int amount) => 'Nhận thưởng $amount xu';
+  String victoryClaimReward(int amount) {
+    return 'Nhận thưởng $amount xu';
+  }
 
   @override
   String get victoryExit => 'Thoát';
@@ -215,4 +217,8 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get victoryRewardCoinsLabel => 'Xu';
+
+  @override
+  String victoryRewardReceived(int amount, String coinIcon) =>
+      'Đã nhận thưởng $amount $coinIcon';
 }

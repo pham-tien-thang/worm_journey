@@ -88,5 +88,12 @@
   "victoryExitLoseRewardWarning": "Bạn sẽ mất phần thưởng lớn",
   "victoryRewardLevelLabel": "Level",
   "victoryRewardTimeLabel": "Thời gian",
-  "victoryRewardCoinsLabel": "Xu"
+  "victoryRewardCoinsLabel": "Xu",
+  "victoryRewardReceived": "Đã nhận thưởng {amount} {coinIcon}",
+  "@victoryRewardReceived": {
+    "placeholders": {
+      "amount": {"type": "int"},
+      "coinIcon": {"type": "String"}
+    }
+  }
 }

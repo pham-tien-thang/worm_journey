@@ -462,6 +462,13 @@ class _VictoryOverlayWidgetState extends State<_VictoryOverlayWidget>
     _claimEffectController.addStatusListener((status) {
       if (status == AnimationStatus.completed && _isClaiming && mounted) {
         CoinService.instance.coinPlus(_claimAmount);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              L10n.victoryRewardReceived(_claimAmount, AppConstants.coinIcon),
+            ),
+          ),
+        );
         _unlockAndDismiss();
       }
     });

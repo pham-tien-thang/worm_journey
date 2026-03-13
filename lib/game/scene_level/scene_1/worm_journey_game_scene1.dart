@@ -456,12 +456,18 @@ class WormJourneyGame extends FlameGame
         cellCenterY <= _cameraY! + halfViewY;
   }
 
+  /// Hàng 6 trở đi (grid row >= 5) cho lá đầu; các lá sau spawn bình thường.
+  static const int _firstLeafMinRow = 5;
+
   void _spawnPrey() {
     final occupied = _occupiedGridKeys();
+    final isFirstLeaf = !_mapEntityManager.entries
+        .any((e) => e.typeId == ProjectType.preyLeaf.typeId);
     final entry = _mapEntityManager.spawn(
       ProjectType.preyLeaf.typeId,
       occupied,
       isCellVisible: _isGridInCameraView,
+      minRow: isFirstLeaf ? _firstLeafMinRow : null,
     );
     if (entry != null) world.add(entry.component);
   }
@@ -1040,7 +1046,8 @@ class WormJourneyGame extends FlameGame
     _startDelayRemaining = startDelaySeconds;
     _gameOver = false;
     _victoryTriggered = false;
-    _flagSpawned = false;
+    // Giữ đúng trạng thái lá cờ từ snapshot: nếu snapshot đã có prey_flag thì không spawn thêm.
+    _flagSpawned = snapshot.entries.any((e) => e.typeId == 'prey_flag');
     _paused = false;
     _moveAccumulator = 0;
   }

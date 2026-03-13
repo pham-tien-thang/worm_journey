@@ -107,5 +107,12 @@
   "victoryExitLoseRewardWarning": "You will lose the large reward",
   "victoryRewardLevelLabel": "Level",
   "victoryRewardTimeLabel": "Time",
-  "victoryRewardCoinsLabel": "Coins"
+  "victoryRewardCoinsLabel": "Coins",
+  "victoryRewardReceived": "Reward received: {amount} {coinIcon}",
+  "@victoryRewardReceived": {
+    "placeholders": {
+      "amount": {"type": "int"},
+      "coinIcon": {"type": "String"}
+    }
+  }
 }

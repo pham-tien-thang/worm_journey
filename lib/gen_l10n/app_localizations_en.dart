@@ -196,7 +196,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get victoryContinue => 'Continue';
 
   @override
-  String victoryClaimReward(int amount) => 'Claim $amount coins';
+  String victoryClaimReward(int amount) {
+    return 'Claim $amount coins';
+  }
 
   @override
   String get victoryExit => 'Exit';
@@ -212,4 +214,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get victoryRewardCoinsLabel => 'Coins';
+
+  @override
+  String victoryRewardReceived(int amount, String coinIcon) =>
+      'Reward received: $amount $coinIcon';
 }

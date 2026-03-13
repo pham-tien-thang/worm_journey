@@ -1,3 +1,4 @@
+import '../../core/app_constants.dart';
 import 'entity_model.dart';
 
 /// Model cha cho mồi (grey). Mặc định độ cứng 0.
@@ -30,10 +31,10 @@ class PreyFlagModel extends GreyModel {
   ProjectType get type => ProjectType.preyFlag;
 }
 
-/// Đồng xu 🪙 (ăn để cộng thưởng victory).
+/// Đồng xu (ăn để cộng thưởng victory). Icon lấy từ [AppConstants.coinIcon] (🪙 Android, 🟡 iOS).
 class PreyCoinModel extends GreyModel {
   @override
-  String get icon => '🪙';
+  String get icon => AppConstants.coinIcon;
   @override
   ProjectType get type => ProjectType.preyCoin;
 }

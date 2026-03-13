@@ -123,6 +123,9 @@ abstract class AppLocalizations {
   String get entityPreyFlagName;
 
   /// No description provided for @entityCoinName.
+  ///
+  /// In en, this message translates to:
+  /// **'Coin'**
   String get entityCoinName;
 
   /// No description provided for @appTitle.
@@ -432,22 +435,46 @@ abstract class AppLocalizations {
   String get victoryContinue;
 
   /// No description provided for @victoryClaimReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim {amount} coins'**
   String victoryClaimReward(int amount);
 
   /// No description provided for @victoryExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
   String get victoryExit;
 
   /// No description provided for @victoryExitLoseRewardWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'You will lose the large reward'**
   String get victoryExitLoseRewardWarning;
 
   /// No description provided for @victoryRewardLevelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
   String get victoryRewardLevelLabel;
 
   /// No description provided for @victoryRewardTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
   String get victoryRewardTimeLabel;
 
   /// No description provided for @victoryRewardCoinsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Coins'**
   String get victoryRewardCoinsLabel;
+
+  /// No description provided for @victoryRewardReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward received: {amount} {coinIcon}'**
+  String victoryRewardReceived(int amount, String coinIcon);
 }
 
 class _AppLocalizationsDelegate

@@ -3,10 +3,10 @@
   "guide_en": "Eat 10 🌿.\n\nDestroy 5 🪦.\n\n🌿: increases your length by 1.\n\n🥥: you get a helmet - destroy obstacles.\n\n🪦 (gravestone): obstacle to avoid.\n\n🌱: creates an extra leaf.\n\n🚩: receive the flag to win.",
   "itemBlock": ["snail", "magnet", "bomb", "antidote", "speed", "clock", "freeze", "dizzy"],
   "missions": [
-    { "id": "leaves", "typeId": "prey_leaf", "target": 1 },
-    { "id": "gravestones", "typeId": "x_mark", "target": 1 }
+    { "id": "leaves", "typeId": "prey_leaf", "target": 10 },
+    { "id": "gravestones", "typeId": "x_mark", "target": 10 }
   ],
-  "timeLimitSeconds": 120,
+  "timeLimitSeconds": 95,
   "timeUrgentThresholdSeconds": 10,
   "rule": "none",
   "respawnHeadDirection": "none",
