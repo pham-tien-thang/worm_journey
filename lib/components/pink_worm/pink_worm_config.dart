@@ -1,6 +1,8 @@
+import 'package:flame/components.dart';
 
 import '../worm/worm_body_config.dart';
 import '../worm/worm_config.dart';
+import '../worm/worm_direction.dart';
 import '../worm/worm_head_config.dart';
 import '../worm/worm_tail_config.dart';
 
@@ -39,16 +41,23 @@ class PinkWormTailConfig extends WormTailConfig {
 /// Config pink worm: head + body + tail assets và thông số.
 class PinkWormConfig extends WormConfig {
   PinkWormConfig({
-    super.segmentSize,
-    super.moveInterval,
-    super.initialLength,
-    super.maxLength,
-    super.gridRows,
-    super.initialGridPositions,
-    super.initialDirection,
+    double segmentSize = 28.0,
+    double moveInterval = 0.28,
+    int initialLength = 10,
+    int? maxLength,
+    int? gridRows,
+    List<Vector2>? initialGridPositions,
+    WormDirection? initialDirection,
   }) : super(
           headConfig: PinkWormHeadConfig(),
           bodyConfig: PinkWormBodyConfig(),
           tailConfig: PinkWormTailConfig(),
+          segmentSize: segmentSize,
+          moveInterval: moveInterval,
+          initialLength: initialLength,
+          maxLength: maxLength,
+          gridRows: gridRows,
+          initialGridPositions: initialGridPositions,
+          initialDirection: initialDirection,
         );
 }

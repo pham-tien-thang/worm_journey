@@ -1,2 +1,2 @@
-// Barrel file: export shared game configuration.
+// Barrel file: export config game.
 export 'game_config.dart';

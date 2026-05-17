@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app_router.dart';
-import '../../core/services/shared_prefs_service.dart'
-    show SharedPrefsService, unlockNotifier;
+import '../../core/services/shared_prefs_service.dart' show SharedPrefsService, unlockNotifier;
 import '../../models/scene_model.dart';
 import '../../widgets/coin_hud.dart';
 
@@ -84,12 +83,9 @@ class _SceneSelectionScreenState extends State<SceneSelectionScreen> {
                     Padding(
                       padding: const EdgeInsets.only(right: 16, top: 8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.45),
+                          color: Colors.black.withOpacity(0.45),
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: CoinHud(),
@@ -99,19 +95,16 @@ class _SceneSelectionScreenState extends State<SceneSelectionScreen> {
                 ),
                 const SizedBox(height: 16),
                 Expanded(
-                  child:
-                      _loading
-                          ? const Center(child: CircularProgressIndicator())
-                          : SingleChildScrollView(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: _SceneGrid(
-                              scenes: _scenes,
-                              onSceneTap:
-                                  (scene) => context.push(
-                                    AppRoutes.sceneLevels(scene.indexId),
-                                  ),
-                            ),
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: _SceneGrid(
+                            scenes: _scenes,
+                            onSceneTap: (scene) =>
+                                context.push(AppRoutes.sceneLevels(scene.indexId)),
                           ),
+                        ),
                 ),
               ],
             ),
@@ -123,7 +116,10 @@ class _SceneSelectionScreenState extends State<SceneSelectionScreen> {
 }
 
 class _SceneGrid extends StatelessWidget {
-  const _SceneGrid({required this.scenes, required this.onSceneTap});
+  const _SceneGrid({
+    required this.scenes,
+    required this.onSceneTap,
+  });
 
   final List<SceneModel> scenes;
   final void Function(SceneModel scene) onSceneTap;
@@ -188,10 +184,14 @@ class _SceneGrid extends StatelessWidget {
                   width: size,
                   height: size,
                   decoration: BoxDecoration(
-                    color:
-                        canTap ? const Color(0xFF2E7D32) : Colors.grey.shade600,
+                    color: canTap
+                        ? const Color(0xFF2E7D32)
+                        : Colors.grey.shade600,
                     borderRadius: BorderRadius.circular(radius),
-                    border: Border.all(color: Colors.white, width: 2.5),
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 2.5,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.3),
@@ -224,10 +224,22 @@ class _SceneGrid extends StatelessWidget {
                       fontSize: size * 0.16,
                       fontWeight: FontWeight.w500,
                       shadows: const [
-                        Shadow(color: Colors.white, offset: Offset(-1, -1)),
-                        Shadow(color: Colors.white, offset: Offset(1, -1)),
-                        Shadow(color: Colors.white, offset: Offset(-1, 1)),
-                        Shadow(color: Colors.white, offset: Offset(1, 1)),
+                        Shadow(
+                          color: Colors.white,
+                          offset: Offset(-1, -1),
+                        ),
+                        Shadow(
+                          color: Colors.white,
+                          offset: Offset(1, -1),
+                        ),
+                        Shadow(
+                          color: Colors.white,
+                          offset: Offset(-1, 1),
+                        ),
+                        Shadow(
+                          color: Colors.white,
+                          offset: Offset(1, 1),
+                        ),
                       ],
                     ),
                   ),

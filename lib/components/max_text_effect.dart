@@ -8,11 +8,11 @@ class MaxTextEffectComponent extends PositionComponent {
     required this.segmentSize,
     this.duration = 0.75,
   }) : super(
-         position: position,
-         anchor: Anchor.center,
-         size: Vector2(segmentSize * 2, segmentSize * 1.5),
-         priority: 200,
-       );
+          position: position,
+          anchor: Anchor.center,
+          size: Vector2(segmentSize * 2, segmentSize * 1.5),
+          priority: 200,
+        );
 
   final double segmentSize;
   final double duration;
@@ -42,16 +42,15 @@ class MaxTextEffectComponent extends PositionComponent {
     TextStyle strokeStyle() => TextStyle(
       fontSize: baseFontSize,
       fontWeight: FontWeight.bold,
-      foreground:
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.5
-            ..color = Colors.black.withValues(alpha: opacity),
+      foreground: Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..color = Colors.black.withOpacity(opacity),
     );
     TextStyle fillStyle() => TextStyle(
       fontSize: baseFontSize,
       fontWeight: FontWeight.bold,
-      color: Colors.white.withValues(alpha: opacity),
+      color: Colors.white.withOpacity(opacity),
     );
 
     final strokePainter = TextPainter(

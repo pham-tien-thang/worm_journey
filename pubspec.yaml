@@ -39,6 +39,7 @@ dependencies:
   intl: any
   shared_preferences: ^2.5.3
   get_it: ^9.2.1
+  flutter_screenutil: ^5.9.3
 
 dev_dependencies:
   flutter_test:

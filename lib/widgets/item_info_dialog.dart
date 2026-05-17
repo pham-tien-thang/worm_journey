@@ -11,7 +11,7 @@ import '../models/item_model.dart';
 import 'app_button.dart';
 
 /// Dialog thông tin item: title (icon + tên, nâu), mô tả, nút Mua, nút Nhận (xanh, nháy scale).
-/// [onBuy] trả về `Future<bool>`: true = mua thành công (đóng dialog), false = không đủ vàng.
+/// [onBuy] trả về Future<bool>: true = mua thành công (đóng dialog), false = không đủ vàng.
 class ItemInfoDialog extends StatefulWidget {
   const ItemInfoDialog({
     super.key,
@@ -21,7 +21,6 @@ class ItemInfoDialog extends StatefulWidget {
   });
 
   final ItemModel item;
-
   /// Trả về true nếu mua thành công (đóng dialog), false nếu không đủ vàng.
   final Future<bool> Function()? onBuy;
   final VoidCallback? onReceive;
@@ -34,9 +33,11 @@ class ItemInfoDialog extends StatefulWidget {
   }) {
     return showDialog<void>(
       context: context,
-      builder:
-          (context) =>
-              ItemInfoDialog(item: item, onBuy: onBuy, onReceive: onReceive),
+      builder: (context) => ItemInfoDialog(
+        item: item,
+        onBuy: onBuy,
+        onReceive: onReceive,
+      ),
     );
   }
 
@@ -54,10 +55,8 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
   Timer? _cooldownTimer;
   late final AnimationController _scaleController;
   late final Animation<double> _scaleAnimation;
-
   /// Timestamp (ms) lần cuối nhận free coin. Null = chưa từng.
   int? _freeCoinLastAtMs;
-
   /// Số giây còn chờ (< 0: đang load, 0: được nhận, > 0: countdown).
   int _freeCoinRemainingSeconds = -1;
 
@@ -72,10 +71,7 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
       return;
     }
     final elapsed = nowSec - (lastAt ~/ 1000);
-    _freeCoinRemainingSeconds = (_freeCoinCooldownSeconds - elapsed).clamp(
-      0,
-      _freeCoinCooldownSeconds,
-    );
+    _freeCoinRemainingSeconds = (_freeCoinCooldownSeconds - elapsed).clamp(0, _freeCoinCooldownSeconds);
   }
 
   static String _formatCountdown(int seconds) {
@@ -123,7 +119,7 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = appL10n;
+    final l10n = L10n;
     final item = widget.item;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -142,17 +138,18 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(item.icon, style: const TextStyle(fontSize: 24)),
+                      Text(
+                        item.icon,
+                        style: const TextStyle(fontSize: 24),
+                      ),
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
                           item.type.name(l10n),
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: _titleBrown,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: _titleBrown,
+                              ),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -165,10 +162,7 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
-                      ),
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                     ),
                   ),
                 ],
@@ -183,18 +177,15 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
                 children: [
                   Expanded(
                     child: AppButton(
-                      label: Text(
-                        l10n.buyCoins(item.price, AppConstants.coinIcon),
-                      ),
-                      onPressed:
-                          widget.onBuy != null
-                              ? () async {
-                                final ok = await widget.onBuy!();
-                                if (ok && context.mounted) {
-                                  Navigator.of(context).pop();
-                                }
+                      label: Text(l10n.buyCoins(item.price, AppConstants.coinIcon)),
+                      onPressed: widget.onBuy != null
+                          ? () async {
+                              final ok = await widget.onBuy!();
+                              if (ok && context.mounted) {
+                                Navigator.of(context).pop();
                               }
-                              : null,
+                            }
+                          : null,
                       isEnabled: widget.onBuy != null,
                     ),
                   ),
@@ -206,44 +197,26 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
                         Builder(
                           builder: (context) {
                             final canReceive = _freeCoinRemainingSeconds == 0;
-                            final label =
-                                canReceive
-                                    ? Text(
-                                      l10n.getCoins(
-                                        _getAmount,
-                                        AppConstants.coinIcon,
-                                      ),
-                                    )
-                                    : Text(
-                                      l10n.waitCountdown(
-                                        _formatCountdown(
-                                          _freeCoinRemainingSeconds,
-                                        ),
-                                      ),
-                                    );
+                            final label = canReceive
+                                ? Text(l10n.getCoins(_getAmount, AppConstants.coinIcon))
+                                : Text(l10n.waitCountdown(_formatCountdown(_freeCoinRemainingSeconds)));
                             final button = AppButton(
                               label: label,
-                              onPressed:
-                                  canReceive
-                                      ? () async {
-                                        await SharedPrefsService.setFreeRandomCoinLastAt(
-                                          DateTime.now().millisecondsSinceEpoch,
-                                        );
-                                        await CoinService.instance.coinPlus(
-                                          _getAmount,
-                                        );
-                                        widget.onReceive?.call();
-                                        if (context.mounted) {
-                                          Navigator.of(context).pop();
-                                        }
+                              onPressed: canReceive
+                                  ? () async {
+                                      await SharedPrefsService.setFreeRandomCoinLastAt(
+                                        DateTime.now().millisecondsSinceEpoch,
+                                      );
+                                      await CoinService.instance.coinPlus(_getAmount);
+                                      widget.onReceive?.call();
+                                      if (context.mounted) {
+                                        Navigator.of(context).pop();
                                       }
-                                      : null,
+                                    }
+                                  : null,
                               backgroundColor: _receiveGreen,
                               foregroundColor: Colors.white,
-                              side: const BorderSide(
-                                color: Colors.amber,
-                                width: 2,
-                              ),
+                              side: const BorderSide(color: Colors.amber, width: 2),
                               isEnabled: canReceive,
                             );
                             if (canReceive) {
@@ -269,15 +242,9 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
                             decoration: BoxDecoration(
                               color: Colors.amber.shade400,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.amber.shade700,
-                                width: 1,
-                              ),
+                              border: Border.all(color: Colors.amber.shade700, width: 1),
                             ),
-                            child: const Text(
-                              '🎬',
-                              style: TextStyle(fontSize: 14),
-                            ),
+                            child: const Text('🎬', style: TextStyle(fontSize: 14)),
                           ),
                         ),
                       ],

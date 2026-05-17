@@ -41,69 +41,20 @@ class MapEntityManager {
   final Random _random;
 
   final List<MapEntityEntry> _entries = [];
-  final Map<int, MapEntityEntry> _entriesByGridKey = {};
-  final Map<String, int> _typeCounts = {};
 
-  Iterable<MapEntityEntry> get entries => _entries;
-
-  static int gridKey(int x, int y) => (y << 16) ^ (x & 0xFFFF);
-
-  static int gridKeyFromVector(Vector2 grid) =>
-      gridKey(grid.x.toInt(), grid.y.toInt());
-
-  bool containsType(String typeId) => (_typeCounts[typeId] ?? 0) > 0;
-
-  int countType(String typeId) => _typeCounts[typeId] ?? 0;
+  List<MapEntityEntry> get entries => List.unmodifiable(_entries);
 
   /// Đặt entity tại ô [grid]. [typeId] phải có trong typeObjConfig. Trả về component để game [world.add].
   /// [withSpawnEffect] true: scale 0→1 (vd. lá cờ khi vừa xuất hiện nhấp nháy 1 nhịp).
-  PositionComponent placeAt(
-    Vector2 grid,
-    String typeId, {
-    bool withSpawnEffect = false,
-  }) {
-    final comp = _createComponent(
-      typeId,
-      grid,
-      withSpawnEffect: withSpawnEffect,
-    );
-    _addEntry(MapEntityEntry(grid: grid, typeId: typeId, component: comp));
+  PositionComponent placeAt(Vector2 grid, String typeId,
+      {bool withSpawnEffect = false}) {
+    final comp = _createComponent(typeId, grid, withSpawnEffect: withSpawnEffect);
+    _entries.add(MapEntityEntry(grid: grid, typeId: typeId, component: comp));
     return comp;
   }
 
-  void _addEntry(MapEntityEntry entry) {
-    _entries.add(entry);
-    final key = gridKeyFromVector(entry.grid);
-    _entriesByGridKey.putIfAbsent(key, () => entry);
-    _typeCounts[entry.typeId] = (_typeCounts[entry.typeId] ?? 0) + 1;
-  }
-
-  void _removeEntry(MapEntityEntry entry) {
-    _entries.remove(entry);
-    final nextCount = (_typeCounts[entry.typeId] ?? 0) - 1;
-    if (nextCount <= 0) {
-      _typeCounts.remove(entry.typeId);
-    } else {
-      _typeCounts[entry.typeId] = nextCount;
-    }
-
-    final key = gridKeyFromVector(entry.grid);
-    if (_entriesByGridKey[key] == entry) {
-      _entriesByGridKey.remove(key);
-      for (final e in _entries) {
-        if (gridKeyFromVector(e.grid) == key) {
-          _entriesByGridKey[key] = e;
-          break;
-        }
-      }
-    }
-  }
-
-  PositionComponent _createComponent(
-    String typeId,
-    Vector2 grid, {
-    bool withSpawnEffect = false,
-  }) {
+  PositionComponent _createComponent(String typeId, Vector2 grid,
+      {bool withSpawnEffect = false}) {
     final position = gridToWorld(grid);
     final icon = EntityModels.icon(typeId);
     final category = typeObjConfig.getCategory(typeId);
@@ -136,7 +87,12 @@ class MapEntityManager {
   }
 
   MapEntityEntry? getAt(Vector2 grid) {
-    return _entriesByGridKey[gridKeyFromVector(grid)];
+    final gx = grid.x.toInt();
+    final gy = grid.y.toInt();
+    for (final e in _entries) {
+      if (e.grid.x.toInt() == gx && e.grid.y.toInt() == gy) return e;
+    }
+    return null;
   }
 
   bool hasEntityAt(Vector2 grid) => getAt(grid) != null;
@@ -147,28 +103,28 @@ class MapEntityManager {
   }
 
   MapEntityEntry? removeAt(Vector2 grid) {
-    final entry = getAt(grid);
-    if (entry == null) return null;
-    _removeEntry(entry);
-    return entry;
+    final gx = grid.x.toInt();
+    final gy = grid.y.toInt();
+    for (var i = 0; i < _entries.length; i++) {
+      if (_entries[i].grid.x.toInt() == gx && _entries[i].grid.y.toInt() == gy) {
+        return _entries.removeAt(i);
+      }
+    }
+    return null;
   }
 
   MapEntityEntry? consumeAt(Vector2 grid) {
     final entry = getAt(grid);
     if (entry == null || !typeObjConfig.isEatable(entry.typeId)) return null;
-    _removeEntry(entry);
+    _entries.remove(entry);
     return entry;
   }
 
   /// [isCellVisible] nếu có: chỉ spawn ở ô trong tầm camera. Null = bỏ qua check.
   /// [minRow] nếu có: chỉ xét ô có row >= minRow (grid.y). VD: lá đầu spawn từ hàng 6 → minRow: 5.
   /// Khi có isCellVisible: duyệt hết ô trong view + trống → chọn ngẫu nhiên 1 ô (đảm bảo sinh trong tầm nhìn).
-  MapEntityEntry? spawn(
-    String typeId,
-    Set<int> occupied, {
-    bool Function(Vector2 grid)? isCellVisible,
-    int? minRow,
-  }) {
+  MapEntityEntry? spawn(String typeId, Set<String> occupied,
+      {bool Function(Vector2 grid)? isCellVisible, int? minRow}) {
     if (!typeObjConfig.isEatable(typeId)) return null;
 
     if (isCellVisible != null) {
@@ -176,19 +132,18 @@ class MapEntityManager {
       for (var row = 0; row < gridRows; row++) {
         if (minRow != null && row < minRow) continue;
         for (var col = 0; col < gridColumns; col++) {
-          final key = gridKey(col, row);
-          if (occupied.contains(key)) continue;
           final pos = Vector2(col.toDouble(), row.toDouble());
+          if (occupied.contains('${col},$row')) continue;
           if (!isCellVisible(pos)) continue;
           candidates.add(pos);
         }
       }
       if (candidates.isEmpty) return null;
       final pos = candidates[_random.nextInt(candidates.length)];
-      occupied.add(gridKeyFromVector(pos));
+      occupied.add('${pos.x.toInt()},${pos.y.toInt()}');
       final comp = _createComponent(typeId, pos, withSpawnEffect: true);
       final entry = MapEntityEntry(grid: pos, typeId: typeId, component: comp);
-      _addEntry(entry);
+      _entries.add(entry);
       return entry;
     }
 
@@ -199,31 +154,29 @@ class MapEntityManager {
         _random.nextInt(gridColumns).toDouble(),
         (rowMin + _random.nextInt(rowCount)).toDouble(),
       );
-      final key = gridKeyFromVector(pos);
+      final key = '${pos.x.toInt()},${pos.y.toInt()}';
       if (occupied.contains(key)) continue;
       occupied.add(key);
       final comp = _createComponent(typeId, pos, withSpawnEffect: true);
       final entry = MapEntityEntry(grid: pos, typeId: typeId, component: comp);
-      _addEntry(entry);
+      _entries.add(entry);
       return entry;
     }
     return null;
   }
 
-  Set<int> occupiedGridKeys(Iterable<Vector2> snakePositions) {
-    final keys = <int>{};
+  Set<String> occupiedGridKeys(Iterable<Vector2> snakePositions) {
+    final keys = <String>{};
     for (final v in snakePositions) {
-      keys.add(gridKeyFromVector(v));
+      keys.add('${v.x.toInt()},${v.y.toInt()}');
     }
-    keys.addAll(_entriesByGridKey.keys);
+    for (final e in _entries) {
+      keys.add('${e.grid.x.toInt()},${e.grid.y.toInt()}');
+    }
     return keys;
   }
 
   Iterable<Vector2> get gridPositions => _entries.map((e) => e.grid);
 
-  void clear() {
-    _entries.clear();
-    _entriesByGridKey.clear();
-    _typeCounts.clear();
-  }
+  void clear() => _entries.clear();
 }

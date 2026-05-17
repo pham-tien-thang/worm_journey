@@ -12,10 +12,9 @@ class AppContext {
 
   final forceUpdateNeeded = ValueNotifier<bool>(false);
 
-  /// appL10n từ context của navigator. Trả về null nếu chưa có context (trước khi build).
+  /// L10n từ context của navigator. Trả về null nếu chưa có context (trước khi build).
   AppLocalizations? get l10n {
-    final ctx =
-        navigatorKey.currentContext ?? navigatorKey.currentState?.context;
+    final ctx = navigatorKey.currentContext ?? navigatorKey.currentState?.context;
     return ctx != null ? AppLocalizations.of(ctx) : null;
   }
 }

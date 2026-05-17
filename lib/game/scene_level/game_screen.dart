@@ -40,23 +40,21 @@ class _GameScreenState extends State<GameScreen> {
 
   Future<void> _showGuideDialog(String guideVi, String guideEn) async {
     final locale = Localizations.localeOf(context);
-    final guideText =
-        locale.languageCode == 'vi'
-            ? (guideVi.isNotEmpty ? guideVi : guideEn)
-            : (guideEn.isNotEmpty ? guideEn : guideVi);
+    final guideText = locale.languageCode == 'vi'
+        ? (guideVi.isNotEmpty ? guideVi : guideEn)
+        : (guideEn.isNotEmpty ? guideEn : guideVi);
     if (guideText.isEmpty) return;
     GamePauseObserver.dialogOpen.value = true;
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder:
-          (context) => GuideGameDialog(
-            guideText: guideText,
-            onUnderstood: () {
-              Navigator.of(context).pop();
-              _game.dismissGuide();
-            },
-          ),
+      builder: (context) => GuideGameDialog(
+        guideText: guideText,
+        onUnderstood: () {
+          Navigator.of(context).pop();
+          _game.dismissGuide();
+        },
+      ),
     );
     if (mounted) GamePauseObserver.dialogOpen.value = false;
   }
@@ -80,7 +78,7 @@ class _GameScreenState extends State<GameScreen> {
   /// Thoát victory: đã thắng nên chỉ show warning mất thưởng, không show "end game".
   Future<void> _showVictoryExitWarning() async {
     GamePauseObserver.dialogOpen.value = true;
-    final l10n = appL10n;
+    final l10n = L10n;
     final reward = _game.victoryExitReward;
     final confirm = await ExitGameDialog.show(
       context,
@@ -107,7 +105,10 @@ class _GameScreenState extends State<GameScreen> {
         }
         _showExitWarning();
       },
-      child: GamePlayScaffold(game: _game, onGameOverEnd: () => context.pop()),
+      child: GamePlayScaffold(
+        game: _game,
+        onGameOverEnd: () => context.pop(),
+      ),
     );
   }
 }

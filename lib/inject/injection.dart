@@ -12,6 +12,6 @@ void initInjection() {
 
 T get<T extends Object>() => _getIt.get<T>();
 
-/// appL10n từ navigator context. Chỉ dùng sau khi app đã build (trong màn hình, dialog).
-AppLocalizations get appL10n =>
+/// L10n từ navigator context. Chỉ dùng sau khi app đã build (trong màn hình, dialog).
+AppLocalizations get L10n =>
     AppLocalizations.of(get<AppContext>().navigatorKey.currentContext!)!;

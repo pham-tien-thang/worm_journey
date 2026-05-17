@@ -20,10 +20,10 @@ class Worm extends PositionComponent {
     WormStats? stats,
     Vector2? position,
     int? gridRowsOverride,
-  }) : _segmentSize = config.segmentSize,
-       _gridRows = gridRowsOverride ?? config.gridRows ?? GameConfig.gridRows,
-       stats = stats ?? WormStats(moveInterval: config.moveInterval),
-       super(position: position ?? Vector2.zero());
+  })  : _segmentSize = config.segmentSize,
+        _gridRows = gridRowsOverride ?? config.gridRows ?? GameConfig.gridRows,
+        stats = stats ?? WormStats(moveInterval: config.moveInterval),
+        super(position: position ?? Vector2.zero());
 
   final WormConfig config;
   final WormInfo? info;
@@ -40,7 +40,6 @@ class Worm extends PositionComponent {
   void setMoveInterval(double value) {
     stats.moveInterval = value;
   }
-
   final List<Vector2> _gridPositions = [];
   List<Vector2> _previousGridPositions = [];
   double _visualProgress = 1.0;
@@ -52,10 +51,8 @@ class Worm extends PositionComponent {
   // --- Nhấp nháy khi đợi ready (mới vào màn) ---
   /// Game set true khi _startDelayRemaining > 0; khi false thì không nhấp nháy.
   bool _waitingToStart = false;
-
   /// Thời gian tích lũy (giây) để tính chu kỳ ẩn/hiện.
   double _blinkPhase = 0;
-
   /// True = đang nửa chu kỳ “hiện”, false = nửa chu kỳ “ẩn”. Head/body/tail check qua [isBlinkVisible].
   bool _blinkVisible = true;
 
@@ -81,7 +78,7 @@ class Worm extends PositionComponent {
   final List<ItemEffectEntry> _itemEffects = [];
   double? _gameTime;
 
-  Iterable<ItemEffectEntry> get itemEffects => _itemEffects;
+  List<ItemEffectEntry> get itemEffects => List.unmodifiable(_itemEffects);
 
   /// Có đang có effect [itemId] không.
   bool hasItemEffect(String itemId) =>
@@ -112,7 +109,8 @@ class Worm extends PositionComponent {
   /// Xóa mọi effect có [itemId] nằm trong [ids]. Gọi [onItemEffectRemoved] cho từng cái.
   void removeItemEffects(Iterable<String> ids) {
     final set = ids.toSet();
-    final toRemove = _itemEffects.where((e) => set.contains(e.itemId)).toList();
+    final toRemove =
+        _itemEffects.where((e) => set.contains(e.itemId)).toList();
     for (final e in toRemove) {
       onItemEffectRemoved(e.itemId);
       _itemEffects.remove(e);
@@ -121,10 +119,9 @@ class Worm extends PositionComponent {
 
   /// Xóa các effect có [endTime] != null và endTime <= currentTime; gọi [onItemEffectRemoved] trước khi xóa.
   void removeExpiredItemEffects(double currentTime) {
-    final toRemove =
-        _itemEffects
-            .where((e) => e.endTime != null && e.endTime! <= currentTime)
-            .toList();
+    final toRemove = _itemEffects
+        .where((e) => e.endTime != null && e.endTime! <= currentTime)
+        .toList();
     for (final e in toRemove) {
       onItemEffectRemoved(e.itemId);
       _itemEffects.remove(e);
@@ -156,11 +153,9 @@ class Worm extends PositionComponent {
 
   /// Số đốt (đầu + thân + đuôi).
   int get segmentCount => _gridPositions.length;
-
   /// Ô grid đuôi.
   Vector2 get tailGridPosition =>
       _gridPositions.isNotEmpty ? _gridPositions.last : Vector2.zero();
-
   /// Ô grid đầu.
   Vector2 get headGridPosition =>
       _gridPositions.isNotEmpty ? _gridPositions.first : Vector2.zero();
@@ -177,26 +172,13 @@ class Worm extends PositionComponent {
   /// Danh sách tất cả ô grid (đầu → đuôi).
   List<Vector2> get allGridPositions => List.from(_gridPositions);
 
-  /// View không cấp phát list mới, dùng cho các đoạn chỉ cần duyệt đọc.
-  Iterable<Vector2> get gridPositions => _gridPositions;
-
-  bool containsBodyGrid(Vector2 grid) {
-    for (var i = 1; i < _gridPositions.length - 1; i++) {
-      final p = _gridPositions[i];
-      if (p.x == grid.x && p.y == grid.y) return true;
-    }
-    return false;
-  }
-
   /// Đổi kích thước mỗi đốt (gọi khi resize màn).
   void setSegmentSize(double s) {
     if (s <= 0) return;
     _segmentSize = s;
     _head.size.setValues(s, s);
     _tail.size.setValues(s, s);
-    for (final seg in _bodySegments) {
-      seg.size.setValues(s, s);
-    }
+    for (final seg in _bodySegments) seg.size.setValues(s, s);
   }
 
   @override
@@ -240,7 +222,10 @@ class Worm extends PositionComponent {
   /// Đổi tọa độ ô grid (0..cột, 0..hàng) sang tọa độ world trong component.
   Vector2 _gridToWorld(Vector2 grid) {
     final half = _segmentSize / 2;
-    return Vector2(grid.x * _segmentSize + half, grid.y * _segmentSize + half);
+    return Vector2(
+      grid.x * _segmentSize + half,
+      grid.y * _segmentSize + half,
+    );
   }
 
   /// Đặt hướng cho bước tiếp theo; không cho quay ngược 180°. Khi dizzy: input bị đảo (kéo lên → đi xuống).
@@ -287,9 +272,7 @@ class Worm extends PositionComponent {
     if (_gridPositions.isEmpty) return;
     _head.scale.setValues(1.0, 1.0);
     _tail.scale.setValues(1.0, 1.0);
-    for (final seg in _bodySegments) {
-      seg.scale.setValues(1.0, 1.0);
-    }
+    for (final seg in _bodySegments) seg.scale.setValues(1.0, 1.0);
     _swallowSegmentIndex = 0;
     _swallowPhase = 0;
     _swallowElapsed = 0;
@@ -310,7 +293,6 @@ class Worm extends PositionComponent {
 
   /// Game gọi khi bắt đầu màn (true) hoặc hết delay (false). Khi false thì tắt nhấp nháy.
   void setWaitingToStart(bool value) {
-    if (_waitingToStart == value) return;
     _waitingToStart = value;
     if (!value) {
       _blinkPhase = 0;
@@ -320,7 +302,6 @@ class Worm extends PositionComponent {
 
   /// PinkWorm gọi khi freeze còn ≤1s (true) để nhấp nháy giống mới vào trận; else false.
   void setFreezeEndBlink(bool value) {
-    if (_freezeEndBlink == value) return;
     _freezeEndBlink = value;
     if (!value) {
       _freezeBlinkPhase = 0;
@@ -330,8 +311,7 @@ class Worm extends PositionComponent {
 
   /// Head/body/tail check trước khi vẽ: false = đang nửa chu kỳ ẩn → không vẽ.
   bool get isBlinkVisible =>
-      (!_waitingToStart || _blinkVisible) &&
-      (!_freezeEndBlink || _freezeBlinkVisible);
+      (!_waitingToStart || _blinkVisible) && (!_freezeEndBlink || _freezeBlinkVisible);
 
   /// Tiến độ di chuyển 0..1 giữa hai ô (để lerp vị trí đầu/đuôi mượt).
   void setVisualProgress(double t) {
@@ -340,71 +320,44 @@ class Worm extends PositionComponent {
 
   /// Nội suy vị trí world giữa hai ô theo [_visualProgress].
   Vector2 _lerpWorld(Vector2 gridFrom, Vector2 gridTo) {
-    final half = _segmentSize / 2;
-    final fromX = gridFrom.x * _segmentSize + half;
-    final fromY = gridFrom.y * _segmentSize + half;
-    final toX = gridTo.x * _segmentSize + half;
-    final toY = gridTo.y * _segmentSize + half;
-    return Vector2(
-      fromX + (toX - fromX) * _visualProgress,
-      fromY + (toY - fromY) * _visualProgress,
-    );
-  }
-
-  void _setLerpWorldPosition(
-    PositionComponent component,
-    Vector2 gridFrom,
-    Vector2 gridTo,
-  ) {
-    final half = _segmentSize / 2;
-    final fromX = gridFrom.x * _segmentSize + half;
-    final fromY = gridFrom.y * _segmentSize + half;
-    final toX = gridTo.x * _segmentSize + half;
-    final toY = gridTo.y * _segmentSize + half;
-    component.position.setValues(
-      fromX + (toX - fromX) * _visualProgress,
-      fromY + (toY - fromY) * _visualProgress,
-    );
+    final from = _gridToWorld(gridFrom);
+    final to = _gridToWorld(gridTo);
+    return from + (to - from) * _visualProgress;
   }
 
   /// Đổi vector (hướng) sang [WormDirection] (ưu tiên trục ngang nếu bằng).
-  WormDirection _deltaToDirection(double dx, double dy) {
-    if (dx.abs() >= dy.abs()) {
-      return dx > 0 ? WormDirection.right : WormDirection.left;
+  WormDirection _vectorToDirection(Vector2 v) {
+    if (v.x.abs() >= v.y.abs()) {
+      return v.x > 0 ? WormDirection.right : WormDirection.left;
     }
-    return dy > 0 ? WormDirection.down : WormDirection.up;
+    return v.y > 0 ? WormDirection.down : WormDirection.up;
   }
 
   /// Cập nhật vị trí và hướng head/body/tail theo [_gridPositions] và [_visualProgress].
   void _syncVisuals() {
     if (_gridPositions.isEmpty) return;
 
-    final headPrev =
-        _previousGridPositions.isNotEmpty
-            ? _previousGridPositions.first
-            : _gridPositions.first;
-    _setLerpWorldPosition(_head, headPrev, _gridPositions.first);
+    final headPrev = _previousGridPositions.isNotEmpty
+        ? _previousGridPositions.first
+        : _gridPositions.first;
+    _head.position = _lerpWorld(headPrev, _gridPositions.first);
     _head.direction = _direction;
-    _head.setShowCryFace(
-      _cryEndTimeRemaining != null && _cryEndTimeRemaining! > 0,
-    );
+    _head.setShowCryFace(_cryEndTimeRemaining != null && _cryEndTimeRemaining! > 0);
     _head.angle = 0;
 
     final tailGrid = _gridPositions.last;
-    final tailPrev =
-        _previousGridPositions.length >= _gridPositions.length
-            ? _previousGridPositions.last
-            : tailGrid;
-    _setLerpWorldPosition(_tail, tailPrev, tailGrid);
+    final tailPrev = _previousGridPositions.length >= _gridPositions.length
+        ? _previousGridPositions.last
+        : tailGrid;
+    _tail.position = _lerpWorld(tailPrev, tailGrid);
     if (_gridPositions.length >= 2) {
       final prev = _gridPositions[_gridPositions.length - 2];
-      final dx = tailGrid.x - prev.x;
-      final dy = tailGrid.y - prev.y;
-      if (dx > 0) {
+      final diff = tailGrid - prev;
+      if (diff.x > 0) {
         _tail.direction = WormDirection.right;
-      } else if (dx < 0) {
+      } else if (diff.x < 0) {
         _tail.direction = WormDirection.left;
-      } else if (dy > 0) {
+      } else if (diff.y > 0) {
         _tail.direction = WormDirection.down;
       } else {
         _tail.direction = WormDirection.up;
@@ -416,25 +369,21 @@ class Worm extends PositionComponent {
       seg.removeFromParent();
     }
     for (var i = 1; i < _gridPositions.length - 1; i++) {
-      final prev =
-          i < _previousGridPositions.length
-              ? _previousGridPositions[i]
-              : _gridPositions[i];
-      final current = _gridPositions[i];
-      final towardHead = _gridPositions[i - 1];
-      final bodyDir = _deltaToDirection(
-        towardHead.x - current.x,
-        towardHead.y - current.y,
-      );
+      final prev = i < _previousGridPositions.length
+          ? _previousGridPositions[i]
+          : _gridPositions[i];
+      final pos = _lerpWorld(prev, _gridPositions[i]);
+      final towardHead = _gridPositions[i - 1] - _gridPositions[i];
+      final bodyDir = _vectorToDirection(towardHead);
       if (i - 1 < _bodySegments.length) {
-        _setLerpWorldPosition(_bodySegments[i - 1], prev, current);
+        _bodySegments[i - 1].position = pos;
         _bodySegments[i - 1].setDirection(bodyDir);
       } else {
         final seg = WormBodySegment(
           config: config.bodyConfig,
           direction: bodyDir,
           segmentSize: _segmentSize,
-          position: _lerpWorld(prev, current),
+          position: pos,
         );
         _bodySegments.add(seg);
         add(seg);

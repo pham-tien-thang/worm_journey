@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
+import 'package:flame/sprite.dart';
 
 import 'worm.dart';
 import 'worm_body_config.dart';
@@ -16,17 +17,16 @@ class WormBodySegment extends PositionComponent {
     required double segmentSize,
     Vector2? position,
   }) : super(
-         position: position ?? Vector2.zero(),
-         size: Vector2.all(segmentSize),
-         anchor: Anchor.center,
-       );
+          position: position ?? Vector2.zero(),
+          size: Vector2.all(segmentSize),
+          anchor: Anchor.center,
+        );
 
   final WormBodyConfig config;
   WormDirection direction;
 
   Sprite? _spriteVertical;
   Sprite? _spriteHorizontal;
-  Worm? _worm;
 
   void setDirection(WormDirection value) {
     direction = value;
@@ -35,25 +35,18 @@ class WormBodySegment extends PositionComponent {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    _worm = findParent<Worm>();
     add(RectangleHitbox(collisionType: CollisionType.passive, isSolid: true));
 
     final game = findParent<FlameGame>();
     if (game == null) return;
-    _spriteVertical = await Sprite.load(
-      config.assetVertical,
-      images: game.images,
-    );
-    _spriteHorizontal = await Sprite.load(
-      config.assetHorizontal,
-      images: game.images,
-    );
+    _spriteVertical = await Sprite.load(config.assetVertical, images: game.images);
+    _spriteHorizontal = await Sprite.load(config.assetHorizontal, images: game.images);
   }
 
   @override
   void render(Canvas canvas) {
     // Nhấp nháy khi đợi ready: Worm bật/tắt [isBlinkVisible], đốt thân không vẽ khi ẩn.
-    if (_worm?.isBlinkVisible == false) return;
+    if (findParent<Worm>()?.isBlinkVisible == false) return;
     final sprite = currentSprite;
     if (sprite == null) return;
 
@@ -71,18 +64,12 @@ class WormBodySegment extends PositionComponent {
       canvas.translate(-cx, -cy);
     }
     final drawSize = size * config.imageScale;
-    sprite.render(
-      canvas,
-      position: center,
-      size: drawSize,
-      anchor: Anchor.center,
-    );
+    sprite.render(canvas, position: center, size: drawSize, anchor: Anchor.center);
     canvas.restore();
   }
 
   Sprite? get currentSprite {
-    final isVertical =
-        direction == WormDirection.up || direction == WormDirection.down;
+    final isVertical = direction == WormDirection.up || direction == WormDirection.down;
     return isVertical ? _spriteVertical : _spriteHorizontal;
   }
 }

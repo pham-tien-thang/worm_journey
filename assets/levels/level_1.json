@@ -4,7 +4,7 @@
   "itemBlock": ["snail", "magnet", "bomb", "antidote", "speed", "clock", "freeze", "dizzy"],
   "missions": [
     { "id": "leaves", "typeId": "prey_leaf", "target": 10 },
-    { "id": "gravestones", "typeId": "x_mark", "target": 10 }
+    { "id": "gravestones", "typeId": "x_mark", "target": 5 }
   ],
   "timeLimitSeconds": 95,
   "timeUrgentThresholdSeconds": 10,

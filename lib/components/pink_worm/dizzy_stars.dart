@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -57,11 +58,8 @@ class DizzyStarsComponent extends PositionComponent {
       final a = (i * math.pi / points) - math.pi / 2;
       final x = center.dx + r * math.cos(a);
       final y = center.dy + r * math.sin(a);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
+      if (i == 0) path.moveTo(x, y);
+      else path.lineTo(x, y);
     }
     path.close();
     canvas.drawPath(path, Paint()..color = fill..style = PaintingStyle.fill);

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
+import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 
 import '../../config/config.dart';
@@ -17,21 +18,22 @@ class WormTail extends PositionComponent {
     required this.direction,
     required double segmentSize,
     Vector2? position,
-  }) : super(
-         position: position ?? Vector2.zero(),
-         size: Vector2.all(segmentSize),
-         anchor: Anchor.center,
-         priority: 9,
-       );
+  })  : _segmentSize = segmentSize,
+        super(
+          position: position ?? Vector2.zero(),
+          size: Vector2.all(segmentSize),
+          anchor: Anchor.center,
+          priority: 9,
+        );
 
   final WormTailConfig config;
   WormDirection direction;
 
+  final double _segmentSize;
   Vector2 _dotDirection = Vector2(1, 0);
 
   Sprite? _spriteVertical;
   Sprite? _spriteHorizontal;
-  Worm? _worm;
 
   void setDirection(WormDirection value) {
     direction = value;
@@ -66,7 +68,6 @@ class WormTail extends PositionComponent {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    _worm = findParent<Worm>();
     _dotDirection = _directionToVector(direction);
     add(RectangleHitbox(collisionType: CollisionType.passive, isSolid: true));
 
@@ -74,16 +75,13 @@ class WormTail extends PositionComponent {
     if (game == null) return;
     final c = config.bodyConfig;
     _spriteVertical = await Sprite.load(c.assetVertical, images: game.images);
-    _spriteHorizontal = await Sprite.load(
-      c.assetHorizontal,
-      images: game.images,
-    );
+    _spriteHorizontal = await Sprite.load(c.assetHorizontal, images: game.images);
   }
 
   @override
   void render(Canvas canvas) {
     // Nhấp nháy khi đợi ready: Worm bật/tắt [isBlinkVisible], đuôi không vẽ khi ẩn.
-    if (_worm?.isBlinkVisible == false) return;
+    if (findParent<Worm>()?.isBlinkVisible == false) return;
     final sprite = currentSprite;
     if (sprite == null) return;
 
@@ -101,12 +99,7 @@ class WormTail extends PositionComponent {
       canvas.translate(-cx, -cy);
     }
     final drawSize = size * config.bodyConfig.imageScale;
-    sprite.render(
-      canvas,
-      position: center,
-      size: drawSize,
-      anchor: Anchor.center,
-    );
+    sprite.render(canvas, position: center, size: drawSize, anchor: Anchor.center);
     canvas.restore();
 
     final step = size.x * config.dotStepRatio;
@@ -124,8 +117,7 @@ class WormTail extends PositionComponent {
   }
 
   Sprite? get currentSprite {
-    final isVertical =
-        direction == WormDirection.up || direction == WormDirection.down;
+    final isVertical = direction == WormDirection.up || direction == WormDirection.down;
     return isVertical ? _spriteVertical : _spriteHorizontal;
   }
 }

@@ -3,6 +3,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../app_router.dart';
 import '../gen_l10n/app_localizations.dart';
@@ -68,23 +69,29 @@ class _WormJourneyAppState extends State<WormJourneyApp> {
       });
     }
     final resolvedLocale = _locale ?? _deviceResolvedLocale();
-    return MaterialApp.router(
-      title: 'Worm Journey',
-      locale: resolvedLocale,
-      localizationsDelegates: [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      localeResolutionCallback: _resolveLocale,
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B5E20)),
-        useMaterial3: true,
+    return ScreenUtilInit(
+      designSize: const Size(393, 852),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (_, __) => MaterialApp.router(
+        title: 'Worm Journey',
+        locale: resolvedLocale,
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        localeResolutionCallback: _resolveLocale,
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B5E20)),
+          useMaterial3: true,
+        ),
+        builder: (context, child) => child ?? const SizedBox.shrink(),
+        routerConfig: _router,
       ),
-      routerConfig: _router,
     );
   }
 }

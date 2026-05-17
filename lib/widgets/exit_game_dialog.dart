@@ -19,40 +19,37 @@ class ExitGameDialog extends StatelessWidget {
   static const double _paddingBottom = 24;
   static const double _buttonSpacing = 12;
   static const double _contentPadding = 20;
-
   /// Dịch nội dung (chữ + nút) lên trên một chút.
   static const double _contentShiftUp = 14;
 
   /// [message] null = dùng l10n.exitGameWarningMessage (thoát game). Có message = dùng cho cảnh báo khác (vd. thoát victory mất thưởng).
   /// [exitRewardAmount] khi set (vd. thoát victory): nút xác nhận thành "Thoát xxx 🪙" để user biết vẫn nhận được xu.
-  static Future<bool?> show(
-    BuildContext context, {
-    String? message,
-    int? exitRewardAmount,
-  }) {
+  static Future<bool?> show(BuildContext context, {String? message, int? exitRewardAmount}) {
     return showDialog<bool>(
       context: context,
       barrierColor: Colors.black54,
-      builder:
-          (context) => PopScope(
-            canPop: false,
-            child: Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-              child: _ExitGameDialogContent(
-                message: message,
-                exitRewardAmount: exitRewardAmount,
-                onConfirm: () => Navigator.of(context).pop(true),
-                onCancel: () => Navigator.of(context).pop(false),
-              ),
-            ),
+      builder: (context) => PopScope(
+        canPop: false,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+          child: _ExitGameDialogContent(
+            message: message,
+            exitRewardAmount: exitRewardAmount,
+            onConfirm: () => Navigator.of(context).pop(true),
+            onCancel: () => Navigator.of(context).pop(false),
           ),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return _ExitGameDialogContent(onConfirm: onConfirm, onCancel: onCancel);
+    return _ExitGameDialogContent(
+      onConfirm: onConfirm,
+      onCancel: onCancel,
+    );
   }
 }
 
@@ -71,12 +68,11 @@ class _ExitGameDialogContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = appL10n;
+    final l10n = L10n;
     final displayMessage = message ?? l10n.exitGameWarningMessage;
-    final confirmLabel =
-        exitRewardAmount != null
-            ? '${l10n.victoryExit}  $exitRewardAmount ${AppConstants.coinIcon}'
-            : l10n.exitGameConfirm;
+    final confirmLabel = exitRewardAmount != null
+        ? '${l10n.victoryExit}  $exitRewardAmount ${AppConstants.coinIcon}'
+        : l10n.exitGameConfirm;
     return Stack(
       alignment: Alignment.bottomCenter,
       children: [
@@ -87,14 +83,9 @@ class _ExitGameDialogContent extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.only(
-            left:
-                ExitGameDialog._paddingHorizontal +
-                ExitGameDialog._contentPadding,
-            right:
-                ExitGameDialog._paddingHorizontal +
-                ExitGameDialog._contentPadding,
-            bottom:
-                ExitGameDialog._paddingBottom + ExitGameDialog._contentPadding,
+            left: ExitGameDialog._paddingHorizontal + ExitGameDialog._contentPadding,
+            right: ExitGameDialog._paddingHorizontal + ExitGameDialog._contentPadding,
+            bottom: ExitGameDialog._paddingBottom + ExitGameDialog._contentPadding,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app_router.dart';
-import '../../core/services/shared_prefs_service.dart'
-    show SharedPrefsService, unlockNotifier;
+import '../../core/services/shared_prefs_service.dart' show SharedPrefsService, unlockNotifier;
 import '../../models/scene_model.dart';
 import '../../widgets/coin_hud.dart';
 
@@ -29,12 +28,11 @@ class _DashedCirclePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final rect = Rect.fromCircle(center: center, radius: radius);
-    final paint =
-        Paint()
-          ..color = color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = strokeWidth
-          ..strokeCap = StrokeCap.round;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
     const twoPi = math.pi * 2;
     final step = twoPi / dashCount;
     final sweep = step * dashRatio;
@@ -46,9 +44,7 @@ class _DashedCirclePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DashedCirclePainter old) =>
-      old.radius != radius ||
-      old.color != color ||
-      old.strokeWidth != strokeWidth;
+      old.radius != radius || old.color != color || old.strokeWidth != strokeWidth;
 }
 
 /// Màn chọn level trong một scene: zigzag dọc, mỗi stage là 1 nút, nối bằng gạch đứt.
@@ -133,12 +129,9 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                     Padding(
                       padding: const EdgeInsets.only(right: 16, top: 8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.45),
+                          color: Colors.black.withOpacity(0.45),
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: CoinHud(),
@@ -148,21 +141,19 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                 ),
                 const SizedBox(height: 16),
                 Expanded(
-                  child:
-                      _loading
-                          ? const Center(child: CircularProgressIndicator())
-                          : _scene == null
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _scene == null
                           ? const Center(child: Text('Scene not found'))
                           : SingleChildScrollView(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: _StageZigzagList(
-                              scene: _scene!,
-                              maxLevelIndexUnlock: _maxLevelIndexUnlock,
-                              onLevelTap:
-                                  (level) =>
-                                      context.push(AppRoutes.game(level.id)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: _StageZigzagList(
+                                scene: _scene!,
+                                maxLevelIndexUnlock: _maxLevelIndexUnlock,
+                                onLevelTap: (level) =>
+                                    context.push(AppRoutes.game(level.id)),
+                              ),
                             ),
-                          ),
                 ),
               ],
             ),
@@ -194,7 +185,9 @@ class _StageZigzagList extends StatelessWidget {
   List<Offset> _nodeCenters(int count, double width) {
     final list = <Offset>[];
     for (var i = 0; i < count; i++) {
-      final x = (i % 2 == 0) ? width * _leftFraction : width * _rightFraction;
+      final x = (i % 2 == 0)
+          ? width * _leftFraction
+          : width * _rightFraction;
       final y = _topPadding + i * _rowHeight + _rowHeight / 2;
       list.add(Offset(x, y));
     }
@@ -208,8 +201,7 @@ class _StageZigzagList extends StatelessWidget {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         final centers = _nodeCenters(levels.length, w);
-        final totalHeight =
-            _topPadding + levels.length * _rowHeight + _topPadding;
+        final totalHeight = _topPadding + levels.length * _rowHeight + _topPadding;
         return SizedBox(
           width: w,
           height: totalHeight,
@@ -231,15 +223,10 @@ class _StageZigzagList extends StatelessWidget {
               // Các nút stage (zigzag: chẵn trái, lẻ phải); tâm chấm trùng với [centers]
               for (var i = 0; i < levels.length; i++) ...[
                 Positioned(
-                  left:
-                      (i % 2 == 0)
-                          ? (w * _leftFraction - _StageNode.width / 2)
-                          : (w * _rightFraction - _StageNode.width / 2),
-                  top:
-                      _topPadding +
-                      i * _rowHeight +
-                      (_rowHeight / 2) -
-                      _StageNode.dotPartHeight / 2,
+                  left: (i % 2 == 0)
+                      ? (w * _leftFraction - _StageNode.width / 2)
+                      : (w * _rightFraction - _StageNode.width / 2),
+                  top: _topPadding + i * _rowHeight + (_rowHeight / 2) - _StageNode.dotPartHeight / 2,
                   child: _StageNode(
                     level: levels[i],
                     nodeRadius: _nodeRadius,
@@ -283,10 +270,7 @@ class _DashedConnectorPainter extends CustomPainter {
     var t = 0.0;
     while (t + dashLength <= len) {
       final a = Offset(p1.dx + ux * t, p1.dy + uy * t);
-      final b = Offset(
-        p1.dx + ux * (t + dashLength),
-        p1.dy + uy * (t + dashLength),
-      );
+      final b = Offset(p1.dx + ux * (t + dashLength), p1.dy + uy * (t + dashLength));
       canvas.drawLine(a, b, paint);
       t += step;
     }
@@ -299,12 +283,11 @@ class _DashedConnectorPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (centers.length < 2) return;
-    final paint =
-        Paint()
-          ..color = color
-          ..strokeWidth = strokeWidth
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
     for (var i = 0; i < centers.length - 1; i++) {
       _drawDashedSegment(canvas, centers[i], centers[i + 1], paint);
     }
@@ -332,7 +315,6 @@ class _StageNode extends StatefulWidget {
 
   final LevelModel level;
   final double nodeRadius;
-
   /// Chỉ stage có id trùng unlock level trong SharedPrefs mới toả.
   final bool showRadar;
   final VoidCallback onTap;
@@ -481,26 +463,10 @@ class _StageNodeState extends State<_StageNode>
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   shadows: const [
-                    Shadow(
-                      color: Colors.white,
-                      offset: Offset(0, 0),
-                      blurRadius: 2,
-                    ),
-                    Shadow(
-                      color: Colors.white,
-                      offset: Offset(1, 0),
-                      blurRadius: 1,
-                    ),
-                    Shadow(
-                      color: Colors.white,
-                      offset: Offset(-1, 0),
-                      blurRadius: 1,
-                    ),
-                    Shadow(
-                      color: Colors.white,
-                      offset: Offset(0, 1),
-                      blurRadius: 1,
-                    ),
+                    Shadow(color: Colors.white, offset: Offset(0, 0), blurRadius: 2),
+                    Shadow(color: Colors.white, offset: Offset(1, 0), blurRadius: 1),
+                    Shadow(color: Colors.white, offset: Offset(-1, 0), blurRadius: 1),
+                    Shadow(color: Colors.white, offset: Offset(0, 1), blurRadius: 1),
                   ],
                 ),
               ),
