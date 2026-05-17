@@ -219,6 +219,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get victoryRewardCoinsLabel => 'Xu';
 
   @override
-  String victoryRewardReceived(int amount, String coinIcon) =>
-      'Đã nhận thưởng $amount $coinIcon';
+  String victoryRewardReceived(int amount, String coinIcon) {
+    return 'Đã nhận thưởng $amount $coinIcon';
+  }
 }

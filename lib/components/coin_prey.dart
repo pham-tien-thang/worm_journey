@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
@@ -16,34 +15,34 @@ class CoinPrey extends PositionComponent {
     this.iconScale = 1.0,
     this.rotateSpeed = 5.0,
   }) : super(
-          position: position ?? Vector2.zero(),
-          size: Vector2.all(segmentSize),
-          anchor: Anchor.center,
-        );
+         position: position ?? Vector2.zero(),
+         size: Vector2.all(segmentSize),
+         anchor: Anchor.center,
+       );
 
   final double segmentSize;
   final String icon;
   final bool withSpawnEffect;
   final double iconScale;
+
   /// Tốc độ lật (radian/giây). Dương = lật từ trái qua phải.
   final double rotateSpeed;
 
   double _angle = 0;
+  late TextPainter _iconPainter;
+  Offset _iconOffset = Offset.zero;
+  double _layoutWidth = -1;
+  double _layoutHeight = -1;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    _layoutIcon();
     if (withSpawnEffect) {
       scale = Vector2.zero();
-      add(ScaleEffect.to(
-        Vector2.all(1),
-        EffectController(duration: 0.15),
-      ));
+      add(ScaleEffect.to(Vector2.all(1), EffectController(duration: 0.15)));
     }
-    add(RectangleHitbox(
-      collisionType: CollisionType.passive,
-      isSolid: false,
-    ));
+    add(RectangleHitbox(collisionType: CollisionType.passive, isSolid: false));
   }
 
   @override
@@ -53,19 +52,10 @@ class CoinPrey extends PositionComponent {
     if (_angle > math.pi * 2) _angle -= math.pi * 2;
   }
 
-  @override
-  void render(Canvas canvas) {
+  void _layoutIcon() {
     final center = Offset(size.x / 2, size.y / 2);
     final fontSize = size.x * 0.9 * iconScale;
-    // Lật theo trục dọc (Y): scale X từ 1 → 0 → 1 tạo hiệu ứng đồng xu lật trái qua phải.
-    final flipScaleX = (1 + math.cos(_angle)) * 0.5;
-
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.scale(flipScaleX, 1.0);
-    canvas.translate(-center.dx, -center.dy);
-
-    final painter = TextPainter(
+    _iconPainter = TextPainter(
       text: TextSpan(
         text: icon,
         style: TextStyle(
@@ -76,15 +66,30 @@ class CoinPrey extends PositionComponent {
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
+    )..layout(minWidth: 0, maxWidth: size.x);
+    _iconOffset = Offset(
+      center.dx - _iconPainter.width / 2,
+      center.dy - _iconPainter.height / 2,
     );
-    painter.layout(minWidth: 0, maxWidth: size.x);
-    painter.paint(
-      canvas,
-      Offset(
-        center.dx - painter.width / 2,
-        center.dy - painter.height / 2,
-      ),
-    );
+    _layoutWidth = size.x;
+    _layoutHeight = size.y;
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (_layoutWidth != size.x || _layoutHeight != size.y) {
+      _layoutIcon();
+    }
+    final center = Offset(size.x / 2, size.y / 2);
+    // Lật theo trục dọc (Y): scale X từ 1 → 0 → 1 tạo hiệu ứng đồng xu lật trái qua phải.
+    final flipScaleX = (1 + math.cos(_angle)) * 0.5;
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.scale(flipScaleX, 1.0);
+    canvas.translate(-center.dx, -center.dy);
+
+    _iconPainter.paint(canvas, _iconOffset);
 
     canvas.restore();
   }

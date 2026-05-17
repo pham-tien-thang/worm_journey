@@ -1,4 +1,4 @@
-/// Barrel file: export core (app, utilities, buff...).
+// Barrel file: export app core and shared services.
 export 'app.dart';
 export 'app_constants.dart';
 export 'app_context.dart';

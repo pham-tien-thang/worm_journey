@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -75,8 +74,11 @@ class BombExplosionComponent extends PositionComponent {
           final r = _wavyRadius(baseRadius, angle, ring, t);
           final x = center.dx + r * math.cos(angle);
           final y = center.dy + r * math.sin(angle);
-          if (k == 0) path.moveTo(x, y);
-          else path.lineTo(x, y);
+          if (k == 0) {
+            path.moveTo(x, y);
+          } else {
+            path.lineTo(x, y);
+          }
         }
         canvas.drawPath(path, paint);
       }
@@ -93,8 +95,11 @@ class BombExplosionComponent extends PositionComponent {
         final r = coreBaseR * (1 + 0.1 * math.sin(5 * angle));
         final x = center.dx + r * math.cos(angle);
         final y = center.dy + r * math.sin(angle);
-        if (i == 0) corePath.moveTo(x, y);
-        else corePath.lineTo(x, y);
+        if (i == 0) {
+          corePath.moveTo(x, y);
+        } else {
+          corePath.lineTo(x, y);
+        }
       }
       corePath.close();
       canvas.drawPath(

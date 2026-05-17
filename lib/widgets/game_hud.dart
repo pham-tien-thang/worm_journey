@@ -43,10 +43,8 @@ class _GameHudState extends State<GameHud> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(widget.pollInterval, (_) {
-      if (!mounted) return;
-      setState(() => _data = widget.game.hudData);
-    });
+    _data = widget.game.hudData;
+    _timer = Timer.periodic(widget.pollInterval, (_) => _pollHudData());
   }
 
   @override
@@ -55,9 +53,56 @@ class _GameHudState extends State<GameHud> {
     super.dispose();
   }
 
+  void _pollHudData() {
+    if (!mounted) return;
+    final next = widget.game.hudData;
+    if (_isSameVisibleHudData(_data, next)) return;
+    setState(() => _data = next);
+  }
+
+  bool _isSameVisibleHudData(GameHudData current, GameHudData next) {
+    if (current.timeRemainingSeconds.ceil() !=
+        next.timeRemainingSeconds.ceil()) {
+      return false;
+    }
+    if ((current.startDelayRemaining > 0) != (next.startDelayRemaining > 0)) {
+      return false;
+    }
+    if (current.timeUrgentThresholdSeconds != next.timeUrgentThresholdSeconds) {
+      return false;
+    }
+    if (current.diamonds != next.diamonds ||
+        current.bossHp != next.bossHp ||
+        current.bossHpMax != next.bossHpMax) {
+      return false;
+    }
+    if (current.missions.length != next.missions.length ||
+        current.itemBuffs.length != next.itemBuffs.length) {
+      return false;
+    }
+    for (var i = 0; i < current.missions.length; i++) {
+      final a = current.missions[i];
+      final b = next.missions[i];
+      if (a.id != b.id ||
+          a.typeId != b.typeId ||
+          a.current != b.current ||
+          a.target != b.target) {
+        return false;
+      }
+    }
+    for (var i = 0; i < current.itemBuffs.length; i++) {
+      final a = current.itemBuffs[i];
+      final b = next.itemBuffs[i];
+      if (a.itemId != b.itemId ||
+          a.remainingSeconds.ceil() != b.remainingSeconds.ceil()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    _data = widget.game.hudData;
     final theme = Theme.of(context);
     final textStyle = theme.textTheme.bodySmall?.copyWith(
       color: AppColors.hudTextBrown,
@@ -88,13 +133,9 @@ class _GameHudState extends State<GameHud> {
         bottom: false,
         child: Row(
           children: [
-            Expanded(
-              child: _LeftSection(data: _data, textStyle: textStyle),
-            ),
+            Expanded(child: _LeftSection(data: _data, textStyle: textStyle)),
             _CenterSection(data: _data, textStyle: textStyle),
-            Expanded(
-              child: _RightSection(data: _data, textStyle: textStyle),
-            ),
+            Expanded(child: _RightSection(data: _data, textStyle: textStyle)),
           ],
         ),
       ),
@@ -117,7 +158,7 @@ class _LeftSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = L10n;
+    final l10n = appL10n;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,14 +190,15 @@ class _LeftSection extends StatelessWidget {
           Wrap(
             spacing: 6,
             runSpacing: 2,
-            children: data.itemBuffs.map((b) {
-              final sec = b.remainingSeconds.ceil();
-              final icon = _itemIcon(b.itemId);
-              return Text(
-                '$icon ${sec}s',
-                style: textStyle?.copyWith(fontSize: 13),
-              );
-            }).toList(),
+            children:
+                data.itemBuffs.map((b) {
+                  final sec = b.remainingSeconds.ceil();
+                  final icon = _itemIcon(b.itemId);
+                  return Text(
+                    '$icon ${sec}s',
+                    style: textStyle?.copyWith(fontSize: 13),
+                  );
+                }).toList(),
           ),
         ],
       ],
@@ -199,10 +241,9 @@ class _CenterSectionState extends State<_CenterSection>
     _colorAnimation = ColorTween(
       begin: AppColors.timeDisplayText,
       end: AppColors.timeUrgent,
-    ).animate(CurvedAnimation(
-      parent: _colorController,
-      curve: Curves.easeInOut,
-    ));
+    ).animate(
+      CurvedAnimation(parent: _colorController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -219,7 +260,8 @@ class _CenterSectionState extends State<_CenterSection>
     final min = seconds ~/ 60;
     final sec = seconds % 60;
     final timeStr = '$min:${sec.toString().padLeft(2, '0')}';
-    final isUrgent = !showReady && seconds <= widget.data.timeUrgentThresholdSeconds;
+    final isUrgent =
+        !showReady && seconds <= widget.data.timeUrgentThresholdSeconds;
 
     if (isUrgent && !_wasUrgent) {
       _wasUrgent = true;
@@ -244,7 +286,7 @@ class _CenterSectionState extends State<_CenterSection>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -262,9 +304,10 @@ class _CenterSectionState extends State<_CenterSection>
                   '⏱',
                   style: TextStyle(
                     fontSize: 18,
-                    color: isUrgent
-                        ? _colorAnimation.value
-                        : AppColors.timeDisplayText,
+                    color:
+                        isUrgent
+                            ? _colorAnimation.value
+                            : AppColors.timeDisplayText,
                   ),
                 ),
               );
@@ -277,13 +320,14 @@ class _CenterSectionState extends State<_CenterSection>
               return Transform.scale(
                 scale: isUrgent ? _scaleAnimation.value : 1,
                 child: Text(
-                  showReady ? L10n.ready : timeStr,
+                  showReady ? appL10n.ready : timeStr,
                   style: (widget.textStyle ?? const TextStyle()).copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: isUrgent
-                        ? _colorAnimation.value
-                        : AppColors.timeDisplayText,
+                    color:
+                        isUrgent
+                            ? _colorAnimation.value
+                            : AppColors.timeDisplayText,
                   ),
                 ),
               );
@@ -377,10 +421,9 @@ class _AnimatedCoinDisplayState extends State<_AnimatedCoinDisplay>
         weight: 0.5,
         tween: Tween<double>(begin: 1.25, end: 1.0),
       ),
-    ]).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.easeInOut,
-    ));
+    ]).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -406,12 +449,13 @@ class _AnimatedCoinDisplayState extends State<_AnimatedCoinDisplay>
     final numberAnimation = Tween<double>(
       begin: from.toDouble(),
       end: newCoin.toDouble(),
-    ).animate(CurvedAnimation(
-      parent: _numberController,
-      curve: Curves.easeOut,
-    ));
+    ).animate(
+      CurvedAnimation(parent: _numberController, curve: Curves.easeOut),
+    );
     _numberListener = () {
-      if (mounted) setState(() => _displayedValue = numberAnimation.value.round());
+      if (mounted) {
+        setState(() => _displayedValue = numberAnimation.value.round());
+      }
     };
     numberAnimation.addListener(_numberListener!);
 
@@ -424,7 +468,9 @@ class _AnimatedCoinDisplayState extends State<_AnimatedCoinDisplay>
   @override
   Widget build(BuildContext context) {
     final currentCoin = CoinService.instance.coin;
-    if (_prevCoin >= 0 && currentCoin != _prevCoin && !_numberController.isAnimating) {
+    if (_prevCoin >= 0 &&
+        currentCoin != _prevCoin &&
+        !_numberController.isAnimating) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _tick(currentCoin);
       });
@@ -439,10 +485,7 @@ class _AnimatedCoinDisplayState extends State<_AnimatedCoinDisplay>
       children: [
         ScaleTransition(
           scale: _scaleAnimation,
-          child: Text(
-            AppConstants.coinIcon,
-            style: TextStyle(fontSize: fs),
-          ),
+          child: Text(AppConstants.coinIcon, style: TextStyle(fontSize: fs)),
         ),
         const SizedBox(width: 4),
         Text(AppConstants.formatCoin(_displayedValue), style: widget.textStyle),
@@ -471,9 +514,10 @@ class _DebugApplyToggle extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               decoration: BoxDecoration(
-                color: isOn
-                    ? Colors.greenAccent.withOpacity(0.95)
-                    : Colors.black.withOpacity(0.7),
+                color:
+                    isOn
+                        ? Colors.greenAccent.withValues(alpha: 0.95)
+                        : Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
                   color: isOn ? Colors.green : Colors.orange,
@@ -515,9 +559,10 @@ class _ShowCoordsToggle extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               decoration: BoxDecoration(
-                color: showCoords
-                    ? Colors.blueAccent.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.7),
+                color:
+                    showCoords
+                        ? Colors.blueAccent.withValues(alpha: 0.3)
+                        : Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
                   color: showCoords ? Colors.blue : Colors.grey,

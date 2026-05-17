@@ -30,14 +30,17 @@ class _GuideGameDialogState extends State<GuideGameDialog> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _updateScrollVisibility());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _updateScrollVisibility(),
+    );
     _scrollController.addListener(_updateScrollVisibility);
   }
 
   void _updateScrollVisibility() {
     if (!mounted || !_scrollController.hasClients) return;
     final pos = _scrollController.position;
-    final canScroll = pos.maxScrollExtent > 0 && pos.pixels < pos.maxScrollExtent - 2;
+    final canScroll =
+        pos.maxScrollExtent > 0 && pos.pixels < pos.maxScrollExtent - 2;
     if (canScroll != _canScrollDown) setState(() => _canScrollDown = canScroll);
   }
 
@@ -50,14 +53,19 @@ class _GuideGameDialogState extends State<GuideGameDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = L10n;
+    final l10n = appL10n;
     const brown = AppColors.hudTextBrown;
     const double dialogWidth = 420;
     const double dialogHeight = 660;
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.only(left: 24, right: 24, top: 0, bottom: 36),
+      insetPadding: const EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 0,
+        bottom: 36,
+      ),
       child: SizedBox(
         width: dialogWidth,
         height: dialogHeight,
@@ -85,7 +93,9 @@ class _GuideGameDialogState extends State<GuideGameDialog> {
                       alignment: Alignment.center,
                       child: Text(
                         l10n.gameRulesTitle,
-                        style: (Theme.of(context).textTheme.headlineSmall ?? const TextStyle(fontSize: 22)).copyWith(
+                        style: (Theme.of(context).textTheme.headlineSmall ??
+                                const TextStyle(fontSize: 22))
+                            .copyWith(
                               color: brown,
                               fontWeight: FontWeight.w800,
                             ),
@@ -136,6 +146,7 @@ class _GuideGameDialogState extends State<GuideGameDialog> {
             ),
           ),
         ),
-    ));
+      ),
+    );
   }
 }

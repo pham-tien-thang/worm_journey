@@ -41,17 +41,14 @@ class GridBackground extends PositionComponent {
     GridBackgroundColors colors = GridBackgroundColors.brown,
     OutsideGridConfig outsideConfig = const OutsideGridConfig(),
     Vector2? position,
-  })  : colorLight = colors.colorLight,
-        colorLighter = colors.colorLighter,
-        outsideColor = outsideConfig.color,
-        outsideIcon = outsideConfig.icon,
-        super(
-          position: position ?? Vector2.zero(),
-          size: Vector2(
-            segmentSize * gridColumns,
-            segmentSize * totalWorldRows,
-          ),
-        );
+  }) : colorLight = colors.colorLight,
+       colorLighter = colors.colorLighter,
+       outsideColor = outsideConfig.color,
+       outsideIcon = outsideConfig.icon,
+       super(
+         position: position ?? Vector2.zero(),
+         size: Vector2(segmentSize * gridColumns, segmentSize * totalWorldRows),
+       );
 
   double segmentSize;
   int gridColumns;
@@ -63,8 +60,17 @@ class GridBackground extends PositionComponent {
   Color outsideColor;
   String outsideIcon;
 
-  void updateGrid(double segSize, int cols, int totalRows, int playStart, int playCount,
-      {Color? outsideColor, String? outsideIcon}) {
+  ui.Picture? _cachedPicture;
+
+  void updateGrid(
+    double segSize,
+    int cols,
+    int totalRows,
+    int playStart,
+    int playCount, {
+    Color? outsideColor,
+    String? outsideIcon,
+  }) {
     segmentSize = segSize;
     gridColumns = cols;
     totalWorldRows = totalRows;
@@ -73,37 +79,64 @@ class GridBackground extends PositionComponent {
     if (outsideColor != null) this.outsideColor = outsideColor;
     if (outsideIcon != null) this.outsideIcon = outsideIcon;
     size.setValues(segSize * cols, segSize * totalRows);
+    _invalidateCache();
   }
 
   @override
   void render(Canvas canvas) {
+    _cachedPicture ??= _buildPicture();
+    canvas.drawPicture(_cachedPicture!);
+  }
+
+  @override
+  void onRemove() {
+    _invalidateCache();
+    super.onRemove();
+  }
+
+  void _invalidateCache() {
+    _cachedPicture?.dispose();
+    _cachedPicture = null;
+  }
+
+  ui.Picture _buildPicture() {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final lightPaint = Paint()..color = colorLight;
+    final lighterPaint = Paint()..color = colorLighter;
+    final outsidePaint = Paint()..color = outsideColor;
+    final outsidePainter = TextPainter(
+      text: TextSpan(
+        text: outsideIcon,
+        style: TextStyle(fontSize: segmentSize * 0.6),
+      ),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+
     for (var row = 0; row < totalWorldRows; row++) {
-      final inPlayable = row >= playableStartRow && row < playableStartRow + playableRowCount;
+      final inPlayable =
+          row >= playableStartRow && row < playableStartRow + playableRowCount;
       for (var col = 0; col < gridColumns; col++) {
         final left = col * segmentSize;
         final top = row * segmentSize;
         if (inPlayable) {
           final playableRow = row - playableStartRow;
           final isEven = (playableRow + col) % 2 == 0;
-          final color = isEven ? colorLight : colorLighter;
           canvas.drawRect(
             Rect.fromLTWH(left, top, segmentSize, segmentSize),
-            Paint()..color = color,
+            isEven ? lightPaint : lighterPaint,
           );
         } else {
           canvas.drawRect(
             Rect.fromLTWH(left, top, segmentSize, segmentSize),
-            Paint()..color = outsideColor,
+            outsidePaint,
           );
-          final painter = TextPainter(
-            text: TextSpan(text: outsideIcon, style: TextStyle(fontSize: segmentSize * 0.6)),
-            textDirection: ui.TextDirection.ltr,
-          )..layout();
-          final cx = left + segmentSize / 2 - painter.width / 2;
-          final cy = top + segmentSize / 2 - painter.height / 2;
-          painter.paint(canvas, Offset(cx, cy));
+          final cx = left + segmentSize / 2 - outsidePainter.width / 2;
+          final cy = top + segmentSize / 2 - outsidePainter.height / 2;
+          outsidePainter.paint(canvas, Offset(cx, cy));
         }
       }
     }
+    return recorder.endRecording();
   }
 }

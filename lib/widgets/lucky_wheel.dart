@@ -223,9 +223,9 @@ class _WheelPainter extends CustomPainter {
     const sweepTotal = -math.pi;
     const segmentCount = 5;
     final sweepSegment = sweepTotal / segmentCount;
-    final R_inner = R * 0.35;
+    final rInner = R * 0.35;
     final outerRect = Rect.fromCircle(center: Offset.zero, radius: R);
-    final innerRect = Rect.fromCircle(center: Offset.zero, radius: R_inner);
+    final innerRect = Rect.fromCircle(center: Offset.zero, radius: rInner);
 
     for (var i = 0; i < segmentCount; i++) {
       var color = i < segmentColors.length ? segmentColors[i] : Colors.grey;
@@ -239,8 +239,8 @@ class _WheelPainter extends CustomPainter {
         ..moveTo(R * math.cos(a1), R * math.sin(a1))
         ..arcTo(outerRect, a1, sweepSegment, false)
         ..lineTo(
-          R_inner * math.cos(a2),
-          R_inner * math.sin(a2),
+          rInner * math.cos(a2),
+          rInner * math.sin(a2),
         )
         ..arcTo(innerRect, a2, -sweepSegment, false)
         ..close();
@@ -248,8 +248,8 @@ class _WheelPainter extends CustomPainter {
       if (isActive) {
         canvas.save();
         final midAngle = startAngle + (i + 0.5) * sweepSegment;
-        final scaleCenterX = (R + R_inner) / 2 * math.cos(midAngle);
-        final scaleCenterY = (R + R_inner) / 2 * math.sin(midAngle);
+        final scaleCenterX = (R + rInner) / 2 * math.cos(midAngle);
+        final scaleCenterY = (R + rInner) / 2 * math.sin(midAngle);
         canvas.translate(scaleCenterX, scaleCenterY);
         canvas.scale(_highlightScale, _highlightScale);
         canvas.translate(-scaleCenterX, -scaleCenterY);

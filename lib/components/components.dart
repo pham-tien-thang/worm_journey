@@ -1,5 +1,4 @@
-/// Barrel file: export tất cả components.
-export 'placeholder_component.dart';
+// Barrel file: export public game components.
 export 'prey.dart';
 export 'worm/worm.dart';
 export 'worm/worm_direction.dart';

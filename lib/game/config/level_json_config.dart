@@ -7,7 +7,6 @@ library;
 import 'dart:convert';
 
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../components/grid_background.dart';

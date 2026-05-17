@@ -216,6 +216,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get victoryRewardCoinsLabel => 'Coins';
 
   @override
-  String victoryRewardReceived(int amount, String coinIcon) =>
-      'Reward received: $amount $coinIcon';
+  String victoryRewardReceived(int amount, String coinIcon) {
+    return 'Reward received: $amount $coinIcon';
+  }
 }

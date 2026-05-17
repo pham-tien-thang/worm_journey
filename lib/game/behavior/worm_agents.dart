@@ -9,10 +9,8 @@ import 'worm_behavior.dart';
 /// Game giữ [List<WormAgent>]; index 0 = player, sau này thêm bot với behavior khác.
 /// [worm] phải có [Worm.info] != null.
 class WormAgent {
-  WormAgent({
-    required this.worm,
-    required this.behavior,
-  }) : assert(worm.info != null, 'WormAgent cần worm có info');
+  WormAgent({required this.worm, required this.behavior})
+    : assert(worm.info != null, 'WormAgent cần worm có info');
 
   final Worm worm;
   final WormBehavior behavior;
@@ -33,15 +31,17 @@ class WormAgent {
   Vector2? step() => worm.step();
   void removeTail() => worm.removeTail();
   void grow() => worm.grow();
-  void applyNextDirectionAndSyncVisuals() => worm.applyNextDirectionAndSyncVisuals();
+  void applyNextDirectionAndSyncVisuals() =>
+      worm.applyNextDirectionAndSyncVisuals();
   void showCryFace() => worm.showCryFace();
   void addItemEffect(String itemId, double? endTime) =>
       worm.addItemEffect(itemId, endTime);
   void removeItemEffects(Iterable<String> ids) => worm.removeItemEffects(ids);
   void setGameTime(double t) => worm.setGameTime(t);
-  void removeExpiredItemEffects(double currentTime) => worm.removeExpiredItemEffects(currentTime);
+  void removeExpiredItemEffects(double currentTime) =>
+      worm.removeExpiredItemEffects(currentTime);
   bool hasItemEffect(String itemId) => worm.hasItemEffect(itemId);
-  List<ItemEffectEntry> get itemEffects => worm.itemEffects;
+  Iterable<ItemEffectEntry> get itemEffects => worm.itemEffects;
   // void setHasHelmet(bool value) => worm.setHasHelmet(value);
   void setWaitingToStart(bool value) => worm.setWaitingToStart(value);
   void setVisualProgress(double progress) => worm.setVisualProgress(progress);

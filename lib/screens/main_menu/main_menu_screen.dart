@@ -11,7 +11,7 @@ class MainMenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = L10n;
+    final l10n = appL10n;
     return Scaffold(
       backgroundColor: const Color(0xFF1B3D2E),
       body: Stack(
@@ -33,9 +33,12 @@ class MainMenuScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.only(top: 8, right: 16),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.45),
+                        color: Colors.black.withValues(alpha: 0.45),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: CoinHud(),
