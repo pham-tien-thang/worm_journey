@@ -116,6 +116,18 @@ abstract class AppLocalizations {
   /// **'Obstacle'**
   String get entityXMarkName;
 
+  /// No description provided for @entityPreyFlagName.
+  ///
+  /// In en, this message translates to:
+  /// **'Flag'**
+  String get entityPreyFlagName;
+
+  /// No description provided for @entityCoinName.
+  ///
+  /// In en, this message translates to:
+  /// **'Coin'**
+  String get entityCoinName;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
@@ -134,6 +146,12 @@ abstract class AppLocalizations {
   /// **'Scene {n}'**
   String sceneLabel(int n);
 
+  /// No description provided for @stageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage {n}'**
+  String stageLabel(int n);
+
   /// No description provided for @gameOver.
   ///
   /// In en, this message translates to:
@@ -151,6 +169,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Play again'**
   String get gameOverPlayAgain;
+
+  /// No description provided for @gameOverRevive.
+  ///
+  /// In en, this message translates to:
+  /// **'Revive'**
+  String get gameOverRevive;
 
   /// No description provided for @gameOverEnd.
   ///
@@ -281,7 +305,7 @@ abstract class AppLocalizations {
   /// No description provided for @itemSeedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Spawns 3 more leaves.'**
+  /// **'Spawns more leaves.'**
   String get itemSeedDescription;
 
   /// No description provided for @itemAntidoteName.
@@ -367,6 +391,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not enough coins'**
   String get notEnoughCoins;
+
+  /// No description provided for @waitCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait {time}'**
+  String waitCountdown(String time);
+
+  /// No description provided for @itemBlockedInLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Item is blocked in this level'**
+  String get itemBlockedInLevel;
+
+  /// No description provided for @understood.
+  ///
+  /// In en, this message translates to:
+  /// **'Understood'**
+  String get understood;
+
+  /// No description provided for @gameRulesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Game rules'**
+  String get gameRulesTitle;
+
+  /// No description provided for @ready.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get ready;
+
+  /// No description provided for @victory.
+  ///
+  /// In en, this message translates to:
+  /// **'Victory'**
+  String get victory;
+
+  /// No description provided for @victoryContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get victoryContinue;
+
+  /// No description provided for @victoryClaimReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim {amount} coins'**
+  String victoryClaimReward(int amount);
+
+  /// No description provided for @victoryExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get victoryExit;
+
+  /// No description provided for @victoryExitLoseRewardWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'You will lose the large reward'**
+  String get victoryExitLoseRewardWarning;
+
+  /// No description provided for @victoryRewardLevelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
+  String get victoryRewardLevelLabel;
+
+  /// No description provided for @victoryRewardTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get victoryRewardTimeLabel;
+
+  /// No description provided for @victoryRewardCoinsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Coins'**
+  String get victoryRewardCoinsLabel;
+
+  /// No description provided for @victoryRewardReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward received: {amount} {coinIcon}'**
+  String victoryRewardReceived(int amount, String coinIcon);
 }
 
 class _AppLocalizationsDelegate

@@ -18,6 +18,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entityXMarkName => 'Obstacle';
 
   @override
+  String get entityPreyFlagName => 'Flag';
+
+  @override
+  String get entityCoinName => 'Coin';
+
+  @override
   String get appTitle => 'Worm Journey';
 
   @override
@@ -31,6 +37,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String stageLabel(int n) {
+    return 'Stage $n';
+  }
+
+  @override
   String get gameOver => 'Game Over';
 
   @override
@@ -38,6 +49,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gameOverPlayAgain => 'Play again';
+
+  @override
+  String get gameOverRevive => 'Revive';
 
   @override
   String get gameOverEnd => 'End';
@@ -112,7 +126,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get itemSeedName => 'Seed';
 
   @override
-  String get itemSeedDescription => 'Spawns 3 more leaves.';
+  String get itemSeedDescription => 'Spawns more leaves.';
 
   @override
   String get itemAntidoteName => 'Antidote';
@@ -157,4 +171,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notEnoughCoins => 'Not enough coins';
+
+  @override
+  String waitCountdown(String time) {
+    return 'Wait $time';
+  }
+
+  @override
+  String get itemBlockedInLevel => 'Item is blocked in this level';
+
+  @override
+  String get understood => 'Understood';
+
+  @override
+  String get gameRulesTitle => 'Game rules';
+
+  @override
+  String get ready => 'Ready';
+
+  @override
+  String get victory => 'Victory';
+
+  @override
+  String get victoryContinue => 'Continue';
+
+  @override
+  String victoryClaimReward(int amount) {
+    return 'Claim $amount coins';
+  }
+
+  @override
+  String get victoryExit => 'Exit';
+
+  @override
+  String get victoryExitLoseRewardWarning => 'You will lose the large reward';
+
+  @override
+  String get victoryRewardLevelLabel => 'Level';
+
+  @override
+  String get victoryRewardTimeLabel => 'Time';
+
+  @override
+  String get victoryRewardCoinsLabel => 'Coins';
+
+  @override
+  String victoryRewardReceived(int amount, String coinIcon) {
+    return 'Reward received: $amount $coinIcon';
+  }
 }

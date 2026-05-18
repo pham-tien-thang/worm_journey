@@ -7,7 +7,6 @@ library;
 import 'dart:convert';
 
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../components/grid_background.dart';
@@ -148,6 +147,27 @@ class MapConfig {
 /// Loại boss màn. "none" = không hiện boss; các giá trị khác do game/scene xử lý (vd. "snake_boss", "dragon").
 const String levelBossTypeNone = 'none';
 
+/// Config spawn đồng xu: đồng xu đầu sau Xs, các đồng xu sau 10s kể từ khi đồng xu trước bị ăn. Từ JSON `coin`.
+class CoinSpawnConfig {
+  const CoinSpawnConfig({
+    this.firstSpawnDelaySeconds = 10.0,
+    this.spawnDelayAfterEatenSeconds = 10.0,
+  });
+
+  final double firstSpawnDelaySeconds;
+  final double spawnDelayAfterEatenSeconds;
+
+  static CoinSpawnConfig? fromJson(Map<String, dynamic>? json) {
+    if (json == null || json.isEmpty) return null;
+    final first = (json['firstSpawnDelaySeconds'] as num?)?.toDouble() ?? 10.0;
+    final after = (json['spawnDelayAfterEatenSeconds'] as num?)?.toDouble() ?? 10.0;
+    return CoinSpawnConfig(
+      firstSpawnDelaySeconds: first,
+      spawnDelayAfterEatenSeconds: after,
+    );
+  }
+}
+
 /// Config đầy đủ một màn (từ JSON). Mỗi màn có file JSON riêng.
 class LevelJsonConfig {
   const LevelJsonConfig({
@@ -160,6 +180,11 @@ class LevelJsonConfig {
     this.outsideConfig = const OutsideConfig(),
     this.bossType = levelBossTypeNone,
     this.spawnCycle = const SpawnCycleConfig(),
+    this.itemBlock = const [],
+    this.guideVi = '',
+    this.guideEn = '',
+    this.respawnHeadDirection = 'none',
+    this.coinSpawnConfig,
   });
 
   final List<MissionConfig> missions;
@@ -174,11 +199,21 @@ class LevelJsonConfig {
   final String bossType;
   /// Sinh mồi theo chu kỳ: mỗi mục có objType + intervalSeconds. Mỗi map config khác nhau.
   final SpawnCycleConfig spawnCycle;
+  /// Danh sách effectTypeId item bị cấm trong màn (vd. magnet, bomb). Scaffold ẩn/dùng item tương ứng.
+  final List<String> itemBlock;
+  /// Chuỗi hướng dẫn đầu game (tiếng Việt). Không bao gồm chữ "Luật chơi".
+  final String guideVi;
+  /// Chuỗi hướng dẫn đầu game (tiếng Anh). Không bao gồm title.
+  final String guideEn;
+  /// Hướng đầu sâu khi hồi sinh: "none" (giữ logic tự chọn), "top", "r", "l", "b". Từ JSON `respawnHeadDirection`.
+  final String respawnHeadDirection;
+  /// Config spawn đồng xu. Null = màn không có đồng xu. Từ JSON `coin`.
+  final CoinSpawnConfig? coinSpawnConfig;
 
   /// Có hiện boss hay không (theo config).
   bool get hasBoss => bossType != levelBossTypeNone && bossType.isNotEmpty;
 
-  /// Load toàn bộ từ [jsonConfig] (map, rule, missions, stats, grid, outside, boss, spawnCycle).
+  /// Load toàn bộ từ [jsonConfig] (map, rule, missions, stats, grid, outside, boss, spawnCycle, itemBlock).
   static LevelJsonConfig loadAllConfig(Map<String, dynamic> jsonConfig) {
     final stats = loadStatsConfig(jsonConfig);
     return LevelJsonConfig(
@@ -191,7 +226,44 @@ class LevelJsonConfig {
       outsideConfig: loadOutsideConfig(jsonConfig),
       bossType: loadBossConfig(jsonConfig),
       spawnCycle: loadSpawnCycleConfig(jsonConfig),
+      itemBlock: loadItemBlockConfig(jsonConfig),
+      guideVi: _guideViWithFallback(jsonConfig),
+      guideEn: loadGuideConfig(jsonConfig, 'guide_en'),
+      respawnHeadDirection: loadRespawnHeadDirection(jsonConfig),
+      coinSpawnConfig: CoinSpawnConfig.fromJson(
+        jsonConfig['coin'] as Map<String, dynamic>?,
+      ),
     );
+  }
+
+  /// Chỉ load hướng đầu khi hồi sinh. Key `respawnHeadDirection`: "none", "top", "r", "l", "b". Null/empty → "none".
+  static String loadRespawnHeadDirection(Map<String, dynamic> jsonConfig) {
+    final s = jsonConfig['respawnHeadDirection'] as String?;
+    if (s == null || s.toString().trim().isEmpty) return 'none';
+    return s.toString().trim().toLowerCase();
+  }
+
+  static String _guideViWithFallback(Map<String, dynamic> jsonConfig) {
+    final vi = loadGuideConfig(jsonConfig, 'guide_vi');
+    if (vi.isNotEmpty) return vi;
+    return loadGuideConfig(jsonConfig, 'guide');
+  }
+
+  /// Chỉ load chuỗi hướng dẫn. Key [key] (guide_vi hoặc guide_en). Null/empty → ''.
+  static String loadGuideConfig(Map<String, dynamic> jsonConfig, String key) {
+    final s = jsonConfig[key];
+    if (s == null) return '';
+    return (s is String ? s : s.toString()).trim();
+  }
+
+  /// Chỉ load danh sách item bị cấm. Key `itemBlock` (array string, effectTypeId). Null/empty → [].
+  static List<String> loadItemBlockConfig(Map<String, dynamic> jsonConfig) {
+    final list = jsonConfig['itemBlock'] as List<dynamic>?;
+    if (list == null || list.isEmpty) return const [];
+    return list
+        .map((e) => (e is String ? e : e.toString()).trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
   }
 
   /// Chỉ load sinh theo chu kỳ. Key `spawnCycle` (array): [{ objType, intervalSeconds }, ...].

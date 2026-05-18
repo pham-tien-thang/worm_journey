@@ -1,0 +1,42 @@
+{
+  "missions": [
+    {
+      "id": "leaves",
+      "typeId": "prey_leaf",
+      "target": 10
+    }
+  ],
+  "timeLimitSeconds": 120,
+  "timeUrgentThresholdSeconds": 10,
+  "rule": "none",
+  "outside": {
+    "color": "0xFF8B7355",
+    "icon": ""
+  },
+  "map": {
+    "obstacles": [],
+    "prey": []
+  },
+  "spawnCycle": [
+    {
+      "objType": "prey_coconut",
+      "intervalSeconds": 10
+    }
+  ],
+  "itemBlock": [
+    "snail",
+    "magnet",
+    "bomb",
+    "antidote",
+    "speed",
+    "clock",
+    "freeze",
+    "dizzy"
+  ],
+  "grid": {
+    "colorLight": "0xFF1B9CDC",
+    "colorLighter": "0xFFCAB11E"
+  },
+  "guide_vi": "luật màn 60",
+  "guide_en": "Level 60 rules"
+}

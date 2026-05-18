@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_constants.dart';
 import '../inject/injection.dart';
 
 /// Dialog cảnh báo thoát game: ảnh nền [waring_dialog.png], chữ "Trò chơi sẽ kết thúc ?", 2 nút Kết thúc (đỏ) và Huỷ (cam).
@@ -21,7 +22,9 @@ class ExitGameDialog extends StatelessWidget {
   /// Dịch nội dung (chữ + nút) lên trên một chút.
   static const double _contentShiftUp = 14;
 
-  static Future<bool?> show(BuildContext context) {
+  /// [message] null = dùng l10n.exitGameWarningMessage (thoát game). Có message = dùng cho cảnh báo khác (vd. thoát victory mất thưởng).
+  /// [exitRewardAmount] khi set (vd. thoát victory): nút xác nhận thành "Thoát xxx 🪙" để user biết vẫn nhận được xu.
+  static Future<bool?> show(BuildContext context, {String? message, int? exitRewardAmount}) {
     return showDialog<bool>(
       context: context,
       barrierColor: Colors.black54,
@@ -31,6 +34,8 @@ class ExitGameDialog extends StatelessWidget {
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 32),
           child: _ExitGameDialogContent(
+            message: message,
+            exitRewardAmount: exitRewardAmount,
             onConfirm: () => Navigator.of(context).pop(true),
             onCancel: () => Navigator.of(context).pop(false),
           ),
@@ -50,16 +55,24 @@ class ExitGameDialog extends StatelessWidget {
 
 class _ExitGameDialogContent extends StatelessWidget {
   const _ExitGameDialogContent({
+    this.message,
+    this.exitRewardAmount,
     required this.onConfirm,
     required this.onCancel,
   });
 
+  final String? message;
+  final int? exitRewardAmount;
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n;
+    final displayMessage = message ?? l10n.exitGameWarningMessage;
+    final confirmLabel = exitRewardAmount != null
+        ? '${l10n.victoryExit}  $exitRewardAmount ${AppConstants.coinIcon}'
+        : l10n.exitGameConfirm;
     return Stack(
       alignment: Alignment.bottomCenter,
       children: [
@@ -80,7 +93,7 @@ class _ExitGameDialogContent extends StatelessWidget {
               Transform.translate(
                 offset: const Offset(0, -ExitGameDialog._contentShiftUp),
                 child: Text(
-                  l10n.exitGameWarningMessage,
+                  displayMessage,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 16,
@@ -94,7 +107,7 @@ class _ExitGameDialogContent extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _DialogButton(
-                      label: l10n.exitGameConfirm,
+                      label: confirmLabel,
                       color: Colors.red,
                       onPressed: onConfirm,
                     ),

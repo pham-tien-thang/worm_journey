@@ -183,14 +183,21 @@ class Worm extends PositionComponent {
 
   @override
   /// Khởi tạo vị trí grid, tạo head + tail, chưa có body (body sinh khi step).
+  /// Nếu [config.initialGridPositions] có: dùng làm vị trí ban đầu (vd. hồi sinh tại vị trí an toàn).
   Future<void> onLoad() async {
-    final n = config.initialLength;
-    final startX = (GameConfig.gridColumns / 2).floor() - n ~/ 2;
-    final startY = (_gridRows / 2).floor();
-    for (var i = n - 1; i >= 0; i--) {
-      _gridPositions.add(Vector2((startX + i).toDouble(), startY.toDouble()));
+    final customPositions = config.initialGridPositions;
+    if (customPositions != null && customPositions.length >= 2) {
+      _gridPositions.addAll(customPositions);
+      _direction = config.initialDirection ?? WormDirection.right;
+    } else {
+      final n = config.initialLength;
+      final startX = (GameConfig.gridColumns / 2).floor() - n ~/ 2;
+      final startY = (_gridRows / 2).floor();
+      for (var i = n - 1; i >= 0; i--) {
+        _gridPositions.add(Vector2((startX + i).toDouble(), startY.toDouble()));
+      }
+      _direction = WormDirection.right;
     }
-    _direction = WormDirection.right;
     _previousGridPositions = List.from(_gridPositions);
 
     _head = WormHead(
@@ -231,8 +238,22 @@ class Worm extends PositionComponent {
     _nextDirection = d;
   }
 
-  /// Đánh dấu thêm 1 đốt ở bước step tiếp theo (gọi khi ăn mồi).
-  void grow() => _pendingGrow++;
+  /// Gọi khi ăn lá nhưng đã đạt maxLength (để hiển thị hiệu ứng "Max").
+  void setOnGrowAtMax(VoidCallback? callback) => _onGrowAtMax = callback;
+  VoidCallback? _onGrowAtMax;
+
+  /// Vị trí đầu sâu trong tọa độ world (để gắn hiệu ứng "Max").
+  Vector2 get headWorldPosition => position + _head.position;
+
+  /// Đánh dấu thêm 1 đốt ở bước step tiếp theo (gọi khi ăn mồi). Nếu đã đạt [config.maxLength] thì không thêm và gọi [onGrowAtMax].
+  void grow() {
+    final maxLen = config.maxLength;
+    if (maxLen != null && _gridPositions.length + _pendingGrow >= maxLen) {
+      _onGrowAtMax?.call();
+      return;
+    }
+    _pendingGrow++;
+  }
 
   /// Trả về component đốt tại [index] (0 = đầu, 1..length-2 = thân, length-1 = đuôi).
   PositionComponent? _getSegmentAt(int index) {
@@ -464,10 +485,13 @@ class Worm extends PositionComponent {
     final newHead = _gridPositions.first + move;
 
     _gridPositions.insert(0, newHead);
-    if (_pendingGrow > 0) {
+    final maxLen = config.maxLength;
+    final wouldExceedMax = maxLen != null && _gridPositions.length > maxLen;
+    if (_pendingGrow > 0 && !wouldExceedMax) {
       _pendingGrow--;
     } else {
       _gridPositions.removeLast();
+      if (_pendingGrow > 0) _pendingGrow--;
     }
 
     _syncVisuals();

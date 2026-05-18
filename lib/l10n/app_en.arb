@@ -3,9 +3,17 @@
   "entityPreyLeafName": "Leaf",
   "entityPreyCoconutName": "Coconut",
   "entityXMarkName": "Obstacle",
+  "entityPreyFlagName": "Flag",
+  "entityCoinName": "Coin",
   "appTitle": "Worm Journey",
   "levelLabel": "Lv{level}",
   "sceneLabel": "Scene {n}",
+  "stageLabel": "Stage {n}",
+  "@stageLabel": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
   "@sceneLabel": {
     "placeholders": {
       "n": {"type": "int"}
@@ -21,6 +29,7 @@
   "gameOver": "Game Over",
   "tapToPlayAgain": "Tap to play again",
   "gameOverPlayAgain": "Play again",
+  "gameOverRevive": "Revive",
   "gameOverEnd": "End",
   "view": "View",
   "quantityShort": "x{quantity}",
@@ -61,7 +70,7 @@
   "itemBombName": "Bomb",
   "itemBombDescription": "Destroys obstacles and damages enemies in 3 tiles.",
   "itemSeedName": "Seed",
-  "itemSeedDescription": "Spawns 3 more leaves.",
+  "itemSeedDescription": "Spawns more leaves.",
   "itemAntidoteName": "Antidote",
   "itemAntidoteDescription": "Removes all active effects from the snake.",
   "itemSpeedName": "Speed Boost",
@@ -75,5 +84,35 @@
   "exitGameWarningMessage": "The game will end?",
   "exitGameConfirm": "End",
   "exitGameCancel": "Cancel",
-  "notEnoughCoins": "Not enough coins"
+  "notEnoughCoins": "Not enough coins",
+  "waitCountdown": "Wait {time}",
+  "@waitCountdown": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "itemBlockedInLevel": "Item is blocked in this level",
+  "understood": "Understood",
+  "gameRulesTitle": "Game rules",
+  "ready": "Ready",
+  "victory": "Victory",
+  "victoryContinue": "Continue",
+  "victoryClaimReward": "Claim {amount} coins",
+  "@victoryClaimReward": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "victoryExit": "Exit",
+  "victoryExitLoseRewardWarning": "You will lose the large reward",
+  "victoryRewardLevelLabel": "Level",
+  "victoryRewardTimeLabel": "Time",
+  "victoryRewardCoinsLabel": "Coins",
+  "victoryRewardReceived": "Reward received: {amount} {coinIcon}",
+  "@victoryRewardReceived": {
+    "placeholders": {
+      "amount": {"type": "int"},
+      "coinIcon": {"type": "String"}
+    }
+  }
 }

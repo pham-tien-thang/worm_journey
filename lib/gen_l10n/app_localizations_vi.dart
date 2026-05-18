@@ -18,6 +18,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get entityXMarkName => 'Chướng ngại vật';
 
   @override
+  String get entityPreyFlagName => 'Lá cờ';
+
+  @override
+  String get entityCoinName => 'Đồng xu';
+
+  @override
   String get appTitle => 'Worm Journey';
 
   @override
@@ -31,6 +37,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String stageLabel(int n) {
+    return 'Chặng $n';
+  }
+
+  @override
   String get gameOver => 'Game Over';
 
   @override
@@ -38,6 +49,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get gameOverPlayAgain => 'Chơi lại';
+
+  @override
+  String get gameOverRevive => 'Hồi sinh';
 
   @override
   String get gameOverEnd => 'Kết thúc';
@@ -114,7 +128,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get itemSeedName => 'Hạt giống';
 
   @override
-  String get itemSeedDescription => 'Tạo thêm 3 lá cây.';
+  String get itemSeedDescription => 'Tạo thêm lá cây.';
 
   @override
   String get itemAntidoteName => 'Thuốc giải';
@@ -160,4 +174,52 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get notEnoughCoins => 'Không đủ vàng';
+
+  @override
+  String waitCountdown(String time) {
+    return 'Chờ $time';
+  }
+
+  @override
+  String get itemBlockedInLevel => 'Item bị cấm ở màn này';
+
+  @override
+  String get understood => 'Đã hiểu';
+
+  @override
+  String get gameRulesTitle => 'Luật chơi';
+
+  @override
+  String get ready => 'Sẵn sàng';
+
+  @override
+  String get victory => 'Chiến thắng';
+
+  @override
+  String get victoryContinue => 'Tiếp tục';
+
+  @override
+  String victoryClaimReward(int amount) {
+    return 'Nhận thưởng $amount xu';
+  }
+
+  @override
+  String get victoryExit => 'Thoát';
+
+  @override
+  String get victoryExitLoseRewardWarning => 'Bạn sẽ mất phần thưởng lớn';
+
+  @override
+  String get victoryRewardLevelLabel => 'Level';
+
+  @override
+  String get victoryRewardTimeLabel => 'Thời gian';
+
+  @override
+  String get victoryRewardCoinsLabel => 'Xu';
+
+  @override
+  String victoryRewardReceived(int amount, String coinIcon) {
+    return 'Đã nhận thưởng $amount $coinIcon';
+  }
 }

@@ -1,2 +1,2 @@
-/// Barrel: config buff dùng chung nhiều màn.
+// Barrel: shared buff configuration.
 export 'buff_config.dart';

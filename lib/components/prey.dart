@@ -12,6 +12,7 @@ class Prey extends PositionComponent {
     required this.icon,
     Vector2? position,
     this.withSpawnEffect = false,
+    this.iconScale = 1.0,
   }) : super(
           position: position ?? Vector2.zero(),
           size: Vector2.all(segmentSize),
@@ -21,6 +22,8 @@ class Prey extends PositionComponent {
   final double segmentSize;
   final String icon;
   final bool withSpawnEffect;
+  /// Scale chữ/icon (vd. lá cờ 1.25 để to hơn xíu).
+  final double iconScale;
 
   @override
   Future<void> onLoad() async {
@@ -41,7 +44,7 @@ class Prey extends PositionComponent {
   @override
   void render(Canvas canvas) {
     final center = Offset(size.x / 2, size.y / 2);
-    final fontSize = size.x * 0.9;
+    final fontSize = size.x * 0.9 * iconScale;
 
     final painter = TextPainter(
       text: TextSpan(

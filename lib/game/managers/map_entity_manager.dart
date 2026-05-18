@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flame/components.dart';
 
+import '../../components/coin_prey.dart';
 import '../../components/prey.dart';
 import '../../components/x_obstacle.dart';
 import '../config/type_obj_config.dart';
@@ -44,8 +45,10 @@ class MapEntityManager {
   List<MapEntityEntry> get entries => List.unmodifiable(_entries);
 
   /// Đặt entity tại ô [grid]. [typeId] phải có trong typeObjConfig. Trả về component để game [world.add].
-  PositionComponent placeAt(Vector2 grid, String typeId) {
-    final comp = _createComponent(typeId, grid);
+  /// [withSpawnEffect] true: scale 0→1 (vd. lá cờ khi vừa xuất hiện nhấp nháy 1 nhịp).
+  PositionComponent placeAt(Vector2 grid, String typeId,
+      {bool withSpawnEffect = false}) {
+    final comp = _createComponent(typeId, grid, withSpawnEffect: withSpawnEffect);
     _entries.add(MapEntityEntry(grid: grid, typeId: typeId, component: comp));
     return comp;
   }
@@ -56,11 +59,23 @@ class MapEntityManager {
     final icon = EntityModels.icon(typeId);
     final category = typeObjConfig.getCategory(typeId);
     if (category == 'grey') {
+      if (typeId == 'prey_coin') {
+        return CoinPrey(
+          segmentSize: segmentSize,
+          icon: icon,
+          position: position,
+          withSpawnEffect: withSpawnEffect,
+          iconScale: 1.0,
+          rotateSpeed: 14.0,
+        );
+      }
+      final isFlag = typeId == 'prey_flag';
       return Prey(
         segmentSize: segmentSize,
         icon: icon,
         position: position,
         withSpawnEffect: withSpawnEffect,
+        iconScale: isFlag ? 1.25 : 1.0,
       );
     }
     return XObstacle(
@@ -106,14 +121,16 @@ class MapEntityManager {
   }
 
   /// [isCellVisible] nếu có: chỉ spawn ở ô trong tầm camera. Null = bỏ qua check.
+  /// [minRow] nếu có: chỉ xét ô có row >= minRow (grid.y). VD: lá đầu spawn từ hàng 6 → minRow: 5.
   /// Khi có isCellVisible: duyệt hết ô trong view + trống → chọn ngẫu nhiên 1 ô (đảm bảo sinh trong tầm nhìn).
   MapEntityEntry? spawn(String typeId, Set<String> occupied,
-      {bool Function(Vector2 grid)? isCellVisible}) {
+      {bool Function(Vector2 grid)? isCellVisible, int? minRow}) {
     if (!typeObjConfig.isEatable(typeId)) return null;
 
     if (isCellVisible != null) {
       final candidates = <Vector2>[];
       for (var row = 0; row < gridRows; row++) {
+        if (minRow != null && row < minRow) continue;
         for (var col = 0; col < gridColumns; col++) {
           final pos = Vector2(col.toDouble(), row.toDouble());
           if (occupied.contains('${col},$row')) continue;
@@ -130,10 +147,12 @@ class MapEntityManager {
       return entry;
     }
 
+    final rowMin = minRow ?? 0;
+    final rowCount = (gridRows - rowMin).clamp(1, gridRows);
     for (var i = 0; i < 100; i++) {
       final pos = Vector2(
         _random.nextInt(gridColumns).toDouble(),
-        _random.nextInt(gridRows).toDouble(),
+        (rowMin + _random.nextInt(rowCount)).toDouble(),
       );
       final key = '${pos.x.toInt()},${pos.y.toInt()}';
       if (occupied.contains(key)) continue;

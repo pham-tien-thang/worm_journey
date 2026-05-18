@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app_router.dart';
 import '../../inject/injection.dart';
+import '../../widgets/coin_hud.dart';
 import '../../widgets/green_button.dart';
 
 class MainMenuScreen extends StatelessWidget {
@@ -25,55 +26,75 @@ class MainMenuScreen extends StatelessWidget {
             ),
           ),
           SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 48),
-                  Image.asset(
-                    'assets/images/worm_journey_logo.png',
-                    fit: BoxFit.contain,
-                    width: 280,
-                  ),
-                  const SizedBox(height: 200),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: GreenButton(
-                      text: l10n.buttonJourney,
-                      onPressed: () => context.push(AppRoutes.play),
-                      width: 175,
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8, right: 16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.45),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: CoinHud(),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: GreenButton(
-                      text: l10n.buttonChallenge,
-                      onPressed: () => context.push(AppRoutes.challenge),
-                      width: 175,
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 48),
+                        Image.asset(
+                          'assets/images/worm_journey_logo.png',
+                          fit: BoxFit.contain,
+                          width: 280,
+                        ),
+                        const SizedBox(height: 200),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: GreenButton(
+                            text: l10n.buttonJourney,
+                            onPressed: () => context.push(AppRoutes.play),
+                            width: 175,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: GreenButton(
+                            text: l10n.buttonChallenge,
+                            onPressed: () => context.push(AppRoutes.challenge),
+                            width: 175,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: GreenButton(
+                            text: l10n.buttonShop,
+                            onPressed: () => context.push(AppRoutes.shop),
+                            width: 175,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: GreenButton(
+                            text: l10n.buttonSettings,
+                            onPressed: () => context.push(AppRoutes.settings),
+                            width: 175,
+                          ),
+                        ),
+                        const SizedBox(height: 48),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: GreenButton(
-                      text: l10n.buttonShop,
-                      onPressed: () => context.push(AppRoutes.shop),
-                      width: 175,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: GreenButton(
-                      text: l10n.buttonSettings,
-                      onPressed: () => context.push(AppRoutes.settings),
-                      width: 175,
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

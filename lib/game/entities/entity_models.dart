@@ -11,6 +11,8 @@ class EntityModels {
   static final Map<String, EntityModel> _registry = {
     ProjectType.preyLeaf.typeId: PreyLeafModel(),
     ProjectType.preyCoconut.typeId: PreyCoconutModel(),
+    ProjectType.preyFlag.typeId: PreyFlagModel(),
+    ProjectType.preyCoin.typeId: PreyCoinModel(),
     ProjectType.xMark.typeId: XMarkModel(),
   };
 

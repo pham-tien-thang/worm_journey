@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 
 import '../core/app_constants.dart';
 import '../core/services/coin_service.dart';
+import '../core/services/shared_prefs_service.dart';
 import '../inject/injection.dart';
 import '../models/item_model.dart';
+import 'app_button.dart';
 
 /// Dialog thông tin item: title (icon + tên, nâu), mô tả, nút Mua, nút Nhận (xanh, nháy scale).
 /// [onBuy] trả về Future<bool>: true = mua thành công (đóng dialog), false = không đủ vàng.
@@ -45,14 +47,39 @@ class ItemInfoDialog extends StatefulWidget {
 
 class _ItemInfoDialogState extends State<ItemInfoDialog>
     with SingleTickerProviderStateMixin {
+  static const int _freeCoinCooldownSeconds = 5 * 60; // 5 phút
+
   late final Random _random = Random();
   int _getAmount = 0;
   Timer? _timer;
+  Timer? _cooldownTimer;
   late final AnimationController _scaleController;
   late final Animation<double> _scaleAnimation;
+  /// Timestamp (ms) lần cuối nhận free coin. Null = chưa từng.
+  int? _freeCoinLastAtMs;
+  /// Số giây còn chờ (< 0: đang load, 0: được nhận, > 0: countdown).
+  int _freeCoinRemainingSeconds = -1;
 
   static const Color _titleBrown = Color(0xFF5D4037);
   static const Color _receiveGreen = Color(0xFF4CAF50);
+
+  void _recalcFreeCoinRemaining() {
+    final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final lastAt = _freeCoinLastAtMs;
+    if (lastAt == null) {
+      _freeCoinRemainingSeconds = 0;
+      return;
+    }
+    final elapsed = nowSec - (lastAt ~/ 1000);
+    _freeCoinRemainingSeconds = (_freeCoinCooldownSeconds - elapsed).clamp(0, _freeCoinCooldownSeconds);
+  }
+
+  static String _formatCountdown(int seconds) {
+    if (seconds < 0) return '...';
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
 
   @override
   void initState() {
@@ -68,11 +95,24 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
     _scaleAnimation = Tween<double>(begin: 0.97, end: 1.03).animate(
       CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
     );
+    SharedPrefsService.getFreeRandomCoinLastAt().then((v) {
+      if (!mounted) return;
+      setState(() {
+        _freeCoinLastAtMs = v;
+        _recalcFreeCoinRemaining();
+      });
+    });
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      _recalcFreeCoinRemaining();
+      setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _cooldownTimer?.cancel();
     _scaleController.dispose();
     super.dispose();
   }
@@ -136,7 +176,8 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
               Row(
                 children: [
                   Expanded(
-                    child: FilledButton(
+                    child: AppButton(
+                      label: Text(l10n.buyCoins(item.price, AppConstants.coinIcon)),
                       onPressed: widget.onBuy != null
                           ? () async {
                               final ok = await widget.onBuy!();
@@ -145,7 +186,7 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
                               }
                             }
                           : null,
-                      child: Text(l10n.buyCoins(item.price, AppConstants.coinIcon)),
+                      isEnabled: widget.onBuy != null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -153,29 +194,45 @@ class _ItemInfoDialogState extends State<ItemInfoDialog>
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        AnimatedBuilder(
-                          animation: _scaleAnimation,
-                          builder: (context, child) {
-                            return Transform.scale(
-                              scale: _scaleAnimation.value,
-                              child: child,
-                            );
-                          },
-                          child: FilledButton(
-                            onPressed: () async {
-                              await CoinService.instance.coinPlus(_getAmount);
-                              widget.onReceive?.call();
-                              if (context.mounted) {
-                                Navigator.of(context).pop();
-                              }
-                            },
-                            style: FilledButton.styleFrom(
+                        Builder(
+                          builder: (context) {
+                            final canReceive = _freeCoinRemainingSeconds == 0;
+                            final label = canReceive
+                                ? Text(l10n.getCoins(_getAmount, AppConstants.coinIcon))
+                                : Text(l10n.waitCountdown(_formatCountdown(_freeCoinRemainingSeconds)));
+                            final button = AppButton(
+                              label: label,
+                              onPressed: canReceive
+                                  ? () async {
+                                      await SharedPrefsService.setFreeRandomCoinLastAt(
+                                        DateTime.now().millisecondsSinceEpoch,
+                                      );
+                                      await CoinService.instance.coinPlus(_getAmount);
+                                      widget.onReceive?.call();
+                                      if (context.mounted) {
+                                        Navigator.of(context).pop();
+                                      }
+                                    }
+                                  : null,
                               backgroundColor: _receiveGreen,
                               foregroundColor: Colors.white,
                               side: const BorderSide(color: Colors.amber, width: 2),
-                            ),
-                            child: Text(l10n.getCoins(_getAmount, AppConstants.coinIcon)),
-                          ),
+                              isEnabled: canReceive,
+                            );
+                            if (canReceive) {
+                              return AnimatedBuilder(
+                                animation: _scaleAnimation,
+                                builder: (context, child) {
+                                  return Transform.scale(
+                                    scale: _scaleAnimation.value,
+                                    child: child,
+                                  );
+                                },
+                                child: button,
+                              );
+                            }
+                            return button;
+                          },
                         ),
                         Positioned(
                           top: -6,
