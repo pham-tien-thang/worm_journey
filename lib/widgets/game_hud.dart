@@ -19,10 +19,12 @@ class GameHud extends StatefulWidget {
     super.key,
     required this.game,
     this.pollInterval = const Duration(milliseconds: 200),
+    this.onExitPressed,
   });
 
   final WormJourneyGame game;
   final Duration pollInterval;
+  final VoidCallback? onExitPressed;
 
   @override
   State<GameHud> createState() => _GameHudState();
@@ -38,6 +40,7 @@ class _GameHudState extends State<GameHud> {
     bossHpMax: 0,
     itemBuffs: [],
     startDelayRemaining: 0,
+    pineappleScore: -1,
   );
 
   @override
@@ -88,14 +91,43 @@ class _GameHudState extends State<GameHud> {
         bottom: false,
         child: Row(
           children: [
-            Expanded(
-              child: _LeftSection(data: _data, textStyle: textStyle),
-            ),
+            if (widget.onExitPressed != null) ...[
+              _HudIconButton(
+                icon: Icons.arrow_back_ios_new,
+                onPressed: widget.onExitPressed!,
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(child: _LeftSection(data: _data, textStyle: textStyle)),
             _CenterSection(data: _data, textStyle: textStyle),
-            Expanded(
-              child: _RightSection(data: _data, textStyle: textStyle),
-            ),
+            Expanded(child: _RightSection(data: _data, textStyle: textStyle)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HudIconButton extends StatelessWidget {
+  const _HudIconButton({required this.icon, required this.onPressed});
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withOpacity(0.72),
+      shape: const CircleBorder(
+        side: BorderSide(color: AppColors.hudBorder, width: 2),
+      ),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Icon(icon, size: 18, color: AppColors.hudTextBrown),
         ),
       ),
     );
@@ -117,7 +149,6 @@ class _LeftSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = L10n;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,38 +157,32 @@ class _LeftSection extends StatelessWidget {
           Builder(
             builder: (_) {
               final icon = EntityModels.icon(m.typeId);
-              final type = EntityModels.projectType(m.typeId);
-              final label = type?.displayName(l10n) ?? m.typeId;
-              return Text(
-                '$icon $label ${m.current}/${m.target}',
-                style: textStyle,
-              );
+              return Text('$icon ${m.current}/${m.target}', style: textStyle);
             },
           ),
           const SizedBox(height: 2),
         ],
         if (data.bossHpMax > 0)
-          Row(
-            children: [
-              Text('HP boss ', style: textStyle),
-              Text('👹', style: TextStyle(fontSize: textStyle?.fontSize ?? 16)),
-              Text(' ×${data.bossHp}/${data.bossHpMax}', style: textStyle),
-            ],
-          ),
+          Text('👹 ${data.bossHp}/${data.bossHpMax}', style: textStyle),
         if (data.itemBuffs.isNotEmpty) ...[
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
             runSpacing: 2,
-            children: data.itemBuffs.map((b) {
-              final sec = b.remainingSeconds.ceil();
-              final icon = _itemIcon(b.itemId);
-              return Text(
-                '$icon ${sec}s',
-                style: textStyle?.copyWith(fontSize: 13),
-              );
-            }).toList(),
+            children:
+                data.itemBuffs.map((b) {
+                  final sec = b.remainingSeconds.ceil();
+                  final icon = _itemIcon(b.itemId);
+                  return Text(
+                    '$icon ${sec}s',
+                    style: textStyle?.copyWith(fontSize: 13),
+                  );
+                }).toList(),
           ),
+        ],
+        if (data.pineappleScore >= 0) ...[
+          const SizedBox(height: 4),
+          Text('👹 ${data.pineappleScore}/10', style: textStyle),
         ],
       ],
     );
@@ -199,10 +224,9 @@ class _CenterSectionState extends State<_CenterSection>
     _colorAnimation = ColorTween(
       begin: AppColors.timeDisplayText,
       end: AppColors.timeUrgent,
-    ).animate(CurvedAnimation(
-      parent: _colorController,
-      curve: Curves.easeInOut,
-    ));
+    ).animate(
+      CurvedAnimation(parent: _colorController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -219,7 +243,8 @@ class _CenterSectionState extends State<_CenterSection>
     final min = seconds ~/ 60;
     final sec = seconds % 60;
     final timeStr = '$min:${sec.toString().padLeft(2, '0')}';
-    final isUrgent = !showReady && seconds <= widget.data.timeUrgentThresholdSeconds;
+    final isUrgent =
+        !showReady && seconds <= widget.data.timeUrgentThresholdSeconds;
 
     if (isUrgent && !_wasUrgent) {
       _wasUrgent = true;
@@ -262,9 +287,10 @@ class _CenterSectionState extends State<_CenterSection>
                   '⏱',
                   style: TextStyle(
                     fontSize: 18,
-                    color: isUrgent
-                        ? _colorAnimation.value
-                        : AppColors.timeDisplayText,
+                    color:
+                        isUrgent
+                            ? _colorAnimation.value
+                            : AppColors.timeDisplayText,
                   ),
                 ),
               );
@@ -281,9 +307,10 @@ class _CenterSectionState extends State<_CenterSection>
                   style: (widget.textStyle ?? const TextStyle()).copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: isUrgent
-                        ? _colorAnimation.value
-                        : AppColors.timeDisplayText,
+                    color:
+                        isUrgent
+                            ? _colorAnimation.value
+                            : AppColors.timeDisplayText,
                   ),
                 ),
               );
@@ -380,10 +407,9 @@ class _AnimatedCoinDisplayState extends State<_AnimatedCoinDisplay>
         weight: 0.5,
         tween: Tween<double>(begin: 1.25, end: 1.0),
       ),
-    ]).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.easeInOut,
-    ));
+    ]).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -409,12 +435,12 @@ class _AnimatedCoinDisplayState extends State<_AnimatedCoinDisplay>
     final numberAnimation = Tween<double>(
       begin: from.toDouble(),
       end: newCoin.toDouble(),
-    ).animate(CurvedAnimation(
-      parent: _numberController,
-      curve: Curves.easeOut,
-    ));
+    ).animate(
+      CurvedAnimation(parent: _numberController, curve: Curves.easeOut),
+    );
     _numberListener = () {
-      if (mounted) setState(() => _displayedValue = numberAnimation.value.round());
+      if (mounted)
+        setState(() => _displayedValue = numberAnimation.value.round());
     };
     numberAnimation.addListener(_numberListener!);
 
@@ -427,7 +453,9 @@ class _AnimatedCoinDisplayState extends State<_AnimatedCoinDisplay>
   @override
   Widget build(BuildContext context) {
     final currentCoin = CoinService.instance.coin;
-    if (_prevCoin >= 0 && currentCoin != _prevCoin && !_numberController.isAnimating) {
+    if (_prevCoin >= 0 &&
+        currentCoin != _prevCoin &&
+        !_numberController.isAnimating) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _tick(currentCoin);
       });
@@ -442,10 +470,7 @@ class _AnimatedCoinDisplayState extends State<_AnimatedCoinDisplay>
       children: [
         ScaleTransition(
           scale: _scaleAnimation,
-          child: Text(
-            AppConstants.coinIcon,
-            style: TextStyle(fontSize: fs),
-          ),
+          child: Text(AppConstants.coinIcon, style: TextStyle(fontSize: fs)),
         ),
         const SizedBox(width: 4),
         Text(AppConstants.formatCoin(_displayedValue), style: widget.textStyle),
@@ -474,9 +499,10 @@ class _DebugApplyToggle extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               decoration: BoxDecoration(
-                color: isOn
-                    ? Colors.greenAccent.withOpacity(0.95)
-                    : Colors.black.withOpacity(0.7),
+                color:
+                    isOn
+                        ? Colors.greenAccent.withOpacity(0.95)
+                        : Colors.black.withOpacity(0.7),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
                   color: isOn ? Colors.green : Colors.orange,
@@ -518,9 +544,10 @@ class _ShowCoordsToggle extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               decoration: BoxDecoration(
-                color: showCoords
-                    ? Colors.blueAccent.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.7),
+                color:
+                    showCoords
+                        ? Colors.blueAccent.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.7),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
                   color: showCoords ? Colors.blue : Colors.grey,

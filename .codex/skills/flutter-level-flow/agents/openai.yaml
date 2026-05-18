@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter Level Flow"
+  short_description: "Load level JSON và mở guide dialog."
+  default_prompt: "Dùng skill này để thêm/sửa luồng vào màn: load assets/levels/level_*.json, map vào LevelJsonConfig/game state, và hiển thị GuideGameDialog khi bắt đầu màn."

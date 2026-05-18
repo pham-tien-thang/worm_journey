@@ -27,6 +27,13 @@ Game rắn săn mồi (Flutter + Flame), hỗ trợ mồi lá/táo, chế độ 
 | [maintain-code/07-eat-and-lose-segment.md](maintain-code/07-eat-and-lose-segment.md) | Sâu ăn vật thể & đâm chướng ngại mất đuôi — vị trí trong code |
 | [maintain-code/08-game-objects-design.md](maintain-code/08-game-objects-design.md) | Thiết kế đối tượng: mồi, chướng ngại, sâu (player/BOT) |
 | [maintain-code/09-snake-movement-and-direction.md](maintain-code/09-snake-movement-and-direction.md) | Sâu di chuyển, đổi hướng, thân/đuôi tại góc — vị trí code |
+| [maintain-code/10-hardness-reference.md](maintain-code/10-hardness-reference.md) | Bảng hardness của Pink, boss/sâu dứa, x_mark và rule va chạm |
+
+### idea notes
+
+| File | Nội dung |
+|------|----------|
+| [random-ideas.md](random-ideas.md) | Ghi nhanh các ý tưởng ngẫu hứng/chưa chốt |
 
 ## Công nghệ
 

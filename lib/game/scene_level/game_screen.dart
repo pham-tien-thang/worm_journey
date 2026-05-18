@@ -40,21 +40,23 @@ class _GameScreenState extends State<GameScreen> {
 
   Future<void> _showGuideDialog(String guideVi, String guideEn) async {
     final locale = Localizations.localeOf(context);
-    final guideText = locale.languageCode == 'vi'
-        ? (guideVi.isNotEmpty ? guideVi : guideEn)
-        : (guideEn.isNotEmpty ? guideEn : guideVi);
+    final guideText =
+        locale.languageCode == 'vi'
+            ? (guideVi.isNotEmpty ? guideVi : guideEn)
+            : (guideEn.isNotEmpty ? guideEn : guideVi);
     if (guideText.isEmpty) return;
     GamePauseObserver.dialogOpen.value = true;
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => GuideGameDialog(
-        guideText: guideText,
-        onUnderstood: () {
-          Navigator.of(context).pop();
-          _game.dismissGuide();
-        },
-      ),
+      builder:
+          (context) => GuideGameDialog(
+            guideText: guideText,
+            onUnderstood: () {
+              Navigator.of(context).pop();
+              _game.dismissGuide();
+            },
+          ),
     );
     if (mounted) GamePauseObserver.dialogOpen.value = false;
   }
@@ -93,22 +95,28 @@ class _GameScreenState extends State<GameScreen> {
     if (mounted) context.pop();
   }
 
+  void _handleExitRequest() {
+    if (_game.overlays.isActive('Victory')) {
+      _showVictoryExitWarning();
+      return;
+    }
+    _showExitWarning();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final content = GamePlayScaffold(
+      game: _game,
+      onExitRequested: _handleExitRequest,
+      onGameOverEnd: () => context.pop(),
+    );
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        if (_game.overlays.isActive('Victory')) {
-          _showVictoryExitWarning();
-          return;
-        }
-        _showExitWarning();
+        _handleExitRequest();
       },
-      child: GamePlayScaffold(
-        game: _game,
-        onGameOverEnd: () => context.pop(),
-      ),
+      child: content,
     );
   }
 }
