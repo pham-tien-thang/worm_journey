@@ -9,7 +9,11 @@ import '../context/worm_game_context.dart';
 /// Va chạm: sâu <= độ cứng vật cản → trừ đuôi; sâu > độ cứng vật cản → phá.
 class PlayerWormBehavior extends WormBehavior {
   @override
-  void onEatEntity(WormAgent agent, GameEntityView entity, WormGameContext context) {
+  void onEatEntity(
+    WormAgent agent,
+    GameEntityView entity,
+    WormGameContext context,
+  ) {
     if (entity.projectType == ProjectType.preyFlag) {
       return;
     }
@@ -25,8 +29,7 @@ class PlayerWormBehavior extends WormBehavior {
       final effectId = entity.effectTypeId;
       if (effectId != null) {
         if (effectId == ItemType.antidote.effectTypeId) {
-          agent.removeItemEffects(BuffConfig.removableByAntidoteEffectIds);
-          agent.removeItemEffects([ItemType.antidote.effectTypeId]);
+          agent.addItemEffect(ItemType.antidote.effectTypeId, null);
         } else if (effectId == ItemType.magnet.effectTypeId) {
           final duration = BuffConfig.durationSecondsFor(effectId);
           if (duration > 0) {

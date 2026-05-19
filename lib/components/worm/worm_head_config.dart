@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 /// Cấu hình đầu sâu: đường dẫn asset, scale, offset vẽ (truyền lúc khởi tạo).
 /// [assetHelmet*] optional: khi có thì head có thể bật helmet (vd. buff dừa).
 class WormHeadConfig {
@@ -14,6 +16,8 @@ class WormHeadConfig {
     this.antennaOffsetHorizontal = 0.18,
     this.antennaOffsetUp = 0.1,
     this.antennaOffsetDown = 0.18,
+    this.circleColor,
+    this.circleBorderColor,
   });
 
   final String assetVertical;
@@ -28,6 +32,8 @@ class WormHeadConfig {
   final double antennaOffsetHorizontal;
   final double antennaOffsetUp;
   final double antennaOffsetDown;
+  final Color? circleColor;
+  final Color? circleBorderColor;
 
   bool get hasHelmetAssets =>
       assetHelmetVertical != null &&

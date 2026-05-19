@@ -26,15 +26,16 @@ class MissionConfig {
   });
 
   final String id;
+
   /// typeId entity (vd. prey_leaf). HUD lấy icon từ EntityModels, name từ ARB (l10n.entityDisplayName).
   final String typeId;
   final int target;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'typeId': typeId,
-        'target': target,
-      };
+    'id': id,
+    'typeId': typeId,
+    'target': target,
+  };
 
   static MissionConfig fromJson(Map<String, dynamic> json) {
     return MissionConfig(
@@ -68,18 +69,17 @@ class GridColorsConfig {
   static GridColorsConfig fromJson(Map<String, dynamic>? json) {
     if (json == null || json.isEmpty) return const GridColorsConfig();
     return GridColorsConfig(
-      colorLight: _parseColorFromJson(json['colorLight']) ?? const Color(0xFFE8DED5),
-      colorLighter: _parseColorFromJson(json['colorLighter']) ?? const Color(0xFFD7CCC8),
+      colorLight:
+          _parseColorFromJson(json['colorLight']) ?? const Color(0xFFE8DED5),
+      colorLighter:
+          _parseColorFromJson(json['colorLighter']) ?? const Color(0xFFD7CCC8),
     );
   }
 }
 
 /// Vùng ngoài grid (outside): màu + icon. Từ JSON: color (hex), icon.
 class OutsideConfig {
-  const OutsideConfig({
-    this.color = const Color(0xFF8B7355),
-    this.icon = '🌱',
-  });
+  const OutsideConfig({this.color = const Color(0xFF8B7355), this.icon = '🌱'});
 
   final Color color;
   final String icon;
@@ -124,7 +124,8 @@ class MapConfig {
       if (list.isEmpty) continue;
       final key = entry.key;
       // Tương thích cũ: obstacles → x_mark, prey → prey_leaf.
-      final typeId = key == 'obstacles' ? 'x_mark' : (key == 'prey' ? 'prey_leaf' : key);
+      final typeId =
+          key == 'obstacles' ? 'x_mark' : (key == 'prey' ? 'prey_leaf' : key);
       placements[typeId] = [...(placements[typeId] ?? []), ...list];
     }
     return MapConfig(placements: placements);
@@ -134,14 +135,34 @@ class MapConfig {
     if (value is! List) return [];
     final list = <Vector2>[];
     for (final e in value) {
-      if (e is List && e.length >= 2) {
-        final col = (e[0] as num).toDouble();
-        final row = (e[1] as num).toDouble();
-        list.add(Vector2(col, row));
-      }
+      final grid = parseGridCoordinate(e);
+      if (grid != null) list.add(grid);
     }
     return list;
   }
+}
+
+Vector2? parseGridCoordinate(dynamic value) {
+  if (value is List && value.length >= 2) {
+    final col = value[0];
+    final row = value[1];
+    if (col is num && row is num) {
+      return Vector2(col.toDouble(), row.toDouble());
+    }
+  }
+  if (value is String) {
+    final match = RegExp(r'^([A-Za-z]+)(\d+)$').firstMatch(value.trim());
+    if (match == null) return null;
+    final letters = match.group(1)!.toUpperCase();
+    final row = int.tryParse(match.group(2)!);
+    if (row == null || row <= 0) return null;
+    var col = 0;
+    for (final code in letters.codeUnits) {
+      col = col * 26 + (code - 0x41 + 1);
+    }
+    return Vector2((col - 1).toDouble(), (row - 1).toDouble());
+  }
+  return null;
 }
 
 /// Loại boss màn. "none" = không hiện boss; các giá trị khác do game/scene xử lý (vd. "snake_boss", "dragon").
@@ -160,7 +181,8 @@ class CoinSpawnConfig {
   static CoinSpawnConfig? fromJson(Map<String, dynamic>? json) {
     if (json == null || json.isEmpty) return null;
     final first = (json['firstSpawnDelaySeconds'] as num?)?.toDouble() ?? 10.0;
-    final after = (json['spawnDelayAfterEatenSeconds'] as num?)?.toDouble() ?? 10.0;
+    final after =
+        (json['spawnDelayAfterEatenSeconds'] as num?)?.toDouble() ?? 10.0;
     return CoinSpawnConfig(
       firstSpawnDelaySeconds: first,
       spawnDelayAfterEatenSeconds: after,
@@ -184,29 +206,49 @@ class LevelJsonConfig {
     this.guideVi = '',
     this.guideEn = '',
     this.respawnHeadDirection = 'none',
+    this.initialWormPositions = const [],
+    this.preyLeafSequence = const [],
+    this.preyLeafCompanionSpawns = const {},
+    this.missionCompleteSpawns = const MapConfig(),
+    this.entryItemRewards = const {},
     this.coinSpawnConfig,
   });
 
   final List<MissionConfig> missions;
   final double timeLimitSeconds;
+
   /// Còn <= X giây thì HUD cảnh báo đỏ nháy. Load từ JSON `timeUrgentThresholdSeconds`.
   final double timeUrgentThresholdSeconds;
   final EnumRule rule;
   final MapConfig mapConfig;
   final GridColorsConfig gridColors;
   final OutsideConfig outsideConfig;
+
   /// Loại boss: [levelBossTypeNone] = không hiện; khác thì scene load theo type.
   final String bossType;
+
   /// Sinh mồi theo chu kỳ: mỗi mục có objType + intervalSeconds. Mỗi map config khác nhau.
   final SpawnCycleConfig spawnCycle;
+
   /// Danh sách effectTypeId item bị cấm trong màn (vd. magnet, bomb). Scaffold ẩn/dùng item tương ứng.
   final List<String> itemBlock;
+
   /// Chuỗi hướng dẫn đầu game (tiếng Việt). Không bao gồm chữ "Luật chơi".
   final String guideVi;
+
   /// Chuỗi hướng dẫn đầu game (tiếng Anh). Không bao gồm title.
   final String guideEn;
+
   /// Hướng đầu sâu khi hồi sinh: "none" (giữ logic tự chọn), "top", "r", "l", "b". Từ JSON `respawnHeadDirection`.
   final String respawnHeadDirection;
+  final List<Vector2> initialWormPositions;
+  final List<Vector2> preyLeafSequence;
+  final Map<String, MapConfig> preyLeafCompanionSpawns;
+  final MapConfig missionCompleteSpawns;
+
+  /// Item cộng một lần khi vào màn. Key = effectTypeId, value = số lượng. Từ JSON `entryItemRewards`.
+  final Map<String, int> entryItemRewards;
+
   /// Config spawn đồng xu. Null = màn không có đồng xu. Từ JSON `coin`.
   final CoinSpawnConfig? coinSpawnConfig;
 
@@ -230,6 +272,11 @@ class LevelJsonConfig {
       guideVi: _guideViWithFallback(jsonConfig),
       guideEn: loadGuideConfig(jsonConfig, 'guide_en'),
       respawnHeadDirection: loadRespawnHeadDirection(jsonConfig),
+      initialWormPositions: loadInitialWormPositions(jsonConfig),
+      preyLeafSequence: loadPreyLeafSequence(jsonConfig),
+      preyLeafCompanionSpawns: loadPreyLeafCompanionSpawns(jsonConfig),
+      missionCompleteSpawns: loadMissionCompleteSpawns(jsonConfig),
+      entryItemRewards: loadEntryItemRewards(jsonConfig),
       coinSpawnConfig: CoinSpawnConfig.fromJson(
         jsonConfig['coin'] as Map<String, dynamic>?,
       ),
@@ -241,6 +288,69 @@ class LevelJsonConfig {
     final s = jsonConfig['respawnHeadDirection'] as String?;
     if (s == null || s.toString().trim().isEmpty) return 'none';
     return s.toString().trim().toLowerCase();
+  }
+
+  static List<Vector2> loadInitialWormPositions(
+    Map<String, dynamic> jsonConfig,
+  ) {
+    final value = jsonConfig['initialWorm'];
+    if (value is Map<String, dynamic>) {
+      return MapConfig._parseGridList(value['positions']);
+    }
+    return MapConfig._parseGridList(value);
+  }
+
+  static List<Vector2> loadPreyLeafSequence(Map<String, dynamic> jsonConfig) {
+    return MapConfig._parseGridList(jsonConfig['preyLeafSequence']);
+  }
+
+  static Map<String, MapConfig> loadPreyLeafCompanionSpawns(
+    Map<String, dynamic> jsonConfig,
+  ) {
+    final value = jsonConfig['preyLeafCompanionSpawns'];
+    if (value is! Map<String, dynamic>) return const {};
+    final result = <String, MapConfig>{};
+    for (final entry in value.entries) {
+      if (entry.value is Map<String, dynamic>) {
+        result[entry.key.trim().toUpperCase()] = MapConfig.fromJson(
+          entry.value as Map<String, dynamic>,
+        );
+      }
+    }
+    return result;
+  }
+
+  static MapConfig loadMissionCompleteSpawns(Map<String, dynamic> jsonConfig) {
+    final value = jsonConfig['missionCompleteSpawns'];
+    if (value is Map<String, dynamic>) return MapConfig.fromJson(value);
+    return const MapConfig();
+  }
+
+  static Map<String, int> loadEntryItemRewards(
+    Map<String, dynamic> jsonConfig,
+  ) {
+    final value =
+        jsonConfig['entryItemRewards'] ??
+        jsonConfig['enterItemRewards'] ??
+        jsonConfig['startItemRewards'];
+    if (value is! Map<String, dynamic>) return const {};
+    final result = <String, int>{};
+    for (final entry in value.entries) {
+      final itemId = entry.key.trim();
+      if (itemId.isEmpty) continue;
+      final quantity = _parseRewardQuantity(entry.value);
+      if (quantity > 0) result[itemId] = quantity;
+    }
+    return result;
+  }
+
+  static int _parseRewardQuantity(dynamic value) {
+    if (value is num) return value.toInt();
+    if (value is Map<String, dynamic>) {
+      final quantity = value['quantity'] ?? value['qty'] ?? value['count'];
+      if (quantity is num) return quantity.toInt();
+    }
+    return 0;
   }
 
   static String _guideViWithFallback(Map<String, dynamic> jsonConfig) {
@@ -267,14 +377,17 @@ class LevelJsonConfig {
   }
 
   /// Chỉ load sinh theo chu kỳ. Key `spawnCycle` (array): [{ objType, intervalSeconds }, ...].
-  static SpawnCycleConfig loadSpawnCycleConfig(Map<String, dynamic> jsonConfig) {
+  static SpawnCycleConfig loadSpawnCycleConfig(
+    Map<String, dynamic> jsonConfig,
+  ) {
     final list = jsonConfig['spawnCycle'] as List<dynamic>?;
     return SpawnCycleConfig.fromJson(list);
   }
 
   /// Chỉ load boss. Key `boss` (string) trong JSON; null/empty/unknown → [levelBossTypeNone].
   static String loadBossConfig(Map<String, dynamic> jsonConfig) {
-    final s = jsonConfig['boss'] as String? ?? jsonConfig['bossType'] as String?;
+    final s =
+        jsonConfig['boss'] as String? ?? jsonConfig['bossType'] as String?;
     if (s == null || s.toString().trim().isEmpty) return levelBossTypeNone;
     return s.toString().trim();
   }
@@ -308,7 +421,9 @@ class LevelJsonConfig {
   }
 
   /// Chỉ load danh sách nhiệm vụ. Key `missions` (list object); null/empty → 1 nhiệm vụ mặc định [MissionConfig.defaultLeaves].
-  static List<MissionConfig> loadMissionsConfig(Map<String, dynamic> jsonConfig) {
+  static List<MissionConfig> loadMissionsConfig(
+    Map<String, dynamic> jsonConfig,
+  ) {
     final list = jsonConfig['missions'] as List<dynamic>?;
     if (list == null || list.isEmpty) {
       return const [MissionConfig.defaultLeaves];
@@ -334,21 +449,36 @@ class SpawnCycleItem {
   const SpawnCycleItem({
     required this.objType,
     required this.intervalSeconds,
+    this.maxOnMap,
+    this.pauseWhenPresent = false,
+    this.preferredPositions = const [],
+    this.preferredPositionsOnly = false,
   });
 
   /// typeId entity (vd. prey_coconut, prey_leaf). Phải là loại eatable (grey trong jsonTypeObj).
   final String objType;
+
   /// Chu kỳ sinh (giây). Mỗi intervalSeconds giây thử sinh 1 con (nếu thỏa điều kiện của từng loại).
   final double intervalSeconds;
+  final int? maxOnMap;
+  final bool pauseWhenPresent;
+  final List<Vector2> preferredPositions;
+  final bool preferredPositionsOnly;
 
   static SpawnCycleItem fromJson(Map<String, dynamic> json) {
     final type = json['objType'] as String? ?? json['typeId'] as String?;
-    final interval = (json['intervalSeconds'] as num?)?.toDouble() ??
+    final interval =
+        (json['intervalSeconds'] as num?)?.toDouble() ??
         (json['interval'] as num?)?.toDouble() ??
         10.0;
+    final maxOnMap = (json['maxOnMap'] as num?)?.toInt();
     return SpawnCycleItem(
       objType: type?.toString().trim() ?? 'prey_coconut',
       intervalSeconds: interval.clamp(0.1, 3600.0),
+      maxOnMap: maxOnMap != null && maxOnMap > 0 ? maxOnMap : null,
+      pauseWhenPresent: json['pauseWhenPresent'] == true,
+      preferredPositions: MapConfig._parseGridList(json['preferredPositions']),
+      preferredPositionsOnly: json['preferredPositionsOnly'] == true,
     );
   }
 }
@@ -362,9 +492,14 @@ class SpawnCycleConfig {
   static SpawnCycleConfig fromJson(List<dynamic>? list) {
     if (list == null || list.isEmpty) return const SpawnCycleConfig();
     return SpawnCycleConfig(
-      items: list
-          .map((e) => SpawnCycleItem.fromJson(Map<String, dynamic>.from(e as Map)))
-          .toList(),
+      items:
+          list
+              .map(
+                (e) => SpawnCycleItem.fromJson(
+                  Map<String, dynamic>.from(e as Map),
+                ),
+              )
+              .toList(),
     );
   }
 }
@@ -377,6 +512,7 @@ class StatsConfig {
   });
 
   final double timeLimitSeconds;
+
   /// Còn <= X giây thì HUD chuyển cảnh báo (đỏ, nháy).
   final double timeUrgentThresholdSeconds;
 }
@@ -387,7 +523,10 @@ class StatsConfig {
 /// Nếu lỗi đọc, file không tồn tại hoặc parse thất bại thì trả về [LevelJsonConfig] mặc định.
 ///
 /// [assetsPath] mặc định `assets/levels` (phải đã khai báo trong `pubspec.yaml`).
-Future<LevelJsonConfig> loadLevelJsonConfig(int level, {String assetsPath = 'assets/levels'}) async {
+Future<LevelJsonConfig> loadLevelJsonConfig(
+  int level, {
+  String assetsPath = 'assets/levels',
+}) async {
   try {
     final path = '$assetsPath/level_$level.json';
     final json = await _loadJsonAsset(path);

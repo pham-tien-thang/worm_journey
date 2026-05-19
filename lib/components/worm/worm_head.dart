@@ -16,13 +16,13 @@ class WormHead extends PositionComponent {
     required this.direction,
     required double segmentSize,
     Vector2? position,
-  })  : _segmentSize = segmentSize,
-        super(
-          position: position ?? Vector2.zero(),
-          size: Vector2.all(segmentSize),
-          anchor: Anchor.center,
-          priority: 10,
-        );
+  }) : _segmentSize = segmentSize,
+       super(
+         position: position ?? Vector2.zero(),
+         size: Vector2.all(segmentSize),
+         anchor: Anchor.center,
+         priority: 10,
+       );
 
   final WormHeadConfig config;
   WormDirection direction;
@@ -57,16 +57,34 @@ class WormHead extends PositionComponent {
 
     final game = findParent<FlameGame>();
     if (game == null) return;
-    _spriteVertical = await Sprite.load(config.assetVertical, images: game.images);
-    _spriteHorizontal = await Sprite.load(config.assetHorizontal, images: game.images);
+    _spriteVertical = await Sprite.load(
+      config.assetVertical,
+      images: game.images,
+    );
+    _spriteHorizontal = await Sprite.load(
+      config.assetHorizontal,
+      images: game.images,
+    );
     _spriteBack = await Sprite.load(config.assetBack, images: game.images);
     _spriteCry = await Sprite.load(config.assetCry, images: game.images);
 
     if (config.hasHelmetAssets) {
-      _helmetVertical = await Sprite.load(config.assetHelmetVertical!, images: game.images);
-      _helmetHorizontal = await Sprite.load(config.assetHelmetHorizontal!, images: game.images);
-      _helmetBack = await Sprite.load(config.assetHelmetBack!, images: game.images);
-      _helmetCry = await Sprite.load(config.assetHelmetCry!, images: game.images);
+      _helmetVertical = await Sprite.load(
+        config.assetHelmetVertical!,
+        images: game.images,
+      );
+      _helmetHorizontal = await Sprite.load(
+        config.assetHelmetHorizontal!,
+        images: game.images,
+      );
+      _helmetBack = await Sprite.load(
+        config.assetHelmetBack!,
+        images: game.images,
+      );
+      _helmetCry = await Sprite.load(
+        config.assetHelmetCry!,
+        images: game.images,
+      );
     }
   }
 
@@ -81,10 +99,25 @@ class WormHead extends PositionComponent {
     final cx = center.x;
     final cy = center.y;
 
+    final circleColor = config.circleColor;
+    if (circleColor != null) {
+      final radius = size.x * 0.42;
+      final fillPaint = Paint()..color = circleColor;
+      final borderPaint =
+          Paint()
+            ..color = config.circleBorderColor ?? const Color(0xFFFFFFFF)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = size.x * 0.08;
+      canvas.drawCircle(Offset(cx, cy), radius, fillPaint);
+      canvas.drawCircle(Offset(cx, cy), radius, borderPaint);
+      return;
+    }
+
     canvas.save();
     final bool flipX = direction == WormDirection.left;
     final bool isBackSprite = sprite == _spriteBack || sprite == _helmetBack;
-    final bool flipY = !_showCryFace && direction == WormDirection.up && !isBackSprite;
+    final bool flipY =
+        !_showCryFace && direction == WormDirection.up && !isBackSprite;
     if (flipX || flipY) {
       canvas.translate(cx, cy);
       if (flipX) canvas.scale(-1.0, 1.0);
@@ -96,7 +129,8 @@ class WormHead extends PositionComponent {
     switch (direction) {
       case WormDirection.left:
       case WormDirection.right:
-        drawCenter = center + Vector2(0, -size.y * config.antennaOffsetHorizontal);
+        drawCenter =
+            center + Vector2(0, -size.y * config.antennaOffsetHorizontal);
         break;
       case WormDirection.up:
         drawCenter = center + Vector2(0, size.y * config.antennaOffsetUp);
@@ -105,7 +139,12 @@ class WormHead extends PositionComponent {
         drawCenter = center + Vector2(0, -size.y * config.antennaOffsetDown);
         break;
     }
-    sprite.render(canvas, position: drawCenter, size: drawSize, anchor: Anchor.center);
+    sprite.render(
+      canvas,
+      position: drawCenter,
+      size: drawSize,
+      anchor: Anchor.center,
+    );
     canvas.restore();
   }
 
@@ -113,12 +152,14 @@ class WormHead extends PositionComponent {
   Sprite? get currentSprite {
     final useHelmet = _useHelmet && _helmetVertical != null;
     if (useHelmet) {
-      if (_showCryFace && _helmetCry != null && direction != WormDirection.up) return _helmetCry;
+      if (_showCryFace && _helmetCry != null && direction != WormDirection.up)
+        return _helmetCry;
       if (direction == WormDirection.up) return _helmetBack;
       if (direction == WormDirection.down) return _helmetVertical;
       return _helmetHorizontal;
     }
-    if (_showCryFace && _spriteCry != null && direction != WormDirection.up) return _spriteCry;
+    if (_showCryFace && _spriteCry != null && direction != WormDirection.up)
+      return _spriteCry;
     if (direction == WormDirection.up) return _spriteBack;
     if (direction == WormDirection.down) return _spriteVertical;
     return _spriteHorizontal;

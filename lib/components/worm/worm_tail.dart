@@ -18,13 +18,13 @@ class WormTail extends PositionComponent {
     required this.direction,
     required double segmentSize,
     Vector2? position,
-  })  : _segmentSize = segmentSize,
-        super(
-          position: position ?? Vector2.zero(),
-          size: Vector2.all(segmentSize),
-          anchor: Anchor.center,
-          priority: 9,
-        );
+  }) : _segmentSize = segmentSize,
+       super(
+         position: position ?? Vector2.zero(),
+         size: Vector2.all(segmentSize),
+         anchor: Anchor.center,
+         priority: 9,
+       );
 
   final WormTailConfig config;
   WormDirection direction;
@@ -75,7 +75,10 @@ class WormTail extends PositionComponent {
     if (game == null) return;
     final c = config.bodyConfig;
     _spriteVertical = await Sprite.load(c.assetVertical, images: game.images);
-    _spriteHorizontal = await Sprite.load(c.assetHorizontal, images: game.images);
+    _spriteHorizontal = await Sprite.load(
+      c.assetHorizontal,
+      images: game.images,
+    );
   }
 
   @override
@@ -89,6 +92,20 @@ class WormTail extends PositionComponent {
     final cx = center.x;
     final cy = center.y;
 
+    final circleColor = config.circleColor;
+    if (circleColor != null) {
+      final radius = size.x * 0.38;
+      final fillPaint = Paint()..color = circleColor;
+      final borderPaint =
+          Paint()
+            ..color = const Color(0xFFFFFFFF)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = size.x * 0.06;
+      canvas.drawCircle(Offset(cx, cy), radius, fillPaint);
+      canvas.drawCircle(Offset(cx, cy), radius, borderPaint);
+      return;
+    }
+
     canvas.save();
     final bool flipX = direction == WormDirection.left;
     final bool flipY = direction == WormDirection.up;
@@ -99,7 +116,12 @@ class WormTail extends PositionComponent {
       canvas.translate(-cx, -cy);
     }
     final drawSize = size * config.bodyConfig.imageScale;
-    sprite.render(canvas, position: center, size: drawSize, anchor: Anchor.center);
+    sprite.render(
+      canvas,
+      position: center,
+      size: drawSize,
+      anchor: Anchor.center,
+    );
     canvas.restore();
 
     final step = size.x * config.dotStepRatio;
@@ -107,7 +129,7 @@ class WormTail extends PositionComponent {
     final ux = _dotDirection.x;
     final uy = _dotDirection.y;
     final dotRadius = size.x * config.dotRadiusRatio;
-    final fillPaint = Paint()..color = GameConfig.snakePink;
+    final fillPaint = Paint()..color = config.dotColor ?? GameConfig.snakePink;
     for (var i = 0; i < 2; i++) {
       final d = startOffset + step * i;
       final dx = center.x + ux * d;
@@ -117,7 +139,8 @@ class WormTail extends PositionComponent {
   }
 
   Sprite? get currentSprite {
-    final isVertical = direction == WormDirection.up || direction == WormDirection.down;
+    final isVertical =
+        direction == WormDirection.up || direction == WormDirection.down;
     return isVertical ? _spriteVertical : _spriteHorizontal;
   }
 }

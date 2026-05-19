@@ -1,14 +1,13 @@
-/// Chỉ số sâu: tốc độ, độ cứng, v.v. Buff dừa: set currentHardness = originalBaseHardness + 1 khi thêm, trả về gốc khi xóa.
+/// Chỉ số sâu: tốc độ, độ cứng, v.v. Buff dừa: set currentHardness = originalBaseHardness + 10 khi thêm, trả về gốc khi xóa.
 class WormStats {
-  WormStats({
-    double? moveInterval,
-    int? baseHardness,
-  })  : _moveInterval = moveInterval ?? 0.28,
-        _originalBaseHardness = baseHardness ?? 1,
-        _currentHardness = baseHardness ?? 1;
+  WormStats({double? moveInterval, int? baseHardness})
+    : _moveInterval = moveInterval ?? 0.28,
+      _originalBaseHardness = baseHardness ?? 10,
+      _currentHardness = baseHardness ?? 10;
 
   double _moveInterval;
   final int _originalBaseHardness;
+
   /// Độ cứng hiện tại (dùng so va chạm). Set trong onItemEffectAdded/Removed khi buff dừa.
   int _currentHardness;
 

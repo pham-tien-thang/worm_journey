@@ -10,10 +10,7 @@ import '../worm/worm.dart';
 /// Sao vàng nhỏ xoay theo hình elip phía trên đầu khi có effect dizzy.
 /// Khi còn 1 giây: nhấp nháy vàng + trắng (fill và stroke). Khi remove dizzy thì không vẽ.
 class DizzyStarsComponent extends PositionComponent {
-  DizzyStarsComponent({
-    required this.segmentSize,
-    super.priority,
-  });
+  DizzyStarsComponent({required this.segmentSize, super.priority});
 
   final double segmentSize;
 
@@ -24,6 +21,7 @@ class DizzyStarsComponent extends PositionComponent {
   static const double _rotateSpeed = 2.5;
   static const double _starRadiusRatio = 0.14;
   static const double _blinkWhenSecondsLeft = 1.0;
+
   /// Cùng tốc độ nhấp nháy với radar magnet — rất nhanh.
   static const double _blinkInterval = 0.08;
 
@@ -45,12 +43,19 @@ class DizzyStarsComponent extends PositionComponent {
     final worm = parent;
     if (worm is! Worm) return;
     if (!worm.hasItemEffect(ItemType.dizzy.effectTypeId)) return;
+    if (worm.isPoisonedReverse) return;
 
     position.setFrom(worm.headLocalPosition);
     _angle += dt * _rotateSpeed;
   }
 
-  void _drawStar(Canvas canvas, Offset center, double radius, Color fill, Color stroke) {
+  void _drawStar(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Color fill,
+    Color stroke,
+  ) {
     const points = 5;
     final path = Path();
     for (var i = 0; i < points * 2; i++) {
@@ -58,23 +63,44 @@ class DizzyStarsComponent extends PositionComponent {
       final a = (i * math.pi / points) - math.pi / 2;
       final x = center.dx + r * math.cos(a);
       final y = center.dy + r * math.sin(a);
-      if (i == 0) path.moveTo(x, y);
-      else path.lineTo(x, y);
+      if (i == 0)
+        path.moveTo(x, y);
+      else
+        path.lineTo(x, y);
     }
     path.close();
-    canvas.drawPath(path, Paint()..color = fill..style = PaintingStyle.fill);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = fill
+        ..style = PaintingStyle.fill,
+    );
     final strokeWidth = (radius * 0.4).clamp(1.5, 3.0);
-    canvas.drawPath(path, Paint()..color = stroke..style = PaintingStyle.stroke..strokeWidth = strokeWidth);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = stroke
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth,
+    );
   }
 
   @override
   void render(Canvas canvas) {
     final worm = parent;
-    if (worm is! Worm || !worm.hasItemEffect(ItemType.dizzy.effectTypeId)) return;
+    if (worm is! Worm ||
+        !worm.hasItemEffect(ItemType.dizzy.effectTypeId) ||
+        worm.isPoisonedReverse) {
+      return;
+    }
 
     final timeLeft = _dizzyTimeLeft(worm);
-    final isBlinkZone = timeLeft != null && timeLeft > 0 && timeLeft <= _blinkWhenSecondsLeft;
-    final showWhite = isBlinkZone && worm.gameTime != null && ((worm.gameTime! / _blinkInterval).floor() % 2 == 1);
+    final isBlinkZone =
+        timeLeft != null && timeLeft > 0 && timeLeft <= _blinkWhenSecondsLeft;
+    final showWhite =
+        isBlinkZone &&
+        worm.gameTime != null &&
+        ((worm.gameTime! / _blinkInterval).floor() % 2 == 1);
     final fillColor = showWhite ? Colors.white : Colors.yellow;
     final strokeColor = showWhite ? Colors.white : Colors.yellow;
 

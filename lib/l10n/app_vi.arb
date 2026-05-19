@@ -11,7 +11,9 @@
   "stageLabel": "Chặng {n}",
   "@stageLabel": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "gameOver": "Game Over",
@@ -24,16 +26,24 @@
   "buyCoins": "Mua {price} {coinIcon}",
   "@buyCoins": {
     "placeholders": {
-      "price": {"type": "int"},
-      "coinIcon": {"type": "String"}
+      "price": {
+        "type": "int"
+      },
+      "coinIcon": {
+        "type": "String"
+      }
     }
   },
   "receive": "Nhận",
   "getCoins": "Nhận {amount} {coinIcon}",
   "@getCoins": {
     "placeholders": {
-      "amount": {"type": "int"},
-      "coinIcon": {"type": "String"}
+      "amount": {
+        "type": "int"
+      },
+      "coinIcon": {
+        "type": "String"
+      }
     }
   },
   "buttonJourney": "Hành trình",
@@ -69,7 +79,9 @@
   "waitCountdown": "Chờ {time}",
   "@waitCountdown": {
     "placeholders": {
-      "time": {"type": "String"}
+      "time": {
+        "type": "String"
+      }
     }
   },
   "itemBlockedInLevel": "Item bị cấm ở màn này",
@@ -81,7 +93,9 @@
   "victoryClaimReward": "Nhận thưởng {amount} xu",
   "@victoryClaimReward": {
     "placeholders": {
-      "amount": {"type": "int"}
+      "amount": {
+        "type": "int"
+      }
     }
   },
   "victoryExit": "Thoát",
@@ -92,8 +106,34 @@
   "victoryRewardReceived": "Đã nhận thưởng {amount} {coinIcon}",
   "@victoryRewardReceived": {
     "placeholders": {
-      "amount": {"type": "int"},
-      "coinIcon": {"type": "String"}
+      "amount": {
+        "type": "int"
+      },
+      "coinIcon": {
+        "type": "String"
+      }
     }
-  }
+  },
+  "@levelLabel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "@sceneLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@quantityShort": {
+    "placeholders": {
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "sceneNotFound": "Không tìm thấy cảnh"
 }

@@ -11,12 +11,16 @@
   "stageLabel": "Stage {n}",
   "@stageLabel": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "@sceneLabel": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "@levelLabel": {
@@ -43,16 +47,24 @@
   "buyCoins": "Buy {price} {coinIcon}",
   "@buyCoins": {
     "placeholders": {
-      "price": {"type": "int"},
-      "coinIcon": {"type": "String"}
+      "price": {
+        "type": "int"
+      },
+      "coinIcon": {
+        "type": "String"
+      }
     }
   },
   "receive": "Receive",
   "getCoins": "Get {amount} {coinIcon}",
   "@getCoins": {
     "placeholders": {
-      "amount": {"type": "int"},
-      "coinIcon": {"type": "String"}
+      "amount": {
+        "type": "int"
+      },
+      "coinIcon": {
+        "type": "String"
+      }
     }
   },
   "buttonJourney": "Journey",
@@ -88,7 +100,9 @@
   "waitCountdown": "Wait {time}",
   "@waitCountdown": {
     "placeholders": {
-      "time": {"type": "String"}
+      "time": {
+        "type": "String"
+      }
     }
   },
   "itemBlockedInLevel": "Item is blocked in this level",
@@ -100,7 +114,9 @@
   "victoryClaimReward": "Claim {amount} coins",
   "@victoryClaimReward": {
     "placeholders": {
-      "amount": {"type": "int"}
+      "amount": {
+        "type": "int"
+      }
     }
   },
   "victoryExit": "Exit",
@@ -111,8 +127,13 @@
   "victoryRewardReceived": "Reward received: {amount} {coinIcon}",
   "@victoryRewardReceived": {
     "placeholders": {
-      "amount": {"type": "int"},
-      "coinIcon": {"type": "String"}
+      "amount": {
+        "type": "int"
+      },
+      "coinIcon": {
+        "type": "String"
+      }
     }
-  }
+  },
+  "sceneNotFound": "Scene not found"
 }

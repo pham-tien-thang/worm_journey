@@ -1,42 +1,99 @@
 {
+  "guide_vi": "Ăn 15 🌿.\n\nLấy 🚩 để thắng.\n\n💣: phá vật cản và gây sát thương boss trong 3 ô.\n\nSâu xanh sẽ bỏ chạy khi bị tấn công kiệt sức.\n\n⚠️ Sâu xanh sẽ \"chiếm lấy\" bạn nếu bắt kịp.",
+  "guide_en": "Eat 15 🌿.\n\nGrab 🚩 to win.\n\n💣: destroys obstacles and damages the boss within 3 tiles.\n\nThe green worm flees when exhausted.\n\n⚠️ It will \"take over\" you if it catches you.",
+  "boss": "green_worm_boss",
+  "entryItemRewards": {
+    "bomb": 1
+  },
   "itemBlock": [
-    "snail",
-    "magnet",
-    "bomb",
     "antidote",
-    "speed",
-    "clock",
-    "freeze",
     "dizzy"
   ],
   "missions": [
     {
       "id": "leaves",
       "typeId": "prey_leaf",
-      "target": 10
+      "target": 15
     }
   ],
-  "timeLimitSeconds": 120,
-  "timeUrgentThresholdSeconds": 10,
+  "timeLimitSeconds": 145,
+  "timeUrgentThresholdSeconds": 30,
   "rule": "none",
+  "grid": {
+    "colorLight": "0xFFC8DCB3",
+    "colorLighter": "0xFFAFCB91"
+  },
   "outside": {
-    "color": "0xFF8B7355",
+    "color": "0xFF416D35",
     "icon": ""
   },
   "map": {
-    "obstacles": [],
+    "x_mark": [
+      "E7",
+      "F7",
+      "G7",
+      "Q7",
+      "R7",
+      "S7",
+      "C13",
+      "D13",
+      "K13",
+      "L13",
+      "M13",
+      "V13",
+      "H20",
+      "I20",
+      "P20",
+      "Q20",
+      "R20",
+      "B27",
+      "C27",
+      "N28",
+      "O28",
+      "W29",
+      "F33",
+      "G33",
+      "T34",
+      "U34"
+    ],
+    "stone": [
+      "K17",
+      "L17",
+      "M17",
+      "K18",
+      "M18",
+      "K19",
+      "L19",
+      "M19"
+    ],
     "prey": []
+  },
+  "missionCompleteSpawns": {
+    "prey_flag": [
+      "L18"
+    ],
+    "bomb": [
+      "L16"
+    ]
   },
   "spawnCycle": [
     {
       "objType": "prey_coconut",
-      "intervalSeconds": 10
+      "intervalSeconds": 10,
+      "maxOnMap": 1,
+      "pauseWhenPresent": true
+    },
+    {
+      "objType": "speed",
+      "intervalSeconds": 15,
+      "maxOnMap": 1,
+      "pauseWhenPresent": true
+    },
+    {
+      "objType": "snail",
+      "intervalSeconds": 20,
+      "maxOnMap": 1,
+      "pauseWhenPresent": true
     }
-  ],
-  "grid": {
-    "colorLight": "0xFF7B76CF",
-    "colorLighter": "0xFF33479D"
-  },
-  "guide_vi": "",
-  "guide_en": ""
+  ]
 }

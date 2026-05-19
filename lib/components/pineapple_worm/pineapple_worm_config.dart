@@ -1,4 +1,5 @@
 import 'package:flame/components.dart';
+import 'package:flutter/material.dart';
 
 import '../worm/worm_body_config.dart';
 import '../worm/worm_config.dart';
@@ -27,6 +28,8 @@ class PineappleWormHeadConfig extends WormHeadConfig {
         antennaOffsetHorizontal: 0.18,
         antennaOffsetUp: 0.1,
         antennaOffsetDown: 0.18,
+        circleColor: const Color(0xFFF9C74F),
+        circleBorderColor: const Color(0xFF8A5A00),
       );
 }
 
@@ -42,7 +45,12 @@ class PineappleWormBodyConfig extends WormBodyConfig {
 }
 
 class PineappleWormTailConfig extends WormTailConfig {
-  PineappleWormTailConfig() : super(bodyConfig: PineappleWormBodyConfig());
+  PineappleWormTailConfig()
+    : super(
+        bodyConfig: PineappleWormBodyConfig(),
+        circleColor: const Color(0xFFF9C74F),
+        dotColor: const Color(0xFF8A5A00),
+      );
 }
 
 class PineappleWormConfig extends WormConfig {

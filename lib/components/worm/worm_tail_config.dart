@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'worm_body_config.dart';
 
 /// Cấu hình đuôi sâu: dùng asset thân (vertical/horizontal), scale, tốc độ lerp chấm đuôi.
@@ -8,6 +10,8 @@ class WormTailConfig {
     this.dotStepRatio = 0.22,
     this.dotStartOffsetRatio = 0.55,
     this.dotRadiusRatio = 0.12,
+    this.circleColor,
+    this.dotColor,
   });
 
   /// Đuôi dùng chung asset với thân.
@@ -16,4 +20,6 @@ class WormTailConfig {
   final double dotStepRatio;
   final double dotStartOffsetRatio;
   final double dotRadiusRatio;
+  final Color? circleColor;
+  final Color? dotColor;
 }

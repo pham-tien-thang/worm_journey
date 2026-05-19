@@ -7,7 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../components/debug_grid_coordinates.dart';
+import '../../../components/green_boss_worm/green_boss_worm.dart';
+import '../../../components/green_boss_worm/green_boss_worm_config.dart';
 import '../../../components/grid_background.dart';
+import '../../../components/heart_burst_effect.dart';
 import '../../../components/pineapple_worm/pineapple_worm.dart';
 import '../../../components/pineapple_worm/pineapple_worm_config.dart';
 import '../../../components/pink_worm/pink_worm.dart';
@@ -42,6 +45,8 @@ class _DeathSnapshot {
     this.wormPositions,
     this.wormDirection,
     this.remainingTimeAtDeath,
+    this.greenBossSegmentCount,
+    this.greenBossLeavesEaten = 0,
   });
 
   final List<({Vector2 grid, String typeId})> entries;
@@ -56,6 +61,10 @@ class _DeathSnapshot {
 
   /// Chỉ có khi [cause] == bodyGone: thời gian còn lại lúc chết (để set tối thiểu 30s nếu < 30).
   final double? remainingTimeAtDeath;
+
+  /// Độ dài boss xanh tại thời điểm chết để revive giữ damage đã gây ra.
+  final int? greenBossSegmentCount;
+  final int greenBossLeavesEaten;
 }
 
 /// Game rắn săn mồi. Full màn hình. Đâm tường/đuôi trừ 1 đốt; còn đầu+đuôi thì thua.
@@ -77,13 +86,79 @@ class WormJourneyGame extends FlameGame
   /// occupied grid, spawn avoidance, buff expiry, và worm-vs-worm collision.
   final List<WormAgent> _botAgents = [];
   WormAgent? _pineappleAgent;
+  WormAgent? _greenBossAgent;
   bool get _isLevel2 => level == 2;
+  bool get _isLevel3 => level == 3;
+  bool get _isLevel4GreenBoss =>
+      level == 4 || _levelConfig.bossType == 'green_worm_boss';
+  bool get _isLevel5GreenBoss =>
+      level == 5 && _levelConfig.bossType == 'green_worm_boss';
   int _pineappleLeavesEaten = 0;
   static const int _pineappleLeavesLoseTarget = 10;
+  int _greenBossLeavesEaten = 0;
+  static const int _greenBossLeavesLoseTarget = 100;
+  static const double _pineappleMoveIntervalScale = 1.03;
+  static const double _level3PlayerMoveIntervalScale = 1.08;
+  static const int _greenBossLength = 8;
+  static const double _greenBossSpeedUnitIntervalScale = 0.1;
+  static const int _greenBossBaseSpeedUnits = 1;
+  static const int _level5GreenBossSpeedLagUnits = 8;
+  static const int _pineappleBaseHardness = 25;
+  static const int _greenBossHitSlowUnits = 3;
+  static const double _greenBossHitSlowDurationSeconds = 1.0;
+  static const double _greenBossMoveIntervalScale =
+      1.0 - _greenBossBaseSpeedUnits * _greenBossSpeedUnitIntervalScale;
+  static const double _greenBossEscapeMoveIntervalScale = 0.45;
+  static const int _greenBossPoisonStepInterval = 3;
+  static const int _greenBossMaxPoisonClouds = 48;
+  static const double _poisonDurationSeconds = 20.0;
+  static const double _poisonImmunitySeconds = 3.0;
+  static const int _level5GreenBossMaxBodySegments = 10;
+  static const int _level5GreenBossMaxLength =
+      _level5GreenBossMaxBodySegments + 2;
+  static const int _greenBossMinPlayerSpawnDistance = 8;
+  static final Set<String> _greenBossAvoidedItemTypeIds = {
+    ProjectType.snail.typeId,
+    ProjectType.bomb.typeId,
+  };
   double _pineappleMoveAccumulator = 0;
+  double _greenBossMoveAccumulator = 0;
+  double _greenBossHitSlowRemaining = 0;
+  int _greenBossCellsSincePoison = 0;
+  bool _greenBossEscaping = false;
+  double _poisonImmunityUntil = -1.0;
 
   /// Con sâu được điều khiển và lấy thông tin lên HUD.
   Worm get mainWorm => _playerAgent.worm;
+
+  double get _playerMoveInterval =>
+      level == 3
+          ? GameConfig.moveInterval * _level3PlayerMoveIntervalScale
+          : GameConfig.moveInterval;
+
+  double get _greenBossBaseMoveInterval =>
+      _isLevel5GreenBoss
+          ? GameConfig.moveInterval *
+              (1.0 +
+                  _level5GreenBossSpeedLagUnits *
+                      _greenBossSpeedUnitIntervalScale)
+          : GameConfig.moveInterval * _greenBossMoveIntervalScale;
+
+  double get _greenBossSpeedUnitMoveInterval =>
+      GameConfig.moveInterval * _greenBossSpeedUnitIntervalScale;
+
+  int get _greenBossMaxLengthForCurrentLevel =>
+      _isLevel5GreenBoss ? _level5GreenBossMaxLength : _greenBossLength;
+
+  int get _greenBossMaxBodySegmentsForHud =>
+      _isLevel5GreenBoss
+          ? _level5GreenBossMaxBodySegments
+          : _greenBossLength - 2;
+
+  int get _greenBossBodySegmentsForHud {
+    final bodySegments = (_greenBossAgent?.segmentCount ?? 2) - 2;
+    return max(0, min(bodySegments, _greenBossMaxBodySegmentsForHud));
+  }
 
   late WormGameContext _wormContext;
   late TypeObjConfig _typeObjConfig;
@@ -91,6 +166,10 @@ class WormJourneyGame extends FlameGame
 
   /// Accumulator theo typeId cho spawn theo chu kỳ (từ _levelConfig.spawnCycle).
   final Map<String, double> _spawnCycleAccumulators = {};
+  final Map<String, int> _spawnCyclePositionIndexes = {};
+  final Map<String, double> _poisonExpireTimes = {};
+  int _nextPreyLeafSequenceIndex = 0;
+  bool _missionCompleteSpawnsPlaced = false;
 
   /// Thời gian đã chơi (giây), tăng mỗi frame. Dùng cho buff expiry, HUD còn lại = [ _timeLimit ] - [_gameTime].
   double _gameTime = 0;
@@ -127,6 +206,10 @@ class WormJourneyGame extends FlameGame
 
   /// Snapshot khi game over: map + tiến trình nhiệm vụ (không có thời gian). Dùng khi bấm "Hồi sinh".
   _DeathSnapshot? _deathSnapshot;
+
+  /// Các x_mark sinh khi sâu hồng mất đốt. Khi chơi lại từ death snapshot,
+  /// xoá các ô này để không giữ lại vật cản do lượt chơi trước tạo ra.
+  final Set<String> _runtimeDeathXMarkKeys = {};
 
   /// Đã hồi sinh một lần trong ván này; chết lần hai không hiện nút Hồi sinh (trừ debug mode).
   bool _hasRevivedOnce = false;
@@ -182,6 +265,12 @@ class WormJourneyGame extends FlameGame
     }
     if (id == ItemType.antidote.effectTypeId) {
       mainWorm.addItemEffect(id, null);
+      _grantPoisonImmunity();
+      return;
+    }
+    if (id == ItemType.dizzy.effectTypeId &&
+        mainWorm.hasItemEffect(ItemType.dizzy.effectTypeId)) {
+      mainWorm.removeItemEffects([ItemType.dizzy.effectTypeId]);
       return;
     }
     final duration = BuffConfig.durationSecondsFor(id);
@@ -210,20 +299,50 @@ class WormJourneyGame extends FlameGame
   }
 
   /// Bom: phá entity trong bán kính [BuffConfig.bombRadiusTiles] ô quanh đầu rắn.
-  void _instantEffectBomb() {
-    final head = mainWorm.headGridPosition;
+  void _instantEffectBomb({WormAgent? source, bool damageGreenBoss = true}) {
+    final sourceAgent = source ?? _playerAgent;
+    final head = sourceAgent.worm.headGridPosition;
     final r = BuffConfig.bombRadiusTiles;
+    var hitGreenBoss = false;
     for (var dy = -r; dy <= r; dy++) {
       for (var dx = -r; dx <= r; dx++) {
         if (dx == 0 && dy == 0) continue;
-        if (dx.abs() + dy.abs() > r) continue;
+        if (max(dx.abs(), dy.abs()) > r) continue;
         final grid = Vector2(head.x + dx, head.y + dy);
         if (_mapEntityManager.hasBlockingEntityAt(grid)) {
           _destroyEntityAt(grid);
         }
+        if (!hitGreenBoss && _greenBossOccupiesGrid(grid)) {
+          hitGreenBoss = true;
+        }
       }
     }
-    if (mainWorm is PinkWorm) (mainWorm as PinkWorm).triggerBombExplosion();
+    if (damageGreenBoss && hitGreenBoss) {
+      _damageGreenBossFromBomb();
+    }
+    if (sourceAgent.worm is PinkWorm) {
+      (sourceAgent.worm as PinkWorm).triggerBombExplosion();
+    }
+  }
+
+  bool _greenBossOccupiesGrid(Vector2 grid) {
+    final agent = _greenBossAgent;
+    if (agent == null || _greenBossEscaping) return false;
+    return _wormContainsGrid(agent, grid);
+  }
+
+  void _damageGreenBossFromBomb() {
+    final agent = _greenBossAgent;
+    if (agent == null || _greenBossEscaping) return;
+    for (var i = 0; i < 2; i++) {
+      final currentAgent = _greenBossAgent;
+      if (currentAgent == null || _greenBossEscaping) return;
+      _loseSegmentFor(currentAgent);
+      if (currentAgent.segmentCount <= 2) {
+        _startGreenBossEscape();
+        return;
+      }
+    }
   }
 
   /// Magnet: hút mồi trong phạm vi [BuffConfig.magnetRangeTiles] ô (Chebyshev) từ đầu rắn, thuộc [magnetAttractTypeIds].
@@ -276,6 +395,27 @@ class WormJourneyGame extends FlameGame
     if (view != null) {
       _playerAgent.behavior.onEatEntity(_playerAgent, view, _wormContext);
     }
+  }
+
+  void _applyPoisonToPlayer() {
+    if (_isPlayerPoisonProtected) return;
+    final duration = BuffConfig.durationSecondsFor(ItemType.dizzy.effectTypeId);
+    if (duration > 0) {
+      mainWorm.addItemEffect(ItemType.dizzy.effectTypeId, _gameTime + duration);
+      if (mainWorm is PinkWorm) {
+        (mainWorm as PinkWorm).applyPoisonReverse();
+      } else {
+        mainWorm.setPoisonedReverse(true);
+      }
+    }
+    _loseSegmentFor(_playerAgent);
+  }
+
+  bool get _isPlayerPoisonProtected =>
+      mainWorm.isPoisonedReverse || _gameTime < _poisonImmunityUntil;
+
+  void _grantPoisonImmunity() {
+    _poisonImmunityUntil = _gameTime + _poisonImmunitySeconds;
   }
 
   /// Tăng tiến độ nhiệm vụ có [id] (mặc định 'mission2').
@@ -367,12 +507,37 @@ class WormJourneyGame extends FlameGame
     skin: 'pineapple',
   );
 
+  WormInfo get _pineapplePlayerInfo => const WormInfo(
+    id: 'player_pineapple',
+    name: 'Sâu dứa',
+    description: 'Sâu điều khiển bởi joystick',
+    wormType: WormType.playerControlled,
+    team: WormTeam.player,
+    skin: 'pineapple',
+  );
+
+  WormInfo get _greenBossInfo => const WormInfo(
+    id: 'boss_green_worm',
+    name: 'Sâu xanh',
+    description: 'Boss sâu xanh',
+    wormType: WormType.bot,
+    team: WormTeam.bot,
+    skin: 'green_boss',
+  );
+
   @override
   Future<void> onLoad() async {
     _deathSnapshot = null;
     _hasRevivedOnce = false;
     _coinsCollectedThisRun = 0;
     _lastCoinEatenGameTime = -999.0;
+    _greenBossMoveAccumulator = 0;
+    _greenBossHitSlowRemaining = 0;
+    _greenBossCellsSincePoison = 0;
+    _greenBossLeavesEaten = 0;
+    _greenBossEscaping = false;
+    _poisonExpireTimes.clear();
+    _poisonImmunityUntil = -1.0;
     _firstCoinSpawned = false;
     _gridRows = playableRowCount;
     camera.viewport = MaxViewport();
@@ -382,9 +547,13 @@ class WormJourneyGame extends FlameGame
 
     _levelConfig = await loadLevelJsonConfig(level);
     _typeObjConfig = await TypeObjConfig.load();
+    await _claimLevelEntryItemRewards();
     _missionConfigs = _levelConfig.missions;
     _missionCurrents = List.filled(_missionConfigs.length, 0);
     _timeLimit = _levelConfig.timeLimitSeconds;
+    _nextPreyLeafSequenceIndex = 0;
+    _missionCompleteSpawnsPlaced =
+        _levelConfig.missionCompleteSpawns.placements.isEmpty;
 
     final gridColors = _levelConfig.gridColors.toGridBackgroundColors();
     final outsideConfig = _levelConfig.outsideConfig.toOutsideGridConfig();
@@ -438,22 +607,17 @@ class WormJourneyGame extends FlameGame
 
     final initLen = shouldApplyDebug ? 10 : (_wormInitLength + 2);
     final maxLen = shouldApplyDebug ? null : _wormMaxLength;
-    final playerInitialPositions =
-        _isLevel2 ? _level2PlayerStartPositions(initLen) : null;
-    final worm = PinkWorm(
-      config: PinkWormConfig(
-        segmentSize: _segmentSize,
-        moveInterval: GameConfig.moveInterval,
-        initialLength: initLen,
-        maxLength: maxLen,
-        gridRows: _gridRows,
-        initialGridPositions: playerInitialPositions,
-        initialDirection:
-            playerInitialPositions != null ? WormDirection.right : null,
-      ),
-      info: WormInfo.playerDefault,
-      position: Vector2(0, playableStartRow * _segmentSize),
-      gridRowsOverride: _gridRows,
+    final playerInitialPositions = _initialPlayerPositions(initLen);
+    final playerInitialLength = playerInitialPositions?.length ?? initLen;
+    final worm = _createPlayerWorm(
+      segmentSize: _segmentSize,
+      moveInterval: _playerMoveInterval,
+      initialLength: playerInitialLength,
+      maxLength: maxLen,
+      gridRows: _gridRows,
+      initialGridPositions: playerInitialPositions,
+      initialDirection:
+          playerInitialPositions != null ? WormDirection.right : null,
     );
     world.add(worm);
     worm.setOnGrowAtMax(_onWormGrowAtMax);
@@ -462,7 +626,7 @@ class WormJourneyGame extends FlameGame
       final pineapple = PineappleWorm(
         config: PineappleWormConfig(
           segmentSize: _segmentSize,
-          moveInterval: GameConfig.moveInterval * 0.95,
+          moveInterval: GameConfig.moveInterval * _pineappleMoveIntervalScale,
           initialLength: initLen,
           maxLength: maxLen,
           gridRows: _gridRows,
@@ -481,13 +645,12 @@ class WormJourneyGame extends FlameGame
         WormAgent(worm: pineapple, behavior: PlayerWormBehavior()),
       );
     }
+    _spawnGreenBoss(avoid: mainWorm.allGridPositions);
 
     _registerMapEntityPlacers();
     _placeAllMapEntitiesFromConfig();
-    if (!_mapEntityManager.entries.any(
-      (e) => _typeObjConfig.isEatable(e.typeId),
-    ))
-      _spawnPrey();
+    _flagSpawned = _hasEntityOnMap(ProjectType.preyFlag.typeId);
+    _ensureLeafOnMap();
 
     if (shouldApplyDebug) {
       _debugGridCoordinates = DebugGridCoordinates(
@@ -518,12 +681,67 @@ class WormJourneyGame extends FlameGame
     return agent;
   }
 
+  Future<void> _claimLevelEntryItemRewards() async {
+    for (final reward in _levelConfig.entryItemRewards.entries) {
+      await SharedPrefsService.claimLevelEntryItemReward(
+        level,
+        reward.key,
+        reward.value,
+      );
+    }
+  }
+
+  Worm _createPlayerWorm({
+    required double segmentSize,
+    required double moveInterval,
+    required int initialLength,
+    required int? maxLength,
+    required int gridRows,
+    required List<Vector2>? initialGridPositions,
+    required WormDirection? initialDirection,
+  }) {
+    if (_isLevel5GreenBoss) {
+      return PineappleWorm(
+        config: PineappleWormConfig(
+          segmentSize: segmentSize,
+          moveInterval: moveInterval,
+          initialLength: initialLength,
+          maxLength: maxLength,
+          gridRows: gridRows,
+          initialGridPositions: initialGridPositions,
+          initialDirection: initialDirection,
+        ),
+        info: _pineapplePlayerInfo,
+        position: Vector2(0, playableStartRow * segmentSize),
+        gridRowsOverride: gridRows,
+      );
+    }
+    return PinkWorm(
+      config: PinkWormConfig(
+        segmentSize: segmentSize,
+        moveInterval: moveInterval,
+        initialLength: initialLength,
+        maxLength: maxLength,
+        gridRows: gridRows,
+        initialGridPositions: initialGridPositions,
+        initialDirection: initialDirection,
+      ),
+      info: WormInfo.playerDefault,
+      position: Vector2(0, playableStartRow * segmentSize),
+      gridRowsOverride: gridRows,
+    );
+  }
+
   void _removeBotAgents() {
     for (final agent in _botAgents) {
       agent.worm.removeFromParent();
     }
     _botAgents.clear();
     _pineappleAgent = null;
+    _greenBossAgent = null;
+    _greenBossEscaping = false;
+    _greenBossHitSlowRemaining = 0;
+    _greenBossCellsSincePoison = 0;
   }
 
   Iterable<WormAgent> _activeWormAgents() sync* {
@@ -535,6 +753,40 @@ class WormJourneyGame extends FlameGame
     for (final agent in _activeWormAgents()) {
       yield* agent.allGridPositions;
     }
+  }
+
+  void _spawnGreenBoss({
+    Iterable<Vector2> avoid = const [],
+    int length = _greenBossLength,
+  }) {
+    if (!_isLevel4GreenBoss) return;
+    final bossLength = length.clamp(2, _greenBossMaxLengthForCurrentLevel);
+    final positions = _greenBossStartPositions(
+      avoid: avoid,
+      length: bossLength,
+    );
+    final boss = GreenBossWorm(
+      config: GreenBossWormConfig(
+        segmentSize: _segmentSize,
+        moveInterval: _greenBossBaseMoveInterval,
+        initialLength: bossLength,
+        maxLength: _isLevel5GreenBoss ? _level5GreenBossMaxLength : bossLength,
+        gridRows: _gridRows,
+        initialGridPositions: positions,
+        initialDirection: WormDirection.left,
+      ),
+      info: _greenBossInfo,
+      position: Vector2(0, playableStartRow * _segmentSize),
+      gridRowsOverride: _gridRows,
+    );
+    world.add(boss);
+    _greenBossAgent = _registerBotAgent(
+      WormAgent(worm: boss, behavior: PlayerWormBehavior()),
+    );
+    _greenBossEscaping = bossLength <= 2;
+    _greenBossHitSlowRemaining = 0;
+    _greenBossCellsSincePoison = 0;
+    if (_greenBossEscaping) _startGreenBossEscape();
   }
 
   Set<String> _occupiedGridKeys() =>
@@ -552,6 +804,10 @@ class WormJourneyGame extends FlameGame
   static const int _firstLeafMinRow = 5;
 
   void _spawnPrey() {
+    if (_levelConfig.preyLeafSequence.isNotEmpty) {
+      _spawnNextConfiguredLeaf();
+      return;
+    }
     final occupied = _occupiedGridKeys();
     final isFirstLeaf =
         !_mapEntityManager.entries.any(
@@ -566,11 +822,102 @@ class WormJourneyGame extends FlameGame
     if (entry != null) world.add(entry.component);
   }
 
+  void _spawnNextConfiguredLeaf() {
+    while (_nextPreyLeafSequenceIndex < _levelConfig.preyLeafSequence.length) {
+      final grid = _levelConfig.preyLeafSequence[_nextPreyLeafSequenceIndex++];
+      if (_spawnAtGridIfFree(ProjectType.preyLeaf.typeId, grid)) {
+        _spawnPreyLeafCompanions(grid);
+        return;
+      }
+    }
+  }
+
+  String _gridCoordinateLabel(Vector2 grid) {
+    var col = grid.x.toInt() + 1;
+    var label = '';
+    while (col > 0) {
+      col--;
+      label = String.fromCharCode(0x41 + col % 26) + label;
+      col ~/= 26;
+    }
+    return '$label${grid.y.toInt() + 1}';
+  }
+
+  void _spawnPreyLeafCompanions(Vector2 leafGrid) {
+    final config =
+        _levelConfig.preyLeafCompanionSpawns[_gridCoordinateLabel(leafGrid)];
+    if (config == null) return;
+    for (final entry in config.placements.entries) {
+      for (final grid in entry.value) {
+        _spawnAtGridIfFree(entry.key, grid);
+      }
+    }
+  }
+
+  bool _spawnAtGridIfFree(String typeId, Vector2 grid) {
+    final key = _gridKey(grid);
+    if (_occupiedGridKeys().contains(key)) return false;
+    final comp = _mapEntityManager.placeAt(grid, typeId);
+    world.add(comp);
+    return true;
+  }
+
+  bool _hasEntityOnMap(String typeId) =>
+      _mapEntityManager.entries.any((e) => e.typeId == typeId);
+
+  bool _hasLeafOnMap() => _hasEntityOnMap(ProjectType.preyLeaf.typeId);
+
+  void _ensureLeafOnMap() {
+    if (!_hasLeafOnMap()) _spawnPrey();
+  }
+
+  void _syncLeafSequenceIndexFromState() {
+    if (_levelConfig.preyLeafSequence.isEmpty) return;
+    final leafMissionIndex = _missionConfigs.indexWhere(
+      (m) => m.id == 'leaves',
+    );
+    final eatenCount =
+        leafMissionIndex >= 0 && leafMissionIndex < _missionCurrents.length
+            ? _missionCurrents[leafMissionIndex]
+            : 0;
+    final leavesOnMap =
+        _mapEntityManager.entries
+            .where((e) => e.typeId == ProjectType.preyLeaf.typeId)
+            .length;
+    _nextPreyLeafSequenceIndex = (eatenCount + leavesOnMap).clamp(
+      0,
+      _levelConfig.preyLeafSequence.length,
+    );
+  }
+
+  void _reducePineappleScoreOnRevive() {
+    if (!_isLevel2) return;
+    _pineappleLeavesEaten = (_pineappleLeavesEaten - 5).clamp(
+      0,
+      _pineappleLeavesLoseTarget,
+    );
+  }
+
   /// Sinh một entity eatable theo [typeId] (từ config spawnCycle). Điều kiện đặc thù từng loại (vd. dừa: tối đa 1 quả, không sinh khi sâu đang buff dừa).
-  void _spawnByTypeId(String typeId) {
+  void _spawnByTypeId(
+    String typeId, {
+    List<Vector2> preferredPositions = const [],
+    bool preferredPositionsOnly = false,
+  }) {
     if (typeId == ProjectType.preyCoconut.typeId) {
       if (mainWorm.hasItemEffect(ProjectType.preyCoconut.typeId)) return;
       if (_mapEntityManager.entries.any((e) => e.typeId == typeId)) return;
+    }
+    if (preferredPositions.isNotEmpty) {
+      final start = _spawnCyclePositionIndexes[typeId] ?? 0;
+      for (var i = 0; i < preferredPositions.length; i++) {
+        final index = (start + i) % preferredPositions.length;
+        if (_spawnAtGridIfFree(typeId, preferredPositions[index])) {
+          _spawnCyclePositionIndexes[typeId] = index + 1;
+          return;
+        }
+      }
+      if (preferredPositionsOnly) return;
     }
     final occupied = _occupiedGridKeys();
     final entry = _mapEntityManager.spawn(
@@ -579,6 +926,40 @@ class WormJourneyGame extends FlameGame
       isCellVisible: _isGridInCameraView,
     );
     if (entry != null) world.add(entry.component);
+  }
+
+  bool get _greenBossObjectiveComplete =>
+      !_isLevel5GreenBoss || _greenBossAgent == null || _greenBossEscaping;
+
+  bool get _levelObjectivesReadyForFlag =>
+      _allMissionsComplete() && _greenBossObjectiveComplete;
+
+  void _placeMissionCompleteSpawnsIfNeeded() {
+    if (_missionCompleteSpawnsPlaced || !_levelObjectivesReadyForFlag) return;
+    var placedAny = false;
+    for (final entry in _levelConfig.missionCompleteSpawns.placements.entries) {
+      for (final grid in entry.value) {
+        final placed = _spawnAtGridIfFree(entry.key, grid);
+        placedAny = placed || placedAny;
+        if (placed && entry.key == ProjectType.preyFlag.typeId) {
+          _flagSpawned = true;
+        }
+      }
+    }
+    _missionCompleteSpawnsPlaced =
+        placedAny || _levelConfig.missionCompleteSpawns.placements.isEmpty;
+  }
+
+  void _trySpawnFlagForObjectives() {
+    if (_gameOver) return;
+    _placeMissionCompleteSpawnsIfNeeded();
+    if (!_levelObjectivesReadyForFlag || _flagSpawned) return;
+    if (_isLevel2) {
+      _setVictory();
+      return;
+    }
+    _spawnFlag();
+    _flagSpawned = true;
   }
 
   Vector2? _nearestLeafGridFrom(Vector2 from) {
@@ -632,6 +1013,30 @@ class WormJourneyGame extends FlameGame
   List<Vector2> _level2PlayerStartPositions(int length) =>
       _linearWormPositions(WormDirection.right, length, rowOffset: 4);
 
+  List<Vector2>? _initialPlayerPositions(int length) {
+    final configured = _levelConfig.initialWormPositions;
+    if (configured.length >= 2) return configured;
+    if (_isLevel2) return _level2PlayerStartPositions(length);
+    if (_isLevel4GreenBoss) return _level4PlayerStartPositions(length);
+    return null;
+  }
+
+  List<Vector2> _level4PlayerStartPositions(int length) {
+    final bossPositions = _greenBossStartPositions();
+    const rowOffsets = [14, 12, 10, 8, 6, 4, 0, -4, -8];
+    for (final offset in rowOffsets) {
+      final positions = _linearWormPositions(
+        WormDirection.right,
+        length,
+        rowOffset: offset,
+      );
+      if (_isPlayerSpawnFarFromGreenBoss(positions, bossPositions)) {
+        return positions;
+      }
+    }
+    return _linearWormPositions(WormDirection.right, length, rowOffset: 10);
+  }
+
   List<Vector2> _level2PineappleStartPositions(
     int length, {
     Iterable<Vector2> avoid = const [],
@@ -646,6 +1051,59 @@ class WormJourneyGame extends FlameGame
       if (!_positionsOverlap(positions, avoid)) return positions;
     }
     return _linearWormPositions(WormDirection.left, length, rowOffset: -4);
+  }
+
+  bool _isPlayerSpawnFarFromGreenBoss(
+    List<Vector2> playerPositions,
+    Iterable<Vector2> bossPositions,
+  ) {
+    return _minGridDistanceBetween(playerPositions, bossPositions) >=
+        _greenBossMinPlayerSpawnDistance;
+  }
+
+  int _minGridDistanceBetween(Iterable<Vector2> a, Iterable<Vector2> b) {
+    var best = 1 << 30;
+    for (final left in a) {
+      for (final right in b) {
+        final d =
+            (left.x - right.x).abs().toInt() + (left.y - right.y).abs().toInt();
+        if (d < best) best = d;
+      }
+    }
+    return best;
+  }
+
+  List<Vector2> _greenBossStartPositions({
+    Iterable<Vector2> avoid = const [],
+    int length = _greenBossLength,
+  }) {
+    final bossLength = length.clamp(2, _greenBossMaxLengthForCurrentLevel);
+    const rowsFromTop = [2, 4, 6, 8, 10];
+    final occupied = avoid.map(_gridKey).toSet();
+    for (final row in rowsFromTop) {
+      final head = Vector2(
+        (GameConfig.gridColumns - bossLength).toDouble(),
+        row.toDouble(),
+      );
+      final positions = List<Vector2>.generate(
+        bossLength,
+        (i) => Vector2(head.x + i, head.y),
+      );
+      final inBounds = positions.every(
+        (p) =>
+            p.x >= 0 &&
+            p.x < GameConfig.gridColumns &&
+            p.y >= 0 &&
+            p.y < _gridRows,
+      );
+      if (!inBounds) continue;
+      if (positions.any((p) => occupied.contains(_gridKey(p)))) continue;
+      return positions;
+    }
+    return List<Vector2>.generate(
+      bossLength,
+      (i) => Vector2((GameConfig.gridColumns - 1 - i).toDouble(), 2),
+    );
   }
 
   bool _isBlockedForAgentPath(Vector2 grid, WormAgent agent) {
@@ -693,6 +1151,418 @@ class WormJourneyGame extends FlameGame
     return best;
   }
 
+  int _gridDistance(Vector2 a, Vector2 b) =>
+      (a.x - b.x).abs().toInt() + (a.y - b.y).abs().toInt();
+
+  int _gridRadiusDistance(Vector2 a, Vector2 b) =>
+      max((a.x - b.x).abs().toInt(), (a.y - b.y).abs().toInt());
+
+  ({Vector2 target, int distance})? _nearestReachablePlayerPartForGreenBoss(
+    WormAgent agent,
+  ) {
+    ({Vector2 target, int distance})? best;
+    for (final part in mainWorm.allGridPositions) {
+      final distance = _greenBossPathDistance(agent, part);
+      if (distance == null) continue;
+      if (best == null || distance < best.distance) {
+        best = (target: part, distance: distance);
+      }
+    }
+    return best;
+  }
+
+  int? _greenBossPathDistance(WormAgent agent, Vector2 target) {
+    final head = agent.worm.headGridPosition;
+    if (head.x == target.x && head.y == target.y) return 0;
+
+    final current = agent.worm.currentDirection;
+    final queue = <Vector2>[head];
+    final distances = <String, int>{_gridKey(head): 0};
+
+    for (var index = 0; index < queue.length; index++) {
+      final currentGrid = queue[index];
+      final currentDistance = distances[_gridKey(currentGrid)]!;
+      for (final direction in _allDirections) {
+        if (currentGrid.x == head.x &&
+            currentGrid.y == head.y &&
+            direction.isOppositeOf(current)) {
+          continue;
+        }
+        final next = currentGrid + direction.toVector();
+        final key = _gridKey(next);
+        if (distances.containsKey(key)) continue;
+        if (_isBlockedForGreenBossPath(next, agent, target)) continue;
+        final nextDistance = currentDistance + 1;
+        if (next.x == target.x && next.y == target.y) return nextDistance;
+        distances[key] = nextDistance;
+        queue.add(next);
+      }
+    }
+    return null;
+  }
+
+  Vector2? _nearbyPriorityFoodForGreenBoss(
+    WormAgent agent,
+    int? playerPathDistance,
+  ) {
+    final head = agent.worm.headGridPosition;
+    Vector2? target;
+    var best = 1 << 30;
+
+    for (final entry in _mapEntityManager.entries) {
+      if (entry.typeId != ProjectType.preyLeaf.typeId &&
+          entry.typeId != ProjectType.speed.typeId) {
+        continue;
+      }
+      final radiusDistance = _gridRadiusDistance(head, entry.grid);
+      if (radiusDistance > 2) continue;
+
+      final pathDistance = _greenBossPathDistance(agent, entry.grid);
+      if (pathDistance == null) continue;
+
+      // Nếu item ở gần theo toạ độ nhưng bị thân chắn làm đường vòng xa,
+      // và sâu hồng gần đầu hơn theo đường đi thực tế, bỏ item để lao vào sâu hồng.
+      if (playerPathDistance != null && playerPathDistance <= pathDistance) {
+        continue;
+      }
+
+      final score =
+          pathDistance + (entry.typeId == ProjectType.speed.typeId ? 0 : 4);
+      if (score < best) {
+        best = score;
+        target = entry.grid;
+      }
+    }
+    return target;
+  }
+
+  Vector2? _nearestReachableLeafForGreenBoss(WormAgent agent) {
+    Vector2? target;
+    var best = 1 << 30;
+    for (final entry in _mapEntityManager.entries) {
+      if (entry.typeId != ProjectType.preyLeaf.typeId) continue;
+      final distance = _greenBossPathDistance(agent, entry.grid);
+      if (distance == null) continue;
+      if (distance < best) {
+        best = distance;
+        target = entry.grid;
+      }
+    }
+    return target;
+  }
+
+  bool _isBlockedForGreenBossPath(
+    Vector2 grid,
+    WormAgent agent,
+    Vector2 target,
+  ) {
+    if (grid.x < 0 ||
+        grid.x >= GameConfig.gridColumns ||
+        grid.y < 0 ||
+        grid.y >= _gridRows) {
+      return true;
+    }
+    if (!(grid.x == target.x && grid.y == target.y)) {
+      final entry = _mapEntityManager.getAt(grid);
+      if (entry != null &&
+          _greenBossAvoidedItemTypeIds.contains(entry.typeId)) {
+        return true;
+      }
+    }
+    if (_mapEntityManager.hasBlockingEntityAt(grid)) return true;
+    for (final part in agent.allGridPositions) {
+      if (part.x == grid.x && part.y == grid.y) return true;
+    }
+    final other = _wormAtGrid(grid, except: agent);
+    return other != null && !(grid.x == target.x && grid.y == target.y);
+  }
+
+  WormDirection? _firstGreenBossPathDirection(WormAgent agent, Vector2 target) {
+    final head = agent.worm.headGridPosition;
+    final current = agent.worm.currentDirection;
+    if (head.x == target.x && head.y == target.y) return null;
+
+    final queue = <Vector2>[head];
+    final cameFrom = <String, ({String previous, WormDirection direction})>{};
+    final seen = <String>{_gridKey(head)};
+    var foundKey = '';
+
+    for (var index = 0; index < queue.length; index++) {
+      final currentGrid = queue[index];
+      if (currentGrid.x == target.x && currentGrid.y == target.y) {
+        foundKey = _gridKey(currentGrid);
+        break;
+      }
+      for (final direction in _allDirections) {
+        if (currentGrid.x == head.x &&
+            currentGrid.y == head.y &&
+            direction.isOppositeOf(current)) {
+          continue;
+        }
+        final next = currentGrid + direction.toVector();
+        final key = _gridKey(next);
+        if (seen.contains(key)) continue;
+        if (_isBlockedForGreenBossPath(next, agent, target)) continue;
+        seen.add(key);
+        cameFrom[key] = (previous: _gridKey(currentGrid), direction: direction);
+        queue.add(next);
+      }
+    }
+
+    if (foundKey.isEmpty) return null;
+    var key = foundKey;
+    var step = cameFrom[key];
+    while (step != null && step.previous != _gridKey(head)) {
+      key = step.previous;
+      step = cameFrom[key];
+    }
+    return step?.direction;
+  }
+
+  WormDirection _chooseGreenBossDirection(WormAgent agent) {
+    final current = agent.worm.currentDirection;
+    if (_isLevel5GreenBoss) {
+      final leafTarget = _nearestReachableLeafForGreenBoss(agent);
+      if (leafTarget != null) {
+        final pathDirection = _firstGreenBossPathDirection(agent, leafTarget);
+        if (pathDirection != null) return pathDirection;
+      }
+    }
+    final playerTarget = _nearestReachablePlayerPartForGreenBoss(agent);
+    final itemTarget = _nearbyPriorityFoodForGreenBoss(
+      agent,
+      playerTarget?.distance,
+    );
+    final target = itemTarget ?? playerTarget?.target;
+    if (target == null) return current;
+
+    final pathDirection = _firstGreenBossPathDirection(agent, target);
+    if (pathDirection != null) return pathDirection;
+
+    final head = agent.worm.headGridPosition;
+    WormDirection? best;
+    var bestScore = 1 << 30;
+    for (final direction in [current, ..._allDirections]) {
+      if (direction.isOppositeOf(current)) continue;
+      final next = head + direction.toVector();
+      if (_isBlockedForGreenBossPath(next, agent, target)) continue;
+      final score = _gridDistance(next, target);
+      if (score < bestScore) {
+        bestScore = score;
+        best = direction;
+      }
+    }
+
+    // Không tự đâm thân nếu còn bất kỳ hướng hợp lệ nào. Nếu không có hướng hợp lệ,
+    // trả current để movement gateway xử lý va chạm như các bot khác.
+    return best ?? current;
+  }
+
+  void _startGreenBossEscape() {
+    final agent = _greenBossAgent;
+    if (agent == null) return;
+    _greenBossEscaping = true;
+    _greenBossHitSlowRemaining = 0;
+    _greenBossCellsSincePoison = 0;
+    agent.worm.setMoveInterval(
+      GameConfig.moveInterval * _greenBossEscapeMoveIntervalScale,
+    );
+    _trySpawnFlagForObjectives();
+  }
+
+  void _triggerGreenBossHitSlow() {
+    final agent = _greenBossAgent;
+    if (agent == null || _greenBossEscaping) return;
+    _greenBossHitSlowRemaining = _greenBossHitSlowDurationSeconds;
+    agent.worm.setMoveInterval(_greenBossSlowedMoveInterval(agent));
+  }
+
+  void _updateGreenBossHitSlow(double dt) {
+    final agent = _greenBossAgent;
+    if (agent == null || _greenBossEscaping) return;
+    if (_greenBossHitSlowRemaining <= 0) return;
+
+    _greenBossHitSlowRemaining -= dt;
+    if (_greenBossHitSlowRemaining <= 0) {
+      _greenBossHitSlowRemaining = 0;
+      agent.worm.setMoveInterval(_greenBossUnslowedMoveInterval(agent));
+      return;
+    }
+
+    agent.worm.setMoveInterval(_greenBossSlowedMoveInterval(agent));
+  }
+
+  double _greenBossUnslowedMoveInterval(WormAgent agent) {
+    final worm = agent.worm;
+    if (agent.hasItemEffect(ItemType.speed.effectTypeId) && worm is PinkWorm) {
+      return _greenBossBaseMoveInterval * worm.speedMoveIntervalScale;
+    }
+    if (agent.hasItemEffect(ItemType.snail.effectTypeId) && worm is PinkWorm) {
+      return _greenBossBaseMoveInterval * worm.snailMoveIntervalScale;
+    }
+    return _greenBossBaseMoveInterval;
+  }
+
+  double _greenBossSlowedMoveInterval(WormAgent agent) {
+    return _greenBossUnslowedMoveInterval(agent) +
+        _greenBossHitSlowUnits * _greenBossSpeedUnitMoveInterval;
+  }
+
+  bool _isGreenBossGoneOutsideMap(WormAgent agent) {
+    final head = agent.worm.headGridPosition;
+    return head.x < -3 ||
+        head.x >= GameConfig.gridColumns + 3 ||
+        head.y < -3 ||
+        head.y >= _gridRows + 3;
+  }
+
+  bool _isBlockedForGreenBossEscape(Vector2 grid, WormAgent agent) {
+    if (!_isGridInBounds(grid)) return false;
+    if (_mapEntityManager.hasEntityAt(grid)) return true;
+    for (final part in agent.allGridPositions) {
+      if (part.x == grid.x && part.y == grid.y) return true;
+    }
+    return _wormAtGrid(grid, except: agent) != null;
+  }
+
+  int _greenBossEscapeScore(Vector2 grid) {
+    final left = grid.x.toInt() + 4;
+    final right = GameConfig.gridColumns - grid.x.toInt() + 2;
+    final top = grid.y.toInt() + 4;
+    final bottom = _gridRows - grid.y.toInt() + 2;
+    return [left, right, top, bottom].reduce(min);
+  }
+
+  WormDirection _chooseGreenBossEscapeDirection(WormAgent agent) {
+    final head = agent.worm.headGridPosition;
+    WormDirection? best;
+    var bestScore = 1 << 30;
+    for (final direction in _allDirections) {
+      final next = head + direction.toVector();
+      if (_isBlockedForGreenBossEscape(next, agent)) continue;
+      final score = _greenBossEscapeScore(next);
+      if (score < bestScore) {
+        bestScore = score;
+        best = direction;
+      }
+    }
+    return best ?? agent.worm.currentDirection;
+  }
+
+  void _advanceEscapingGreenBoss(WormAgent agent) {
+    final direction = _chooseGreenBossEscapeDirection(agent);
+    agent.worm.forceDirection(direction);
+    agent.step();
+    if (_isGreenBossGoneOutsideMap(agent)) {
+      agent.worm.removeFromParent();
+      _botAgents.remove(agent);
+      _greenBossAgent = null;
+      _greenBossEscaping = false;
+      _greenBossHitSlowRemaining = 0;
+      _greenBossCellsSincePoison = 0;
+      _trySpawnFlagForObjectives();
+    }
+  }
+
+  void _consumeEntityForBot(WormAgent agent, MapEntityEntry consumed) {
+    consumed.component.removeFromParent();
+    if (consumed.typeId == ProjectType.preyLeaf.typeId) {
+      if (!identical(agent, _greenBossAgent) || _isLevel5GreenBoss) {
+        agent.grow();
+      }
+      agent.worm.playSwallowPreyEffect();
+      if (identical(agent, _greenBossAgent)) {
+        _greenBossLeavesEaten = (_greenBossLeavesEaten + 1).clamp(
+          0,
+          _greenBossLeavesLoseTarget,
+        );
+        if (_greenBossLeavesEaten >= _greenBossLeavesLoseTarget) {
+          _setGameOver(_GameOverCause.bodyGone);
+          return;
+        }
+      }
+      if (identical(agent, _pineappleAgent)) {
+        _pineappleLeavesEaten = (_pineappleLeavesEaten + 1).clamp(
+          0,
+          _pineappleLeavesLoseTarget,
+        );
+        if (_pineappleLeavesEaten >= _pineappleLeavesLoseTarget) {
+          _setGameOver(_GameOverCause.bodyGone);
+          return;
+        }
+      }
+      if (!_hasLeafOnMap()) _spawnPrey();
+      return;
+    }
+    if (identical(agent, _greenBossAgent) &&
+        consumed.typeId == ProjectType.bomb.typeId) {
+      _instantEffectBomb(source: agent, damageGreenBoss: false);
+      return;
+    }
+
+    final view = EntityModels.view(consumed.typeId);
+    final effectId = view?.effectTypeId;
+    if (effectId == null) return;
+    final duration = BuffConfig.durationSecondsFor(effectId);
+    if (duration > 0) {
+      agent.addItemEffect(effectId, _gameTime + duration);
+      if (identical(agent, _greenBossAgent) && _greenBossHitSlowRemaining > 0) {
+        agent.worm.setMoveInterval(_greenBossSlowedMoveInterval(agent));
+      }
+    }
+  }
+
+  void _dropGreenBossPoisonAt(Vector2 grid) {
+    if (!_isLevel5GreenBoss) return;
+    if (!_isGridInBounds(grid)) return;
+    if (_mapEntityManager.getAt(grid) != null) return;
+    if (_wormAtGrid(grid) != null) return;
+    final poisonEntries =
+        _mapEntityManager.entries
+            .where((e) => e.typeId == ProjectType.poison.typeId)
+            .toList();
+    if (poisonEntries.length >= _greenBossMaxPoisonClouds) {
+      final removed = _mapEntityManager.removeAt(poisonEntries.first.grid);
+      removed?.component.removeFromParent();
+      _poisonExpireTimes.remove(_gridKey(poisonEntries.first.grid));
+    }
+    final comp = _mapEntityManager.placeAt(
+      grid,
+      ProjectType.poison.typeId,
+      withSpawnEffect: true,
+    );
+    _poisonExpireTimes[_gridKey(grid)] = _gameTime + _poisonDurationSeconds;
+    world.add(comp);
+  }
+
+  void _updatePoisonCloudLifetimes() {
+    if (_poisonExpireTimes.isEmpty) return;
+    final expiredKeys =
+        _poisonExpireTimes.entries
+            .where((entry) => entry.value <= _gameTime)
+            .map((entry) => entry.key)
+            .toList();
+    if (expiredKeys.isEmpty) return;
+    for (final key in expiredKeys) {
+      _poisonExpireTimes.remove(key);
+      for (final entry in _mapEntityManager.entries) {
+        if (_gridKey(entry.grid) != key) continue;
+        if (entry.typeId != ProjectType.poison.typeId) continue;
+        final removed = _mapEntityManager.removeAt(entry.grid);
+        removed?.component.removeFromParent();
+        break;
+      }
+    }
+  }
+
+  void _onGreenBossAdvanced(Vector2 tailBeforeStep) {
+    if (!_isLevel5GreenBoss || _greenBossEscaping) return;
+    _greenBossCellsSincePoison++;
+    if (_greenBossCellsSincePoison < _greenBossPoisonStepInterval) return;
+    _greenBossCellsSincePoison = 0;
+    _dropGreenBossPoisonAt(tailBeforeStep);
+  }
+
   void _updatePineappleWorm(double dt) {
     final agent = _pineappleAgent;
     if (agent == null) return;
@@ -705,34 +1575,42 @@ class WormJourneyGame extends FlameGame
       _pineappleMoveAccumulator -= interval;
       final nextDir = _choosePineappleDirection(agent);
       if (!_advanceAgentOneStep(agent, nextDirection: nextDir)) return;
+      final entryAtHead = _mapEntityManager.getAt(worm.headGridPosition);
+      if (entryAtHead?.typeId == ProjectType.poison.typeId) continue;
       final consumed = _mapEntityManager.consumeAt(worm.headGridPosition);
       if (consumed == null) continue;
-      consumed.component.removeFromParent();
-      if (consumed.typeId == ProjectType.preyLeaf.typeId) {
-        worm.grow();
-        worm.playSwallowPreyEffect();
-        _pineappleLeavesEaten = (_pineappleLeavesEaten + 1).clamp(
-          0,
-          _pineappleLeavesLoseTarget,
-        );
-        if (_pineappleLeavesEaten >= _pineappleLeavesLoseTarget) {
-          _setGameOver(_GameOverCause.bodyGone);
-          return;
-        }
-        if (_mapEntityManager.entries
-            .where((e) => e.typeId == ProjectType.preyLeaf.typeId)
-            .isEmpty) {
-          _spawnPrey();
-        }
+      _consumeEntityForBot(agent, consumed);
+    }
+  }
+
+  void _updateGreenBossWorm(double dt) {
+    final agent = _greenBossAgent;
+    if (agent == null) return;
+    _updateGreenBossHitSlow(dt);
+    final worm = agent.worm;
+    _greenBossMoveAccumulator += dt;
+    final interval = worm.moveInterval;
+    worm.setVisualProgress(
+      Curves.linear.transform(
+        (_greenBossMoveAccumulator / interval).clamp(0.0, 1.0),
+      ),
+    );
+    while (_greenBossMoveAccumulator >= interval) {
+      _greenBossMoveAccumulator -= interval;
+      if (_greenBossEscaping) {
+        _advanceEscapingGreenBoss(agent);
+        if (_greenBossAgent == null) return;
         continue;
       }
-      final view = EntityModels.view(consumed.typeId);
-      if (view != null && view.effectTypeId != null) {
-        final duration = BuffConfig.durationSecondsFor(view.effectTypeId!);
-        if (duration > 0) {
-          worm.addItemEffect(view.effectTypeId!, _gameTime + duration);
-        }
-      }
+      final nextDir = _chooseGreenBossDirection(agent);
+      final tailBeforeStep = worm.tailGridPosition.clone();
+      if (!_advanceAgentOneStep(agent, nextDirection: nextDir)) return;
+      _onGreenBossAdvanced(tailBeforeStep);
+      final entryAtHead = _mapEntityManager.getAt(worm.headGridPosition);
+      if (entryAtHead?.typeId == ProjectType.poison.typeId) continue;
+      final consumed = _mapEntityManager.consumeAt(worm.headGridPosition);
+      if (consumed == null) continue;
+      _consumeEntityForBot(agent, consumed);
     }
   }
 
@@ -773,12 +1651,11 @@ class WormJourneyGame extends FlameGame
     }
   }
 
-  /// Duyệt config map: typeId (string) → placeAt cho từng ô. Bỏ qua prey_flag — cờ chỉ spawn khi hoàn thành nhiệm vụ.
+  /// Duyệt config map: typeId (string) → placeAt cho từng ô.
   /// Không đặt entity lên ô đang bị thân sâu hoặc entity khác chiếm.
   void _placeAllMapEntitiesFromConfig() {
     Set<String> occupied = _occupiedGridKeys();
     for (final entry in _levelConfig.mapConfig.placements.entries) {
-      if (entry.key == ProjectType.preyFlag.typeId) continue;
       final place = _placeEntityAt[entry.key];
       if (place == null) continue;
       for (final grid in entry.value) {
@@ -887,6 +1764,14 @@ class WormJourneyGame extends FlameGame
           cause == _GameOverCause.bodyGone
               ? (_timeLimit - _gameTime).clamp(0.0, double.infinity)
               : null,
+      greenBossSegmentCount:
+          _isLevel4GreenBoss
+              ? min(
+                _greenBossAgent?.segmentCount ?? 0,
+                _greenBossMaxLengthForCurrentLevel,
+              )
+              : null,
+      greenBossLeavesEaten: _greenBossLeavesEaten,
     );
     if (_hasRevivedOnce && !shouldApplyDebug) {
       overlays.add('GameOverNoRevive');
@@ -920,22 +1805,6 @@ class WormJourneyGame extends FlameGame
     final currentMaxLevel = await SharedPrefsService.getMaxLevelIndexUnlock();
     final newLevel = currentMaxLevel < level + 1 ? level + 1 : currentMaxLevel;
     await SharedPrefsService.setMaxLevelIndexUnlock(newLevel);
-    if (level == 1 && currentMaxLevel < 2) {
-      final magnet = await SharedPrefsService.getItemQuantity(
-        ItemType.magnet.effectTypeId,
-      );
-      final speed = await SharedPrefsService.getItemQuantity(
-        ItemType.speed.effectTypeId,
-      );
-      await SharedPrefsService.setItemQuantity(
-        ItemType.magnet.effectTypeId,
-        magnet + 1,
-      );
-      await SharedPrefsService.setItemQuantity(
-        ItemType.speed.effectTypeId,
-        speed + 1,
-      );
-    }
     final newSceneFromLevel = ((newLevel - 1) ~/ 5) + 1;
     final currentMaxScene = await SharedPrefsService.getMaxSceneIndexUnlock();
     if (newSceneFromLevel > currentMaxScene) {
@@ -972,7 +1841,7 @@ class WormJourneyGame extends FlameGame
     return _mapEntityManager.getAt(grid) == null;
   }
 
-  /// Ô trong lưới và trống, hoặc có vật cản độ cứng 1 (chỉ dùng khi không còn vùng an toàn).
+  /// Ô trong lưới và trống, hoặc có vật cản độ cứng 10 (chỉ dùng khi không còn vùng an toàn).
   bool _isCellUsableForSpawn(Vector2 grid) {
     const cols = GameConfig.gridColumns;
     final rows = _gridRows;
@@ -981,7 +1850,7 @@ class WormJourneyGame extends FlameGame
     final entry = _mapEntityManager.getAt(grid);
     if (entry == null) return true;
     return _typeObjConfig.isBlocking(entry.typeId) &&
-        EntityModels.hardness(entry.typeId) == 1;
+        EntityModels.hardness(entry.typeId) == 10;
   }
 
   /// Số ô liên tiếp theo [dir] từ [head] (không tính head) hoàn toàn trống.
@@ -999,7 +1868,7 @@ class WormJourneyGame extends FlameGame
     return count;
   }
 
-  /// Số ô liên tiếp theo [dir] từ [head] là trống hoặc vật cản độ cứng 1 (dùng khi đã phải phá chỗ).
+  /// Số ô liên tiếp theo [dir] từ [head] là trống hoặc vật cản độ cứng 10 (dùng khi đã phải phá chỗ).
   int _countEmptyOrClearableAhead(Vector2 head, WormDirection dir) {
     const cols = GameConfig.gridColumns;
     final rows = _gridRows;
@@ -1011,7 +1880,7 @@ class WormJourneyGame extends FlameGame
       if (entry == null) {
         count++;
       } else if (_typeObjConfig.isBlocking(entry.typeId) &&
-          EntityModels.hardness(entry.typeId) == 1) {
+          EntityModels.hardness(entry.typeId) == 10) {
         count++;
       } else {
         break;
@@ -1053,18 +1922,43 @@ class WormJourneyGame extends FlameGame
   /// - Config "top"/"r"/"l"/"b": sâu có thể ngoằn nghoèo (path 5 ô nối tiếp), hướng đầu cố định từ config.
   /// Trả về (positions: head→tail, direction, needDestroy).
   ({List<Vector2> positions, WormDirection direction, bool needDestroy})?
-  _findSafeSpawn() {
+  _findSafeSpawn({
+    Iterable<Vector2> avoid = const [],
+    int? minDistanceFromAvoid,
+  }) {
     final configDir = _respawnHeadDirectionFromConfig();
-    if (configDir == null) return _findSafeSpawnLinear();
-    return _findSafeSpawnWinding(configDir);
+    if (configDir == null) {
+      return _findSafeSpawnLinear(
+        avoid: avoid,
+        minDistanceFromAvoid: minDistanceFromAvoid,
+      );
+    }
+    return _findSafeSpawnWinding(
+      configDir,
+      avoid: avoid,
+      minDistanceFromAvoid: minDistanceFromAvoid,
+    );
   }
 
   /// Sâu xếp thẳng hàng; hướng đầu chọn theo nhiều ô trống phía trước nhất (config "none").
   ({List<Vector2> positions, WormDirection direction, bool needDestroy})?
-  _findSafeSpawnLinear() {
+  _findSafeSpawnLinear({
+    Iterable<Vector2> avoid = const [],
+    int? minDistanceFromAvoid,
+  }) {
     const cols = GameConfig.gridColumns;
     final rows = _gridRows;
     const bodyCount = _respawnWormLength - 1;
+    final avoidList = avoid.toList();
+    final avoidKeys = avoidList.map(_gridKey).toSet();
+
+    bool avoids(Vector2 grid) => !avoidKeys.contains(_gridKey(grid));
+
+    bool farEnough(List<Vector2> positions) {
+      if (minDistanceFromAvoid == null || avoidList.isEmpty) return true;
+      return _minGridDistanceBetween(positions, avoidList) >=
+          minDistanceFromAvoid;
+    }
 
     ({Vector2 head, WormDirection direction, int ahead})? bestEmpty;
     for (var row = 0; row < rows; row++) {
@@ -1073,7 +1967,11 @@ class WormJourneyGame extends FlameGame
         for (final dir in _allDirections) {
           final step = dir.toVector();
           final body1 = head - step;
-          var ok = _isCellEmpty(head) && _isCellEmpty(body1);
+          var ok =
+              _isCellEmpty(head) &&
+              avoids(head) &&
+              _isCellEmpty(body1) &&
+              avoids(body1);
           var pos = body1;
           for (var i = 0; i < bodyCount - 1 && ok; i++) {
             pos = pos - step;
@@ -1081,13 +1979,18 @@ class WormJourneyGame extends FlameGame
               ok = false;
               break;
             }
-            if (!_isCellEmpty(pos)) ok = false;
+            if (!_isCellEmpty(pos) || !avoids(pos)) ok = false;
           }
           if (!ok) continue;
+          final positions = List<Vector2>.generate(
+            _respawnWormLength,
+            (i) => head - step * i.toDouble(),
+          );
+          if (!farEnough(positions)) continue;
           final front = head + step;
           if (front.x < 0 || front.x >= cols || front.y < 0 || front.y >= rows)
             continue;
-          if (!_isCellEmpty(front)) continue;
+          if (!_isCellEmpty(front) || !avoids(front)) continue;
 
           final ahead = _countStrictEmptyAhead(head, dir);
           if (bestEmpty == null || ahead > bestEmpty.ahead) {
@@ -1119,16 +2022,21 @@ class WormJourneyGame extends FlameGame
         for (final dir in _allDirections) {
           final step = dir.toVector();
           var pos = head;
-          var ok = _isCellUsableForSpawn(pos);
+          var ok = _isCellUsableForSpawn(pos) && avoids(pos);
           for (var i = 0; i < bodyCount && ok; i++) {
             pos = pos - step;
             if (pos.x < 0 || pos.x >= cols || pos.y < 0 || pos.y >= rows) {
               ok = false;
               break;
             }
-            if (!_isCellUsableForSpawn(pos)) ok = false;
+            if (!_isCellUsableForSpawn(pos) || !avoids(pos)) ok = false;
           }
           if (!ok) continue;
+          final positions = List<Vector2>.generate(
+            _respawnWormLength,
+            (i) => head - step * i.toDouble(),
+          );
+          if (!farEnough(positions)) continue;
 
           final ahead = _countEmptyOrClearableAhead(head, dir);
           if (bestUsable == null || ahead > bestUsable.ahead) {
@@ -1157,13 +2065,27 @@ class WormJourneyGame extends FlameGame
 
   /// Sâu có thể ngoằn nghoèo (path 5 ô nối tiếp); hướng đầu cố định [headDirection] từ config.
   ({List<Vector2> positions, WormDirection direction, bool needDestroy})?
-  _findSafeSpawnWinding(WormDirection headDirection) {
+  _findSafeSpawnWinding(
+    WormDirection headDirection, {
+    Iterable<Vector2> avoid = const [],
+    int? minDistanceFromAvoid,
+  }) {
     const cols = GameConfig.gridColumns;
     final rows = _gridRows;
     final frontStep = headDirection.toVector();
+    final avoidList = avoid.toList();
+    final avoidKeys = avoidList.map(_gridKey).toSet();
 
     bool inBounds(Vector2 p) =>
         p.x >= 0 && p.x < cols && p.y >= 0 && p.y < rows;
+
+    bool avoids(Vector2 grid) => !avoidKeys.contains(_gridKey(grid));
+
+    bool farEnough(List<Vector2> positions) {
+      if (minDistanceFromAvoid == null || avoidList.isEmpty) return true;
+      return _minGridDistanceBetween(positions, avoidList) >=
+          minDistanceFromAvoid;
+    }
 
     ({List<Vector2> path, bool useHeadAtStart})? bestEmpty;
     ({List<Vector2> path, bool useHeadAtStart})? bestUsable;
@@ -1174,6 +2096,9 @@ class WormJourneyGame extends FlameGame
       final head = headAtStart ? path.first : path.last;
       final front = head + frontStep;
       if (!inBounds(front)) return;
+
+      if (!path.every(avoids) || !avoids(front)) return;
+      if (!farEnough(path)) return;
 
       final emptyOk = path.every(_isCellEmpty) && _isCellEmpty(front);
       final usableOk =
@@ -1254,13 +2179,105 @@ class WormJourneyGame extends FlameGame
     ];
   }
 
-  /// Phá entity tại [grid] nếu là vật cản độ cứng 1 (để giải chỗ cho sâu hồi sinh).
+  /// Phá entity tại [grid] nếu là vật cản độ cứng 10 (để giải chỗ cho sâu hồi sinh).
   void _destroyObstacleIfHardness1(Vector2 grid) {
     final entry = _mapEntityManager.getAt(grid);
     if (entry == null) return;
     if (!_typeObjConfig.isBlocking(entry.typeId)) return;
-    if (EntityModels.hardness(entry.typeId) != 1) return;
+    if (EntityModels.hardness(entry.typeId) != 10) return;
     _destroyEntityAt(grid);
+  }
+
+  bool _isGridInBounds(Vector2 grid) {
+    return grid.x >= 0 &&
+        grid.x < GameConfig.gridColumns &&
+        grid.y >= 0 &&
+        grid.y < _gridRows;
+  }
+
+  WormDirection _inferDirectionFromPositions(List<Vector2> positions) {
+    if (positions.length < 2) return WormDirection.right;
+    final delta = positions.first - positions[1];
+    if (delta.x > 0) return WormDirection.right;
+    if (delta.x < 0) return WormDirection.left;
+    if (delta.y > 0) return WormDirection.down;
+    if (delta.y < 0) return WormDirection.up;
+    return WormDirection.right;
+  }
+
+  bool _canClearForConfiguredSpawn(
+    Vector2 grid, {
+    required bool clearNonBlocking,
+  }) {
+    if (!_isGridInBounds(grid)) return false;
+    final entry = _mapEntityManager.getAt(grid);
+    if (entry == null) return true;
+    if (!_typeObjConfig.isBlocking(entry.typeId)) return clearNonBlocking;
+    return EntityModels.hardness(entry.typeId) == 10;
+  }
+
+  void _clearForConfiguredSpawn(
+    Vector2 grid, {
+    required bool clearNonBlocking,
+  }) {
+    final entry = _mapEntityManager.getAt(grid);
+    if (entry == null) return;
+    final isBlocking = _typeObjConfig.isBlocking(entry.typeId);
+    if (!isBlocking && clearNonBlocking) {
+      _destroyEntityAt(grid);
+      return;
+    }
+    if (isBlocking && EntityModels.hardness(entry.typeId) == 10) {
+      _destroyEntityAt(grid);
+    }
+  }
+
+  void _removeRuntimeDeathXMarksFromMap() {
+    if (_runtimeDeathXMarkKeys.isEmpty) return;
+    for (final key in _runtimeDeathXMarkKeys.toList()) {
+      for (final entry in _mapEntityManager.entries) {
+        if (_gridKey(entry.grid) != key) continue;
+        if (entry.typeId != ProjectType.xMark.typeId) continue;
+        final removed = _mapEntityManager.removeAt(entry.grid);
+        removed?.component.removeFromParent();
+        break;
+      }
+    }
+    _runtimeDeathXMarkKeys.clear();
+  }
+
+  void _removePoisonCloudsFromMap() {
+    for (final entry in _mapEntityManager.entries.toList()) {
+      if (entry.typeId != ProjectType.poison.typeId) continue;
+      final removed = _mapEntityManager.removeAt(entry.grid);
+      removed?.component.removeFromParent();
+    }
+    _poisonExpireTimes.clear();
+  }
+
+  ({List<Vector2> positions, WormDirection direction})?
+  _configuredInitialSpawnForRestart() {
+    final configured = _levelConfig.initialWormPositions;
+    if (configured.length < 2) return null;
+
+    final positions = [for (final p in configured) p.clone()];
+    final direction = _inferDirectionFromPositions(positions);
+    final front = positions.first + direction.toVector();
+
+    for (final grid in positions) {
+      if (!_canClearForConfiguredSpawn(grid, clearNonBlocking: true)) {
+        return null;
+      }
+    }
+    if (!_canClearForConfiguredSpawn(front, clearNonBlocking: true)) {
+      return null;
+    }
+
+    for (final grid in positions) {
+      _clearForConfiguredSpawn(grid, clearNonBlocking: true);
+    }
+    _clearForConfiguredSpawn(front, clearNonBlocking: true);
+    return (positions: positions, direction: direction);
   }
 
   void _restartFromDeath() {
@@ -1272,18 +2289,41 @@ class WormJourneyGame extends FlameGame
     for (final p in _magnetPulls) p.entry.component.removeFromParent();
     _magnetPulls.clear();
     _magnetLastPullTime = null;
+    _poisonExpireTimes.clear();
 
     for (final e in snapshot.entries) {
       final place = _placeEntityAt[e.typeId];
       if (place != null) place(e.grid);
     }
+    _removeRuntimeDeathXMarksFromMap();
+    _removePoisonCloudsFromMap();
     _missionCurrents = List.from(snapshot.missionCurrents);
+    _greenBossLeavesEaten = snapshot.greenBossLeavesEaten;
+    _syncLeafSequenceIndexFromState();
 
     final List<Vector2> initialPositions;
     final WormDirection dir;
     final int wormLength;
+    final greenBossSpawnPreview =
+        _isLevel4GreenBoss ? _greenBossStartPositions() : const <Vector2>[];
 
-    if (snapshot.cause == _GameOverCause.timeUp &&
+    final configuredRestart =
+        _isLevel3 ? _configuredInitialSpawnForRestart() : null;
+
+    if (configuredRestart != null) {
+      initialPositions = configuredRestart.positions;
+      dir = configuredRestart.direction;
+      wormLength = initialPositions.length;
+
+      if (snapshot.cause == _GameOverCause.timeUp) {
+        _timeLimit += 30;
+      } else {
+        final remaining = snapshot.remainingTimeAtDeath ?? 0;
+        _timeLimit = remaining < 30 ? 30 : remaining;
+        _gameTime = 0;
+      }
+    } else if (!_isLevel4GreenBoss &&
+        snapshot.cause == _GameOverCause.timeUp &&
         snapshot.wormPositions != null &&
         snapshot.wormPositions!.length >= 2 &&
         snapshot.wormDirection != null) {
@@ -1292,9 +2332,18 @@ class WormJourneyGame extends FlameGame
       wormLength = initialPositions.length;
       _timeLimit += 30;
     } else {
-      final safe = _findSafeSpawn();
+      final safe =
+          _isLevel4GreenBoss
+              ? _findSafeSpawn(
+                avoid: greenBossSpawnPreview,
+                minDistanceFromAvoid: _greenBossMinPlayerSpawnDistance,
+              )
+              : _findSafeSpawn();
       initialPositions =
-          safe?.positions ?? _defaultRespawnPositions(WormDirection.right);
+          safe?.positions ??
+          (_isLevel4GreenBoss
+              ? _level4PlayerStartPositions(_respawnWormLength)
+              : _defaultRespawnPositions(WormDirection.right));
       dir = safe?.direction ?? WormDirection.right;
       wormLength = _respawnWormLength;
 
@@ -1311,19 +2360,14 @@ class WormJourneyGame extends FlameGame
       _gameTime = 0;
     }
 
-    final worm = PinkWorm(
-      config: PinkWormConfig(
-        segmentSize: _segmentSize,
-        moveInterval: GameConfig.moveInterval,
-        initialLength: wormLength,
-        maxLength: _wormMaxLength,
-        gridRows: _gridRows,
-        initialGridPositions: initialPositions,
-        initialDirection: dir,
-      ),
-      info: WormInfo.playerDefault,
-      position: Vector2(0, playableStartRow * _segmentSize),
-      gridRowsOverride: _gridRows,
+    final worm = _createPlayerWorm(
+      segmentSize: _segmentSize,
+      moveInterval: _playerMoveInterval,
+      initialLength: wormLength,
+      maxLength: _wormMaxLength,
+      gridRows: _gridRows,
+      initialGridPositions: initialPositions,
+      initialDirection: dir,
     );
     world.add(worm);
     worm.setOnGrowAtMax(_onWormGrowAtMax);
@@ -1332,7 +2376,7 @@ class WormJourneyGame extends FlameGame
       final pineapple = PineappleWorm(
         config: PineappleWormConfig(
           segmentSize: _segmentSize,
-          moveInterval: GameConfig.moveInterval * 0.95,
+          moveInterval: GameConfig.moveInterval * _pineappleMoveIntervalScale,
           initialLength: _respawnWormLength,
           maxLength: _wormMaxLength,
           gridRows: _gridRows,
@@ -1351,6 +2395,13 @@ class WormJourneyGame extends FlameGame
         WormAgent(worm: pineapple, behavior: PlayerWormBehavior()),
       );
     }
+    final greenBossRestartLength =
+        snapshot.greenBossSegmentCount == null
+            ? _greenBossLength
+            : min(snapshot.greenBossSegmentCount!, _greenBossLength);
+    if (greenBossRestartLength > 0) {
+      _spawnGreenBoss(avoid: initialPositions, length: greenBossRestartLength);
+    }
 
     final headWorld = _gridToWorld(initialPositions.first);
     final worldWidth = GameConfig.gridColumns * _segmentSize;
@@ -1363,19 +2414,26 @@ class WormJourneyGame extends FlameGame
       maxCameraY.clamp(halfViewY, double.infinity),
     );
     camera.viewfinder.position = Vector2(worldWidth / 2, _cameraY!);
+    _ensureLeafOnMap();
 
     _spawnCycleAccumulators.clear();
+    _spawnCyclePositionIndexes.clear();
     for (final item in _levelConfig.spawnCycle.items) {
       _spawnCycleAccumulators[item.objType] = 0;
     }
     _coinsCollectedThisRun = 0;
-    _pineappleLeavesEaten = 0;
+    _reducePineappleScoreOnRevive();
     _pineappleMoveAccumulator = 0;
+    _greenBossMoveAccumulator = 0;
+    _greenBossHitSlowRemaining = 0;
+    _greenBossCellsSincePoison = 0;
+    _poisonImmunityUntil = -1.0;
     _lastCoinEatenGameTime = -999.0;
     _firstCoinSpawned = false;
     if (snapshot.cause != _GameOverCause.timeUp) {
       _gameTime = 0;
     }
+    _poisonExpireTimes.clear();
     _startDelayRemaining = startDelaySeconds;
     _gameOver = false;
     _victoryTriggered = false;
@@ -1385,12 +2443,12 @@ class WormJourneyGame extends FlameGame
     );
     _paused = false;
     _moveAccumulator = 0;
+    _missionCompleteSpawnsPlaced =
+        _levelConfig.missionCompleteSpawns.placements.isEmpty;
   }
 
   void _restart() {
-    if (_isLevel2) {
-      _pineappleLeavesEaten = (_pineappleLeavesEaten - 5).clamp(0, 9999);
-    }
+    _reducePineappleScoreOnRevive();
     mainWorm.removeFromParent();
     _removeBotAgents();
     for (final e in _mapEntityManager.entries) e.component.removeFromParent();
@@ -1398,25 +2456,22 @@ class WormJourneyGame extends FlameGame
     for (final p in _magnetPulls) p.entry.component.removeFromParent();
     _magnetPulls.clear();
     _magnetLastPullTime = null;
+    _runtimeDeathXMarkKeys.clear();
+    _poisonExpireTimes.clear();
 
     final initLen = shouldApplyDebug ? 10 : (_wormInitLength + 2);
     final maxLen = shouldApplyDebug ? null : _wormMaxLength;
-    final playerInitialPositions =
-        _isLevel2 ? _level2PlayerStartPositions(initLen) : null;
-    final worm = PinkWorm(
-      config: PinkWormConfig(
-        segmentSize: _segmentSize,
-        moveInterval: GameConfig.moveInterval,
-        initialLength: initLen,
-        maxLength: maxLen,
-        gridRows: _gridRows,
-        initialGridPositions: playerInitialPositions,
-        initialDirection:
-            playerInitialPositions != null ? WormDirection.right : null,
-      ),
-      info: WormInfo.playerDefault,
-      position: Vector2(0, playableStartRow * _segmentSize),
-      gridRowsOverride: _gridRows,
+    final playerInitialPositions = _initialPlayerPositions(initLen);
+    final playerInitialLength = playerInitialPositions?.length ?? initLen;
+    final worm = _createPlayerWorm(
+      segmentSize: _segmentSize,
+      moveInterval: _playerMoveInterval,
+      initialLength: playerInitialLength,
+      maxLength: maxLen,
+      gridRows: _gridRows,
+      initialGridPositions: playerInitialPositions,
+      initialDirection:
+          playerInitialPositions != null ? WormDirection.right : null,
     );
     world.add(worm);
     worm.setOnGrowAtMax(_onWormGrowAtMax);
@@ -1425,7 +2480,7 @@ class WormJourneyGame extends FlameGame
       final pineapple = PineappleWorm(
         config: PineappleWormConfig(
           segmentSize: _segmentSize,
-          moveInterval: GameConfig.moveInterval * 0.95,
+          moveInterval: GameConfig.moveInterval * _pineappleMoveIntervalScale,
           initialLength: initLen,
           maxLength: maxLen,
           gridRows: _gridRows,
@@ -1444,20 +2499,24 @@ class WormJourneyGame extends FlameGame
         WormAgent(worm: pineapple, behavior: PlayerWormBehavior()),
       );
     }
+    _spawnGreenBoss(avoid: mainWorm.allGridPositions);
 
     _placeAllMapEntitiesFromConfig();
-    if (!_mapEntityManager.entries.any(
-      (e) => _typeObjConfig.isEatable(e.typeId),
-    ))
-      _spawnPrey();
+    _ensureLeafOnMap();
 
     _spawnCycleAccumulators.clear();
+    _spawnCyclePositionIndexes.clear();
     for (final item in _levelConfig.spawnCycle.items) {
       _spawnCycleAccumulators[item.objType] = 0;
     }
     _coinsCollectedThisRun = 0;
     if (!_isLevel2) _pineappleLeavesEaten = 0;
+    _greenBossLeavesEaten = 0;
     _pineappleMoveAccumulator = 0;
+    _greenBossMoveAccumulator = 0;
+    _greenBossHitSlowRemaining = 0;
+    _greenBossCellsSincePoison = 0;
+    _poisonImmunityUntil = -1.0;
     _lastCoinEatenGameTime = -999.0;
     _firstCoinSpawned = false;
     _gameTime = 0;
@@ -1467,11 +2526,14 @@ class WormJourneyGame extends FlameGame
 
     _gameOver = false;
     _victoryTriggered = false;
-    _flagSpawned = false;
+    _flagSpawned = _hasEntityOnMap(ProjectType.preyFlag.typeId);
     _paused = false;
     _moveAccumulator = 0;
     _cameraY = null;
     _hasRevivedOnce = false;
+    _nextPreyLeafSequenceIndex = 0;
+    _missionCompleteSpawnsPlaced =
+        _levelConfig.missionCompleteSpawns.placements.isEmpty;
   }
 
   /// Trừ 1 đốt đuôi và để lại dấu X tại vị trí đuôi.
@@ -1480,11 +2542,19 @@ class WormJourneyGame extends FlameGame
     final tailGrid = agent.tailGridPosition.clone();
     agent.removeTail();
     if (_mapEntityManager.getAt(tailGrid) == null) {
-      final comp = _mapEntityManager.placeAt(tailGrid, 'x_mark');
+      final comp = _mapEntityManager.placeAt(
+        tailGrid,
+        ProjectType.xMark.typeId,
+      );
+      _runtimeDeathXMarkKeys.add(_gridKey(tailGrid));
       world.add(comp);
     }
     if (identical(agent, _pineappleAgent) && agent.segmentCount <= 2) {
       _setVictory();
+      return;
+    }
+    if (identical(agent, _greenBossAgent) && agent.segmentCount <= 2) {
+      _startGreenBossEscape();
       return;
     }
     if (agent.isPlayer && agent.segmentCount <= 2) {
@@ -1499,11 +2569,26 @@ class WormJourneyGame extends FlameGame
   /// Phá entity tại ô [grid] (khi độ cứng sâu > độ cứng vật cản).
   void _destroyEntityAt(Vector2 grid) {
     final entry = _mapEntityManager.removeAt(grid);
-    if (entry != null) entry.component.removeFromParent();
+    if (entry != null) {
+      if (entry.typeId == ProjectType.xMark.typeId) {
+        _runtimeDeathXMarkKeys.remove(_gridKey(entry.grid));
+      }
+      if (entry.typeId == ProjectType.poison.typeId) {
+        _poisonExpireTimes.remove(_gridKey(entry.grid));
+      }
+      entry.component.removeFromParent();
+    }
   }
 
   /// Độ cứng hiện tại của sâu (currentHardness, set trong onItemEffectAdded/Removed khi buff dừa).
   int _getWormHardness(WormAgent agent) => agent.worm.stats.currentHardness;
+
+  int _getEntityHardnessForCollision(String typeId) {
+    if (_isLevel5GreenBoss && typeId == ProjectType.xMark.typeId) {
+      return _pineappleBaseHardness;
+    }
+    return EntityModels.hardness(typeId);
+  }
 
   bool _wormContainsGrid(WormAgent agent, Vector2 grid) {
     for (final part in agent.allGridPositions) {
@@ -1522,6 +2607,15 @@ class WormJourneyGame extends FlameGame
 
   bool _onHitWorm(WormAgent attacker, WormAgent defender) {
     attacker.applyNextDirectionAndSyncVisuals();
+    if (identical(attacker, _greenBossAgent) && defender.isPlayer) {
+      world.add(
+        HeartBurstEffect(
+          position: attacker.worm.headWorldPosition,
+          segmentSize: _segmentSize,
+        ),
+      );
+      _triggerGreenBossHitSlow();
+    }
     final attackerHardness = _getWormHardness(attacker);
     final defenderHardness = _getWormHardness(defender);
     if (attackerHardness <= defenderHardness) {
@@ -1569,12 +2663,11 @@ class WormJourneyGame extends FlameGame
       return true;
     }
 
-    final result = agent.behavior.onHitEntity(
-      agent,
-      view,
-      _getWormHardness(agent),
-      _wormContext,
-    );
+    final entityHardness = _getEntityHardnessForCollision(entry.typeId);
+    final result =
+        _getWormHardness(agent) <= entityHardness
+            ? HitResult.loseSegment
+            : HitResult.destroyAndStep;
     switch (result) {
       case HitResult.loseSegment:
         agent.applyNextDirectionAndSyncVisuals();
@@ -1659,8 +2752,14 @@ class WormJourneyGame extends FlameGame
       );
     }
     final hasBoss = _levelConfig.hasBoss;
-    final int bossHp = hasBoss ? 0 : 0; // TODO: cập nhật từ boss entity khi có
-    final int bossHpMax = hasBoss ? 100 : 0; // TODO: từ level JSON khi có boss
+    final isGreenBossHud = hasBoss && _isLevel4GreenBoss;
+    final int bossHp = isGreenBossHud ? _greenBossBodySegmentsForHud : 0;
+    final int bossHpMax =
+        isGreenBossHud
+            ? _greenBossMaxBodySegmentsForHud
+            : hasBoss
+            ? 100
+            : 0;
     final itemBuffs =
         mainWorm.itemEffects
             .where((e) => e.endTime != null)
@@ -1701,6 +2800,7 @@ class WormJourneyGame extends FlameGame
     }
 
     _gameTime += dt;
+    _updatePoisonCloudLifetimes();
 
     if (_gameTime >= _timeLimit) {
       _setGameOver(_GameOverCause.timeUp);
@@ -1718,6 +2818,7 @@ class WormJourneyGame extends FlameGame
 
     _updateMagnetPulls(dt);
     _updatePineappleWorm(dt);
+    _updateGreenBossWorm(dt);
     if (_gameOver) return;
 
     if (mainWorm.hasItemEffect(ItemType.magnet.effectTypeId)) {
@@ -1734,12 +2835,27 @@ class WormJourneyGame extends FlameGame
 
     for (final item in _levelConfig.spawnCycle.items) {
       if (!_typeObjConfig.isEatable(item.objType)) continue;
+      final maxOnMap = item.maxOnMap;
+      if (maxOnMap != null &&
+          _mapEntityManager.entries
+                  .where((e) => e.typeId == item.objType)
+                  .length >=
+              maxOnMap) {
+        if (item.pauseWhenPresent) {
+          _spawnCycleAccumulators[item.objType] = 0;
+        }
+        continue;
+      }
       final acc = _spawnCycleAccumulators[item.objType] ?? 0;
       final next = acc + dt;
       _spawnCycleAccumulators[item.objType] = next;
       if (next >= item.intervalSeconds) {
         _spawnCycleAccumulators[item.objType] = next - item.intervalSeconds;
-        _spawnByTypeId(item.objType);
+        _spawnByTypeId(
+          item.objType,
+          preferredPositions: item.preferredPositions,
+          preferredPositionsOnly: item.preferredPositionsOnly,
+        );
       }
     }
 
@@ -1757,6 +2873,12 @@ class WormJourneyGame extends FlameGame
     if (!_advanceAgentOneStep(_playerAgent)) return;
 
     final newHead = mainWorm.headGridPosition;
+    final entryAtHead = _mapEntityManager.getAt(newHead);
+    if (entryAtHead?.typeId == ProjectType.poison.typeId) {
+      _applyPoisonToPlayer();
+      _trySpawnFlagForObjectives();
+      return;
+    }
     final consumed = _mapEntityManager.consumeAt(newHead);
     if (consumed != null) {
       consumed.component.removeFromParent();
@@ -1769,32 +2891,25 @@ class WormJourneyGame extends FlameGame
         if (view != null) {
           _playerAgent.behavior.onEatEntity(_playerAgent, view, _wormContext);
         }
-        _setVictory();
+        if (_allMissionsComplete()) _setVictory();
         return;
+      }
+      if (consumed.typeId == ProjectType.bomb.typeId) {
+        _instantEffectBomb();
+        return;
+      }
+      if (consumed.typeId == ProjectType.antidote.typeId) {
+        _grantPoisonImmunity();
       }
       final view = EntityModels.view(consumed.typeId);
       if (view != null) {
         _playerAgent.behavior.onEatEntity(_playerAgent, view, _wormContext);
       }
-      if (_allMissionsComplete() && !_flagSpawned) {
-        if (_isLevel2) {
-          _setVictory();
-          return;
-        }
-        _spawnFlag();
-        _flagSpawned = true;
-      }
+      _trySpawnFlagForObjectives();
       return;
     }
 
-    if (_allMissionsComplete() && !_flagSpawned) {
-      if (_isLevel2) {
-        _setVictory();
-        return;
-      }
-      _spawnFlag();
-      _flagSpawned = true;
-    }
+    _trySpawnFlagForObjectives();
   }
 
   @override

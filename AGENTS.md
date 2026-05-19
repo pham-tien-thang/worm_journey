@@ -52,9 +52,27 @@ change.
 
 - New level mechanics should add indexed state to managers when they introduce
   frequent lookup by grid, type, category, or visibility.
+- Levels that use normal mission completion must keep the `prey_flag` victory
+  item in the flow: complete missions, spawn or reveal the flag, then win only
+  when the player eats the flag. Do not special-case new boss/bot levels to skip
+  the flag unless the task explicitly asks for a no-flag win rule.
 - New components must document whether they are static, animated, or event-driven
   and cache render resources accordingly.
 - Before merging gameplay performance work, run:
   `flutter analyze --no-fatal-infos --no-fatal-warnings`.
 - If tests exist, run the relevant Flutter tests. If the project test scaffold is
   broken or empty, report that explicitly instead of claiming test coverage.
+
+## Level Guide Protection
+
+- Treat the current worktree as the source of truth for `assets/levels/level_*.json`.
+  Do not use `git show HEAD`, checkout, or any committed version as a rollback source
+  for guides when the worktree is dirty or user changes are uncommitted.
+- Do not edit `guide_vi` or `guide_en` for levels outside the user-requested scope.
+  If a request says "check" other guides, inspect and report only unless the user
+  explicitly asks to change those specific levels.
+- Before changing any guide, read and preserve the current `guide_vi` and `guide_en`
+  values for that level in the terminal output. If a later rollback is requested,
+  restore from that captured current-worktree snapshot, not from Git history.
+- If the exact prior guide text is not available, stop and ask instead of inventing
+  or reverting to a stale committed placeholder.

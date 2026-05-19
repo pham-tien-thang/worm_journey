@@ -27,6 +27,8 @@ class SharedPrefsService {
   static const String _wormInitLengthKey = 'worm_init_length';
   static const String _wormMaxLengthKey = 'worm_max_length';
   static const String _itemQtyPrefix = 'item_qty_';
+  static const String _levelEntryRewardClaimPrefix =
+      'level_entry_reward_claimed_';
 
   /// Số đốt thân khởi điểm (1 = 1 đầu + 1 thân + 1 đuôi). Mặc định 1.
   static Future<int> getWormInitLength() async {
@@ -82,7 +84,9 @@ class SharedPrefsService {
   }
 
   /// Lưu thời điểm vừa nhận free random coin (sau khi bấm Get XX coin).
-  static Future<void> setFreeRandomCoinLastAt(int millisecondsSinceEpoch) async {
+  static Future<void> setFreeRandomCoinLastAt(
+    int millisecondsSinceEpoch,
+  ) async {
     await init();
     await _prefs!.setInt(_freeRandomCoinLastAtKey, millisecondsSinceEpoch);
   }
@@ -127,6 +131,28 @@ class SharedPrefsService {
     }
   }
 
+  /// Cộng thưởng vào màn đúng 1 lần cho từng cặp level + item.
+  /// Trả true nếu lần này vừa cộng, false nếu đã claim trước đó hoặc quantity không hợp lệ.
+  static Future<bool> claimLevelEntryItemReward(
+    int level,
+    String itemId,
+    int quantity,
+  ) async {
+    await init();
+    final normalizedItemId = itemId.trim();
+    if (level <= 0 || normalizedItemId.isEmpty || quantity <= 0) return false;
+
+    final claimedKey =
+        '$_levelEntryRewardClaimPrefix${level}_$normalizedItemId';
+    if (_prefs!.getBool(claimedKey) ?? false) return false;
+
+    final quantityKey = _itemQtyPrefix + normalizedItemId;
+    final current = _prefs!.getInt(quantityKey) ?? 0;
+    await _prefs!.setInt(quantityKey, current + quantity);
+    await _prefs!.setBool(claimedKey, true);
+    return true;
+  }
+
   /// Kiểm tra đã từng lưu số lượng item chưa (để biết lần đầu vào game).
   static Future<bool> hasItemQuantityKey(String itemId) async {
     await init();
@@ -134,7 +160,9 @@ class SharedPrefsService {
   }
 
   /// Load số lượng tất cả item (key = itemId).
-  static Future<Map<String, int>> getItemQuantities(Iterable<String> itemIds) async {
+  static Future<Map<String, int>> getItemQuantities(
+    Iterable<String> itemIds,
+  ) async {
     await init();
     final map = <String, int>{};
     for (final id in itemIds) {

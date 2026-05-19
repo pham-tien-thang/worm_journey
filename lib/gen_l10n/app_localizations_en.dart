@@ -219,4 +219,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String victoryRewardReceived(int amount, String coinIcon) {
     return 'Reward received: $amount $coinIcon';
   }
+
+  @override
+  String get sceneNotFound => 'Scene not found';
 }

@@ -35,8 +35,9 @@ Nguồn code:
 
 | Tên trong game | Code / type | Hardness gốc | Hardness hiện tại khi có buff | Ghi chú |
 |---|---|---:|---:|---|
-| Pink worm / sâu hồng | `PinkWorm` | `1` | `2` khi có buff dừa | `WormStats` mặc định `baseHardness = 1`; `PinkWorm` tăng `currentHardness = originalBaseHardness + 1` khi có dừa. |
-| Pineapple worm / sâu dứa / boss hiện tại | `PineappleWorm` | `2` | Theo `currentHardness` nếu sau này gắn buff/effect | Constructor set `WormStats(baseHardness: 2)`. |
+| Pink worm / sâu hồng | `PinkWorm` | `10` | `20` khi có buff dừa | `WormStats` mặc định `baseHardness = 10`; `PinkWorm` tăng `currentHardness = originalBaseHardness + 10` khi có dừa. |
+| Pineapple worm / sâu dứa / boss hiện tại | `PineappleWorm` | `25` | Theo `currentHardness` nếu sau này gắn buff/effect | Constructor set `WormStats(baseHardness: 25)`. |
+| Green boss worm / sâu xanh | `GreenBossWorm` | `30` | `40` khi có buff dừa | Constructor set `WormStats(baseHardness: 30)`, bằng sâu dứa `25 + 5`. |
 | Boss tương lai | Chưa có class riêng | Chưa khai báo | Chưa khai báo | Nếu boss mới cũng là worm, khai báo qua `WormStats(baseHardness: X)` và đăng ký `WormAgent` để dùng gateway va chạm chung. |
 | Mini-bot tương lai | Chưa có class riêng | Chưa khai báo | Chưa khai báo | Không code va chạm riêng; dùng `WormAgent` + `WormBehavior`. |
 
@@ -44,6 +45,7 @@ Nguồn code:
 
 - `lib/entities/worm/worm_stats.dart`
 - `lib/components/pineapple_worm/pineapple_worm.dart`
+- `lib/components/green_boss_worm/green_boss_worm.dart`
 - `lib/components/pink_worm/pink_worm.dart`
 
 ## Vật thể / Entity
@@ -54,7 +56,8 @@ Nguồn code:
 | Coconut / dừa | `prey_coconut` | `🥥` | `GreyModel` | `0` | Không | Mồi buff độ cứng cho Pink. |
 | Flag / cờ | `prey_flag` | `🚩` | `GreyModel` | `0` | Không | Ăn để thắng ở flow cũ. |
 | Coin / xu | `prey_coin` | Theo platform | `GreyModel` | `0` | Không | Ăn để cộng thưởng victory. |
-| X mark / bia mộ | `x_mark` | `🪦` | `ObstacleModel` | `1` | Có | Để lại ở vị trí đuôi khi sâu mất đốt. |
+| X mark / bia mộ | `x_mark` | `🪦` | `ObstacleModel` | `10` | Có | Để lại ở vị trí đuôi khi sâu mất đốt. |
+| Stone / đá | `stone` | `🪨` | `StoneModel` | `50` | Có | Mũ bảo hiểm dừa không phá được; bom phá được khi nằm trong vùng nổ. |
 
 Nguồn code:
 
@@ -66,11 +69,16 @@ Nguồn code:
 
 | Tình huống | So sánh | Kết quả hiện tại |
 |---|---|---|
-| Pink đâm `x_mark` | `1 <= 1` | Pink mất 1 đốt. |
-| Pink có dừa đâm `x_mark` | `2 > 1` | `x_mark` bị phá. |
-| Pineapple/Boss đâm `x_mark` | `2 > 1` | `x_mark` bị phá. |
-| Pink đâm Pineapple/Boss | `1 <= 2` | Pink mất 1 đốt. |
-| Pineapple/Boss đâm Pink | `2 > 1` | Pink mất 1 đốt. |
+| Pink đâm `x_mark` | `10 <= 10` | Pink mất 1 đốt. |
+| Pink có dừa đâm `x_mark` | `20 > 10` | `x_mark` bị phá. |
+| Pineapple đâm `x_mark` | `25 > 10` | `x_mark` bị phá. |
+| Green boss đâm `x_mark` | `30 > 10` | `x_mark` bị phá. |
+| Pink có dừa đâm `stone` | `20 <= 50` | Pink mất 1 đốt, đá không bị phá. |
+| Green boss có dừa đâm `stone` | `40 <= 50` | Green boss mất 1 đốt, đá không bị phá. |
+| Bom nổ trúng `stone` | Instant effect | `stone` bị phá, không so hardness sâu. |
+| Pink đâm Pineapple/Boss | `10 <= 25` | Pink mất 1 đốt. |
+| Pineapple đâm Pink | `25 > 10` | Pink mất 1 đốt. |
+| Green boss đâm Pink | `30 > 10` | Pink mất 1 đốt. |
 | Hai sâu hardness ngang nhau đâm nhau | `attacker <= defender` | Sâu đang đâm mất 1 đốt. |
 
 ## Khi thêm object mới
