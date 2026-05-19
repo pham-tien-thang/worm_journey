@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app_router.dart';
 import '../../core/game_pause_observer.dart';
 import '../../core/services/coin_service.dart';
 import '../../inject/injection.dart';
+import '../../models/scene_model.dart';
 import '../../widgets/exit_game_dialog.dart';
 import '../../widgets/guide_game_dialog.dart';
 import 'game_play_scaffold.dart';
@@ -21,6 +23,9 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late final WormJourneyGame _game;
+
+  bool get _isLastLevelOfScene =>
+      widget.level > 0 && widget.level % levelsPerScene == 0;
 
   @override
   void initState() {
@@ -92,7 +97,16 @@ class _GameScreenState extends State<GameScreen> {
     if (confirm != true) return;
     if (reward != null) await CoinService.instance.coinPlus(reward);
     await _game.performVictoryUnlockAndDismiss();
-    if (mounted) context.pop();
+    _returnAfterVictory();
+  }
+
+  void _returnAfterVictory() {
+    if (!mounted) return;
+    if (_isLastLevelOfScene) {
+      context.go(AppRoutes.play);
+      return;
+    }
+    context.pop();
   }
 
   void _handleExitRequest() {
@@ -109,6 +123,7 @@ class _GameScreenState extends State<GameScreen> {
       game: _game,
       onExitRequested: _handleExitRequest,
       onGameOverEnd: () => context.pop(),
+      onVictoryEnd: _returnAfterVictory,
     );
     return PopScope(
       canPop: false,

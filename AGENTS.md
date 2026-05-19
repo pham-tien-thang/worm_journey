@@ -43,6 +43,8 @@ change.
   overlay/HUD rebuilds.
 - HUD polling must compare visible data before `setState`; avoid rebuilding
   every poll when the displayed second, mission, buff, or coin value is unchanged.
+- HUD labels must stay compact: when an emoji already identifies a HUD metric,
+  do not add a duplicate text key such as `HP`, `Coin`, or `Leaf` beside it.
 - Prefer `ValueListenableBuilder`, `AnimatedBuilder`, or scoped state for small
   animated UI regions instead of rebuilding the whole game scaffold.
 - Do not put gameplay state mutations in `build`; use callbacks, timers,
@@ -52,6 +54,10 @@ change.
 
 - New level mechanics should add indexed state to managers when they introduce
   frequent lookup by grid, type, category, or visibility.
+- Item effect removal must remove the effect from the active list before calling
+  `onItemEffectRemoved` or any move-interval sync. Speed/snail expiry, mutual
+  replacement, and antidote clearing must have regression tests because
+  callbacks inspect the current active effects.
 - Levels that use normal mission completion must keep the `prey_flag` victory
   item in the flow: complete missions, spawn or reveal the flag, then win only
   when the player eats the flag. Do not special-case new boss/bot levels to skip

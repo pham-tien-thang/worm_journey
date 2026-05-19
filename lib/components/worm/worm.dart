@@ -104,8 +104,11 @@ class Worm extends PositionComponent {
     if (toRemove != null) {
       for (final id in toRemove) {
         if (hasItemEffect(id)) {
-          onItemEffectRemoved(id);
           _itemEffects.removeWhere((e) => e.itemId == id);
+          if (id == ItemType.dizzy.effectTypeId) {
+            _isPoisonedReverse = false;
+          }
+          onItemEffectRemoved(id);
         }
       }
     }
@@ -120,26 +123,26 @@ class Worm extends PositionComponent {
     final set = ids.toSet();
     final toRemove = _itemEffects.where((e) => set.contains(e.itemId)).toList();
     for (final e in toRemove) {
+      _itemEffects.remove(e);
       if (e.itemId == ItemType.dizzy.effectTypeId) {
         _isPoisonedReverse = false;
       }
       onItemEffectRemoved(e.itemId);
-      _itemEffects.remove(e);
     }
   }
 
-  /// Xóa các effect có [endTime] != null và endTime <= currentTime; gọi [onItemEffectRemoved] trước khi xóa.
+  /// Xóa các effect có [endTime] != null và endTime <= currentTime; xóa khỏi list trước khi sync state.
   void removeExpiredItemEffects(double currentTime) {
     final toRemove =
         _itemEffects
             .where((e) => e.endTime != null && e.endTime! <= currentTime)
             .toList();
     for (final e in toRemove) {
+      _itemEffects.remove(e);
       if (e.itemId == ItemType.dizzy.effectTypeId) {
         _isPoisonedReverse = false;
       }
       onItemEffectRemoved(e.itemId);
-      _itemEffects.remove(e);
     }
   }
 

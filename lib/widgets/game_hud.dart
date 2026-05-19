@@ -209,7 +209,7 @@ class _LeftSection extends StatelessWidget {
           const SizedBox(height: 2),
         ],
         if (data.bossHpMax > 0)
-          Text('👹 HP ${data.bossHp}/${data.bossHpMax}', style: textStyle),
+          Text('👹 ${data.bossHp}/${data.bossHpMax}', style: textStyle),
         if (data.itemBuffs.isNotEmpty) ...[
           const SizedBox(height: 4),
           Wrap(
