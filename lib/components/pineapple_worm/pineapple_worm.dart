@@ -14,7 +14,12 @@ class PineappleWorm extends PinkWorm {
   }) : super(
          config: config ?? PineappleWormConfig(),
          info: info,
-         stats: stats ?? WormStats(baseHardness: 25),
+         stats:
+             stats ??
+             WormStats(
+               moveInterval: (config ?? PineappleWormConfig()).moveInterval,
+               baseHardness: 25,
+             ),
          position: position,
          gridRowsOverride: gridRowsOverride,
        );

@@ -101,13 +101,11 @@ class WormJourneyGame extends FlameGame
   static const double _level3PlayerMoveIntervalScale = 1.08;
   static const int _greenBossLength = 8;
   static const double _greenBossSpeedUnitIntervalScale = 0.1;
-  static const int _greenBossBaseSpeedUnits = 1;
-  static const int _level5GreenBossSpeedLagUnits = 8;
+  static const double _greenBossBaseSpeedUnits = 0.5;
+  static const int _level5GreenBossSpeedLagUnits = 7;
   static const int _pineappleBaseHardness = 25;
   static const int _greenBossHitSlowUnits = 3;
-  static const double _greenBossHitSlowDurationSeconds = 1.0;
-  static const double _level5GreenBossDamageSpeedDurationSeconds = 1.0;
-  static const int _level5GreenBossDamageSpeedUnits = 8;
+  static const double _greenBossHitSlowDurationSeconds = 1.5;
   static const double _greenBossMoveIntervalScale =
       1.0 - _greenBossBaseSpeedUnits * _greenBossSpeedUnitIntervalScale;
   static const double _greenBossEscapeMoveIntervalScale = 0.45;
@@ -126,7 +124,6 @@ class WormJourneyGame extends FlameGame
   double _pineappleMoveAccumulator = 0;
   double _greenBossMoveAccumulator = 0;
   double _greenBossHitSlowRemaining = 0;
-  double _level5GreenBossDamageSpeedUntil = -1.0;
   int _greenBossCellsSincePoison = 0;
   bool _greenBossEscaping = false;
   double _poisonImmunityUntil = -1.0;
@@ -536,7 +533,6 @@ class WormJourneyGame extends FlameGame
     _lastCoinEatenGameTime = -999.0;
     _greenBossMoveAccumulator = 0;
     _greenBossHitSlowRemaining = 0;
-    _level5GreenBossDamageSpeedUntil = -1.0;
     _greenBossCellsSincePoison = 0;
     _greenBossLeavesEaten = 0;
     _greenBossEscaping = false;
@@ -745,7 +741,6 @@ class WormJourneyGame extends FlameGame
     _greenBossAgent = null;
     _greenBossEscaping = false;
     _greenBossHitSlowRemaining = 0;
-    _level5GreenBossDamageSpeedUntil = -1.0;
     _greenBossCellsSincePoison = 0;
   }
 
@@ -790,7 +785,6 @@ class WormJourneyGame extends FlameGame
     );
     _greenBossEscaping = bossLength <= 2;
     _greenBossHitSlowRemaining = 0;
-    _level5GreenBossDamageSpeedUntil = -1.0;
     _greenBossCellsSincePoison = 0;
     if (_greenBossEscaping) _startGreenBossEscape();
   }
@@ -1369,7 +1363,6 @@ class WormJourneyGame extends FlameGame
     if (agent == null) return;
     _greenBossEscaping = true;
     _greenBossHitSlowRemaining = 0;
-    _level5GreenBossDamageSpeedUntil = -1.0;
     _greenBossCellsSincePoison = 0;
     agent.worm.setMoveInterval(
       GameConfig.moveInterval * _greenBossEscapeMoveIntervalScale,
@@ -1381,62 +1374,33 @@ class WormJourneyGame extends FlameGame
     final agent = _greenBossAgent;
     if (agent == null || _greenBossEscaping) return;
     _greenBossHitSlowRemaining = _greenBossHitSlowDurationSeconds;
-    _syncGreenBossMoveInterval(agent);
+    agent.worm.setMoveInterval(_greenBossSlowedMoveInterval(agent));
   }
 
   void _updateGreenBossHitSlow(double dt) {
     final agent = _greenBossAgent;
     if (agent == null || _greenBossEscaping) return;
-    final hasDamageSpeedTimer = _level5GreenBossDamageSpeedUntil >= 0;
-    if (_greenBossHitSlowRemaining <= 0 && !hasDamageSpeedTimer) return;
+    if (_greenBossHitSlowRemaining <= 0) return;
 
-    if (_greenBossHitSlowRemaining > 0) {
-      _greenBossHitSlowRemaining -= dt;
-      if (_greenBossHitSlowRemaining <= 0) {
-        _greenBossHitSlowRemaining = 0;
-      }
+    _greenBossHitSlowRemaining -= dt;
+    if (_greenBossHitSlowRemaining <= 0) {
+      _greenBossHitSlowRemaining = 0;
+      agent.worm.setMoveInterval(_greenBossUnslowedMoveInterval(agent));
+      return;
     }
-    if (_level5GreenBossDamageSpeedUntil >= 0 &&
-        _gameTime >= _level5GreenBossDamageSpeedUntil) {
-      _level5GreenBossDamageSpeedUntil = -1.0;
-    }
-    _syncGreenBossMoveInterval(agent);
-  }
 
-  void _triggerLevel5GreenBossDamageSpeed() {
-    final agent = _greenBossAgent;
-    if (!_isLevel5GreenBoss || agent == null || _greenBossEscaping) return;
-    _level5GreenBossDamageSpeedUntil =
-        _gameTime + _level5GreenBossDamageSpeedDurationSeconds;
-    _syncGreenBossMoveInterval(agent);
-  }
-
-  void _syncGreenBossMoveInterval(WormAgent agent) {
-    agent.worm.setMoveInterval(
-      _greenBossHitSlowRemaining > 0
-          ? _greenBossSlowedMoveInterval(agent)
-          : _greenBossUnslowedMoveInterval(agent),
-    );
+    agent.worm.setMoveInterval(_greenBossSlowedMoveInterval(agent));
   }
 
   double _greenBossUnslowedMoveInterval(WormAgent agent) {
     final worm = agent.worm;
-    var interval = _greenBossBaseMoveInterval;
     if (agent.hasItemEffect(ItemType.speed.effectTypeId) && worm is PinkWorm) {
-      interval = _greenBossBaseMoveInterval * worm.speedMoveIntervalScale;
+      return _greenBossBaseMoveInterval * worm.speedMoveIntervalScale;
     }
     if (agent.hasItemEffect(ItemType.snail.effectTypeId) && worm is PinkWorm) {
-      interval = _greenBossBaseMoveInterval * worm.snailMoveIntervalScale;
+      return _greenBossBaseMoveInterval * worm.snailMoveIntervalScale;
     }
-    if (_isLevel5GreenBoss &&
-        _level5GreenBossDamageSpeedUntil >= 0 &&
-        _gameTime < _level5GreenBossDamageSpeedUntil) {
-      final damageSpeedInterval =
-          _greenBossBaseMoveInterval -
-          _level5GreenBossDamageSpeedUnits * _greenBossSpeedUnitMoveInterval;
-      interval = min(interval, damageSpeedInterval);
-    }
-    return max(_greenBossSpeedUnitMoveInterval, interval);
+    return _greenBossBaseMoveInterval;
   }
 
   double _greenBossSlowedMoveInterval(WormAgent agent) {
@@ -1495,7 +1459,6 @@ class WormJourneyGame extends FlameGame
       _greenBossAgent = null;
       _greenBossEscaping = false;
       _greenBossHitSlowRemaining = 0;
-      _level5GreenBossDamageSpeedUntil = -1.0;
       _greenBossCellsSincePoison = 0;
       _trySpawnFlagForObjectives();
     }
@@ -1543,8 +1506,8 @@ class WormJourneyGame extends FlameGame
     final duration = BuffConfig.durationSecondsFor(effectId);
     if (duration > 0) {
       agent.addItemEffect(effectId, _gameTime + duration);
-      if (identical(agent, _greenBossAgent)) {
-        _syncGreenBossMoveInterval(agent);
+      if (identical(agent, _greenBossAgent) && _greenBossHitSlowRemaining > 0) {
+        agent.worm.setMoveInterval(_greenBossSlowedMoveInterval(agent));
       }
     }
   }
@@ -2463,7 +2426,6 @@ class WormJourneyGame extends FlameGame
     _pineappleMoveAccumulator = 0;
     _greenBossMoveAccumulator = 0;
     _greenBossHitSlowRemaining = 0;
-    _level5GreenBossDamageSpeedUntil = -1.0;
     _greenBossCellsSincePoison = 0;
     _poisonImmunityUntil = -1.0;
     _lastCoinEatenGameTime = -999.0;
@@ -2553,7 +2515,6 @@ class WormJourneyGame extends FlameGame
     _pineappleMoveAccumulator = 0;
     _greenBossMoveAccumulator = 0;
     _greenBossHitSlowRemaining = 0;
-    _level5GreenBossDamageSpeedUntil = -1.0;
     _greenBossCellsSincePoison = 0;
     _poisonImmunityUntil = -1.0;
     _lastCoinEatenGameTime = -999.0;
@@ -2580,10 +2541,6 @@ class WormJourneyGame extends FlameGame
     agent.showCryFace();
     final tailGrid = agent.tailGridPosition.clone();
     agent.removeTail();
-    final isGreenBoss = identical(agent, _greenBossAgent);
-    if (isGreenBoss) {
-      _triggerLevel5GreenBossDamageSpeed();
-    }
     if (_mapEntityManager.getAt(tailGrid) == null) {
       final comp = _mapEntityManager.placeAt(
         tailGrid,
@@ -2596,7 +2553,7 @@ class WormJourneyGame extends FlameGame
       _setVictory();
       return;
     }
-    if (isGreenBoss && agent.segmentCount <= 2) {
+    if (identical(agent, _greenBossAgent) && agent.segmentCount <= 2) {
       _startGreenBossEscape();
       return;
     }

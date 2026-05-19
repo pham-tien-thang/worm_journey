@@ -103,12 +103,17 @@ class Worm extends PositionComponent {
     final toRemove = BuffConfig.getMutuallyExclusiveIdsToRemove(itemId);
     if (toRemove != null) {
       for (final id in toRemove) {
-        if (hasItemEffect(id)) {
+        final removed = _itemEffects
+            .where((e) => e.itemId == id)
+            .toList(growable: false);
+        if (removed.isNotEmpty) {
           _itemEffects.removeWhere((e) => e.itemId == id);
-          if (id == ItemType.dizzy.effectTypeId) {
-            _isPoisonedReverse = false;
+          for (final e in removed) {
+            if (e.itemId == ItemType.dizzy.effectTypeId) {
+              _isPoisonedReverse = false;
+            }
+            onItemEffectRemoved(e.itemId);
           }
-          onItemEffectRemoved(id);
         }
       }
     }
@@ -131,7 +136,7 @@ class Worm extends PositionComponent {
     }
   }
 
-  /// Xóa các effect có [endTime] != null và endTime <= currentTime; xóa khỏi list trước khi sync state.
+  /// Xóa các effect có [endTime] != null và endTime <= currentTime; gọi [onItemEffectRemoved] trước khi xóa.
   void removeExpiredItemEffects(double currentTime) {
     final toRemove =
         _itemEffects
