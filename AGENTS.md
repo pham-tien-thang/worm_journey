@@ -43,6 +43,12 @@ change.
   overlay/HUD rebuilds.
 - HUD polling must compare visible data before `setState`; avoid rebuilding
   every poll when the displayed second, mission, buff, or coin value is unchanged.
+- HUD text must stay compact. If an emoji already identifies the metric or
+  state, do not add redundant text labels; use `emoji value` instead of
+  `emoji label value`.
+- HUD boss values must come from real gameplay state, not placeholders like
+  `0/100`. For worm bosses, HP-style HUD values count body segments only and do
+  not include head or tail.
 - Prefer `ValueListenableBuilder`, `AnimatedBuilder`, or scoped state for small
   animated UI regions instead of rebuilding the whole game scaffold.
 - Do not put gameplay state mutations in `build`; use callbacks, timers,

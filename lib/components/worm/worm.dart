@@ -103,9 +103,17 @@ class Worm extends PositionComponent {
     final toRemove = BuffConfig.getMutuallyExclusiveIdsToRemove(itemId);
     if (toRemove != null) {
       for (final id in toRemove) {
-        if (hasItemEffect(id)) {
-          onItemEffectRemoved(id);
+        final removed = _itemEffects
+            .where((e) => e.itemId == id)
+            .toList(growable: false);
+        if (removed.isNotEmpty) {
           _itemEffects.removeWhere((e) => e.itemId == id);
+          for (final e in removed) {
+            if (e.itemId == ItemType.dizzy.effectTypeId) {
+              _isPoisonedReverse = false;
+            }
+            onItemEffectRemoved(e.itemId);
+          }
         }
       }
     }
@@ -120,11 +128,11 @@ class Worm extends PositionComponent {
     final set = ids.toSet();
     final toRemove = _itemEffects.where((e) => set.contains(e.itemId)).toList();
     for (final e in toRemove) {
+      _itemEffects.remove(e);
       if (e.itemId == ItemType.dizzy.effectTypeId) {
         _isPoisonedReverse = false;
       }
       onItemEffectRemoved(e.itemId);
-      _itemEffects.remove(e);
     }
   }
 
@@ -135,11 +143,11 @@ class Worm extends PositionComponent {
             .where((e) => e.endTime != null && e.endTime! <= currentTime)
             .toList();
     for (final e in toRemove) {
+      _itemEffects.remove(e);
       if (e.itemId == ItemType.dizzy.effectTypeId) {
         _isPoisonedReverse = false;
       }
       onItemEffectRemoved(e.itemId);
-      _itemEffects.remove(e);
     }
   }
 
