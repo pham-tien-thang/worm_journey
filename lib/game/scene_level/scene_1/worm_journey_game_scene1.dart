@@ -101,7 +101,7 @@ class WormJourneyGame extends FlameGame
   static const double _level3PlayerMoveIntervalScale = 1.08;
   static const int _greenBossLength = 8;
   static const double _greenBossSpeedUnitIntervalScale = 0.1;
-  static const int _greenBossBaseSpeedUnits = 1;
+  static const double _greenBossBaseSpeedUnits = 0.5;
   static const int _level5GreenBossSpeedLagUnits = 7;
   static const int _pineappleBaseHardness = 25;
   static const int _greenBossHitSlowUnits = 3;
