@@ -21,6 +21,7 @@ Tất cả key đều tùy chọn. Thiếu hoặc `null` thì dùng giá trị m
 | `outside` | `object` | nâu + 🌱 | Màu và icon vùng ngoài grid. |
 | `map` | `object` | `{}` | Chướng ngại và mồi đặt sẵn theo tọa độ grid. |
 | `spawnCycle` | `array` | `[]` | Sinh mồi theo chu kỳ: mỗi phần tử `{ objType, intervalSeconds }`. Mỗi map config khác nhau. |
+| `entryItemRewards` | `object` | `{}` | Item cộng khi vào màn, mỗi cặp level + item chỉ cộng một lần và lưu cache. |
 
 ### `missions` (array)
 
@@ -37,6 +38,8 @@ Ví dụ:
   { "id": "leaves", "typeId": "prey_leaf", "target": 10 }
 ]
 ```
+
+Sau khi hoàn thành mission thường, game phải giữ flow thắng qua cờ: spawn/reveal `prey_flag`, rồi chỉ thắng khi player ăn cờ. Không bỏ qua `prey_flag` cho level boss/bot mới trừ khi level đó được thiết kế rõ là thắng không cần cờ.
 
 ### `grid` (object)
 
@@ -59,6 +62,7 @@ Vùng trên/dưới vùng chơi (ô không thuộc grid):
 Mỗi **key** = loại entity (typeId), **value** = list tọa độ grid `[[col, row], ...]`. Game dùng factory đăng ký từng typeId → hàm tạo entity tại ô (chướng ngại → ObstacleManager, mồi → PreyManager, bot → list agent...). Thêm loại mới (đá, nước, mồi chuối, bot nhỏ) chỉ cần đăng ký thêm trong game, không gom hết vào một manager.
 
 - `x_mark` (array): dấu X 🪦 — chướng ngại, có buff dừa thì phá được.
+- `stone` (array): đá 🪨 — chướng ngại hardness 50, mũ bảo hiểm không phá được, bom phá được.
 - `prey_leaf` (array): mồi lá 🌿.
 - `prey_apple` (array): mồi táo/dừa 🥥.
 - *(Tương thích cũ: `obstacles` → coi là `x_mark`, `prey` → coi là `prey_leaf`.)*
@@ -79,6 +83,20 @@ Ví dụ:
 "spawnCycle": [
   { "objType": "prey_coconut", "intervalSeconds": 10 }
 ]
+```
+
+### `entryItemRewards` (object)
+
+Item thưởng khi người chơi vào màn. Key là `effectTypeId`, value là số lượng.
+Game lưu cache theo từng cặp level + item, nên vào lại màn hoặc restart không cộng lặp.
+
+Ví dụ:
+
+```json
+"entryItemRewards": {
+  "magnet": 1,
+  "speed": 1
+}
 ```
 
 Ví dụ map:

@@ -11,8 +11,8 @@
   "rule": "none",
   "respawnHeadDirection": "none",
   "grid": {
-    "colorLight": "0xFFE8DED5",
-    "colorLighter": "0xFFD7CCC8"
+    "colorLight": "0xFFE9F5DF",
+    "colorLighter": "0xFFD7EAC6"
   },
   "outside": {
     "color": "0xFF8B7355",

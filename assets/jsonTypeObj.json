@@ -1,4 +1,19 @@
 {
-  "obtain": ["x_mark"],
-  "grey": ["prey_leaf", "prey_coconut", "prey_flag", "prey_coin"]
+  "obtain": ["x_mark", "stone"],
+  "grey": [
+    "prey_leaf",
+    "prey_coconut",
+    "prey_flag",
+    "prey_coin",
+    "snail",
+    "magnet",
+    "bomb",
+    "seed",
+    "antidote",
+    "speed",
+    "clock",
+    "freeze",
+    "dizzy",
+    "poison"
+  ]
 }

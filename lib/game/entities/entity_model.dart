@@ -8,6 +8,7 @@ enum ProjectType {
   preyFlag,
   preyCoin,
   xMark,
+  stone,
   // Mỗi ItemType có ProjectType tương ứng (effectTypeId = typeId)
   snail,
   magnet,
@@ -18,6 +19,7 @@ enum ProjectType {
   clock,
   freeze,
   dizzy,
+  poison,
 }
 
 /// Chuỗi typeId dùng trong JSON / registry / buff. Một nguồn duy nhất.
@@ -34,6 +36,8 @@ extension ProjectTypeExtension on ProjectType {
         return 'prey_coin';
       case ProjectType.xMark:
         return 'x_mark';
+      case ProjectType.stone:
+        return 'stone';
       case ProjectType.snail:
         return 'snail';
       case ProjectType.magnet:
@@ -52,6 +56,8 @@ extension ProjectTypeExtension on ProjectType {
         return 'freeze';
       case ProjectType.dizzy:
         return 'dizzy';
+      case ProjectType.poison:
+        return 'poison';
     }
   }
 
@@ -67,6 +73,8 @@ extension ProjectTypeExtension on ProjectType {
       case ProjectType.preyCoin:
         return null;
       case ProjectType.xMark:
+        return null;
+      case ProjectType.stone:
         return null;
       case ProjectType.snail:
         return ItemType.snail;
@@ -86,6 +94,8 @@ extension ProjectTypeExtension on ProjectType {
         return ItemType.freeze;
       case ProjectType.dizzy:
         return ItemType.dizzy;
+      case ProjectType.poison:
+        return null;
     }
   }
 
@@ -105,6 +115,10 @@ extension ProjectTypeExtension on ProjectType {
         return l10n.entityCoinName;
       case ProjectType.xMark:
         return l10n.entityXMarkName;
+      case ProjectType.stone:
+        return 'Stone';
+      case ProjectType.poison:
+        return 'Poison';
       default:
         return itemType?.name(l10n) ?? typeId;
     }
@@ -129,6 +143,7 @@ class GameEntityView {
   final EntityModel model;
 
   ProjectType get projectType => model.type;
+
   /// effectTypeId dùng cho addItemEffect (vd. prey_coconut). Null nếu entity không gắn item buff.
   String? get effectTypeId => projectType.itemTypeId;
   int get hardness => model.hardness;

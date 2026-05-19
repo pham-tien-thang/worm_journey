@@ -1,10 +1,10 @@
 import 'package:flame/components.dart';
 
 import '../../entities/entities.dart';
-import '../worm/worm.dart';
+import '../pink_worm/pink_worm.dart';
 import 'pineapple_worm_config.dart';
 
-class PineappleWorm extends Worm {
+class PineappleWorm extends PinkWorm {
   PineappleWorm({
     PineappleWormConfig? config,
     WormInfo? info,
@@ -14,7 +14,7 @@ class PineappleWorm extends Worm {
   }) : super(
          config: config ?? PineappleWormConfig(),
          info: info,
-         stats: stats ?? WormStats(baseHardness: 2),
+         stats: stats ?? WormStats(baseHardness: 25),
          position: position,
          gridRowsOverride: gridRowsOverride,
        );

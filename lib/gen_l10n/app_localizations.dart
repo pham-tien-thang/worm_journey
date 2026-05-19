@@ -475,6 +475,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reward received: {amount} {coinIcon}'**
   String victoryRewardReceived(int amount, String coinIcon);
+
+  /// No description provided for @sceneNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Scene not found'**
+  String get sceneNotFound;
 }
 
 class _AppLocalizationsDelegate

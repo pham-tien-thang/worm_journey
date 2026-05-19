@@ -14,6 +14,44 @@ class EntityModels {
     ProjectType.preyFlag.typeId: PreyFlagModel(),
     ProjectType.preyCoin.typeId: PreyCoinModel(),
     ProjectType.xMark.typeId: XMarkModel(),
+    ProjectType.stone.typeId: StoneModel(),
+    ProjectType.snail.typeId: ItemEntityModel(
+      type: ProjectType.snail,
+      icon: '🐌',
+    ),
+    ProjectType.magnet.typeId: ItemEntityModel(
+      type: ProjectType.magnet,
+      icon: '🧲',
+    ),
+    ProjectType.bomb.typeId: ItemEntityModel(
+      type: ProjectType.bomb,
+      icon: '💣',
+    ),
+    ProjectType.seed.typeId: ItemEntityModel(
+      type: ProjectType.seed,
+      icon: '🌱',
+    ),
+    ProjectType.antidote.typeId: ItemEntityModel(
+      type: ProjectType.antidote,
+      icon: '🧪',
+    ),
+    ProjectType.speed.typeId: ItemEntityModel(
+      type: ProjectType.speed,
+      icon: '💨',
+    ),
+    ProjectType.clock.typeId: ItemEntityModel(
+      type: ProjectType.clock,
+      icon: '⏱',
+    ),
+    ProjectType.freeze.typeId: ItemEntityModel(
+      type: ProjectType.freeze,
+      icon: '❄️',
+    ),
+    ProjectType.dizzy.typeId: ItemEntityModel(
+      type: ProjectType.dizzy,
+      icon: '😵‍💫',
+    ),
+    ProjectType.poison.typeId: PoisonEntityModel(),
   };
 
   static EntityModel? get(String typeId) => _registry[typeId];

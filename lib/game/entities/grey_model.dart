@@ -38,3 +38,22 @@ class PreyCoinModel extends GreyModel {
   @override
   ProjectType get type => ProjectType.preyCoin;
 }
+
+class ItemEntityModel extends GreyModel {
+  ItemEntityModel({required this.type, required this.icon});
+
+  @override
+  final ProjectType type;
+
+  @override
+  final String icon;
+}
+
+/// Đám độc xanh do sâu xanh nhả ra; player chạm vào sẽ bị đảo hướng và mất 1 đốt.
+class PoisonEntityModel extends GreyModel {
+  @override
+  String get icon => '';
+
+  @override
+  ProjectType get type => ProjectType.poison;
+}

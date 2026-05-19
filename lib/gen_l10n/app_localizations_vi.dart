@@ -222,4 +222,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String victoryRewardReceived(int amount, String coinIcon) {
     return 'Đã nhận thưởng $amount $coinIcon';
   }
+
+  @override
+  String get sceneNotFound => 'Không tìm thấy cảnh';
 }

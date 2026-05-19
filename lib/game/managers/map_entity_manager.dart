@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flame/components.dart';
 
 import '../../components/coin_prey.dart';
+import '../../components/poison_cloud.dart';
 import '../../components/prey.dart';
 import '../../components/x_obstacle.dart';
 import '../config/type_obj_config.dart';
@@ -46,15 +47,25 @@ class MapEntityManager {
 
   /// Đặt entity tại ô [grid]. [typeId] phải có trong typeObjConfig. Trả về component để game [world.add].
   /// [withSpawnEffect] true: scale 0→1 (vd. lá cờ khi vừa xuất hiện nhấp nháy 1 nhịp).
-  PositionComponent placeAt(Vector2 grid, String typeId,
-      {bool withSpawnEffect = false}) {
-    final comp = _createComponent(typeId, grid, withSpawnEffect: withSpawnEffect);
+  PositionComponent placeAt(
+    Vector2 grid,
+    String typeId, {
+    bool withSpawnEffect = false,
+  }) {
+    final comp = _createComponent(
+      typeId,
+      grid,
+      withSpawnEffect: withSpawnEffect,
+    );
     _entries.add(MapEntityEntry(grid: grid, typeId: typeId, component: comp));
     return comp;
   }
 
-  PositionComponent _createComponent(String typeId, Vector2 grid,
-      {bool withSpawnEffect = false}) {
+  PositionComponent _createComponent(
+    String typeId,
+    Vector2 grid, {
+    bool withSpawnEffect = false,
+  }) {
     final position = gridToWorld(grid);
     final icon = EntityModels.icon(typeId);
     final category = typeObjConfig.getCategory(typeId);
@@ -67,6 +78,13 @@ class MapEntityManager {
           withSpawnEffect: withSpawnEffect,
           iconScale: 1.0,
           rotateSpeed: 14.0,
+        );
+      }
+      if (typeId == ProjectType.poison.typeId) {
+        return PoisonCloud(
+          segmentSize: segmentSize,
+          position: position,
+          withSpawnEffect: withSpawnEffect,
         );
       }
       final isFlag = typeId == 'prey_flag';
@@ -106,7 +124,8 @@ class MapEntityManager {
     final gx = grid.x.toInt();
     final gy = grid.y.toInt();
     for (var i = 0; i < _entries.length; i++) {
-      if (_entries[i].grid.x.toInt() == gx && _entries[i].grid.y.toInt() == gy) {
+      if (_entries[i].grid.x.toInt() == gx &&
+          _entries[i].grid.y.toInt() == gy) {
         return _entries.removeAt(i);
       }
     }
@@ -123,8 +142,12 @@ class MapEntityManager {
   /// [isCellVisible] nếu có: chỉ spawn ở ô trong tầm camera. Null = bỏ qua check.
   /// [minRow] nếu có: chỉ xét ô có row >= minRow (grid.y). VD: lá đầu spawn từ hàng 6 → minRow: 5.
   /// Khi có isCellVisible: duyệt hết ô trong view + trống → chọn ngẫu nhiên 1 ô (đảm bảo sinh trong tầm nhìn).
-  MapEntityEntry? spawn(String typeId, Set<String> occupied,
-      {bool Function(Vector2 grid)? isCellVisible, int? minRow}) {
+  MapEntityEntry? spawn(
+    String typeId,
+    Set<String> occupied, {
+    bool Function(Vector2 grid)? isCellVisible,
+    int? minRow,
+  }) {
     if (!typeObjConfig.isEatable(typeId)) return null;
 
     if (isCellVisible != null) {

@@ -31,6 +31,9 @@ class GameHud extends StatefulWidget {
 }
 
 class _GameHudState extends State<GameHud> {
+  static const double _timerLaneWidth = 156;
+  static const double _backButtonGap = 8;
+
   Timer? _timer;
   GameHudData _data = const GameHudData(
     timeRemainingSeconds: 0,
@@ -89,19 +92,62 @@ class _GameHudState extends State<GameHud> {
       ),
       child: SafeArea(
         bottom: false,
-        child: Row(
-          children: [
-            if (widget.onExitPressed != null) ...[
-              _HudIconButton(
-                icon: Icons.arrow_back_ios_new,
-                onPressed: widget.onExitPressed!,
-              ),
-              const SizedBox(width: 8),
-            ],
-            Expanded(child: _LeftSection(data: _data, textStyle: textStyle)),
-            _CenterSection(data: _data, textStyle: textStyle),
-            Expanded(child: _RightSection(data: _data, textStyle: textStyle)),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final timerLaneWidth =
+                constraints.maxWidth < _timerLaneWidth
+                    ? constraints.maxWidth
+                    : _timerLaneWidth;
+            final sideWidth =
+                ((constraints.maxWidth - timerLaneWidth) / 2)
+                    .clamp(0.0, double.infinity)
+                    .toDouble();
+
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: sideWidth,
+                    child: Row(
+                      children: [
+                        if (widget.onExitPressed != null) ...[
+                          _HudIconButton(
+                            icon: Icons.arrow_back_ios_new,
+                            onPressed: widget.onExitPressed!,
+                          ),
+                          const SizedBox(width: _backButtonGap),
+                        ],
+                        Expanded(
+                          child: _LeftSection(
+                            data: _data,
+                            textStyle: textStyle,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: timerLaneWidth,
+                    child: Center(
+                      child: _CenterSection(data: _data, textStyle: textStyle),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    width: sideWidth,
+                    child: _RightSection(data: _data, textStyle: textStyle),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -163,7 +209,7 @@ class _LeftSection extends StatelessWidget {
           const SizedBox(height: 2),
         ],
         if (data.bossHpMax > 0)
-          Text('👹 ${data.bossHp}/${data.bossHpMax}', style: textStyle),
+          Text('👹 HP ${data.bossHp}/${data.bossHpMax}', style: textStyle),
         if (data.itemBuffs.isNotEmpty) ...[
           const SizedBox(height: 4),
           Wrap(

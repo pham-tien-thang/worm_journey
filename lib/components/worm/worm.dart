@@ -20,10 +20,10 @@ class Worm extends PositionComponent {
     WormStats? stats,
     Vector2? position,
     int? gridRowsOverride,
-  })  : _segmentSize = config.segmentSize,
-        _gridRows = gridRowsOverride ?? config.gridRows ?? GameConfig.gridRows,
-        stats = stats ?? WormStats(moveInterval: config.moveInterval),
-        super(position: position ?? Vector2.zero());
+  }) : _segmentSize = config.segmentSize,
+       _gridRows = gridRowsOverride ?? config.gridRows ?? GameConfig.gridRows,
+       stats = stats ?? WormStats(moveInterval: config.moveInterval),
+       super(position: position ?? Vector2.zero());
 
   final WormConfig config;
   final WormInfo? info;
@@ -40,6 +40,7 @@ class Worm extends PositionComponent {
   void setMoveInterval(double value) {
     stats.moveInterval = value;
   }
+
   final List<Vector2> _gridPositions = [];
   List<Vector2> _previousGridPositions = [];
   double _visualProgress = 1.0;
@@ -51,8 +52,10 @@ class Worm extends PositionComponent {
   // --- Nhấp nháy khi đợi ready (mới vào màn) ---
   /// Game set true khi _startDelayRemaining > 0; khi false thì không nhấp nháy.
   bool _waitingToStart = false;
+
   /// Thời gian tích lũy (giây) để tính chu kỳ ẩn/hiện.
   double _blinkPhase = 0;
+
   /// True = đang nửa chu kỳ “hiện”, false = nửa chu kỳ “ẩn”. Head/body/tail check qua [isBlinkVisible].
   bool _blinkVisible = true;
 
@@ -77,8 +80,14 @@ class Worm extends PositionComponent {
   // --- Item effects (buff/item đều là effect; [endTime] null = không hết hạn) ---
   final List<ItemEffectEntry> _itemEffects = [];
   double? _gameTime;
+  bool _isPoisonedReverse = false;
 
   List<ItemEffectEntry> get itemEffects => List.unmodifiable(_itemEffects);
+  bool get isPoisonedReverse => _isPoisonedReverse;
+
+  void setPoisonedReverse(bool value) {
+    _isPoisonedReverse = value;
+  }
 
   /// Có đang có effect [itemId] không.
   bool hasItemEffect(String itemId) =>
@@ -109,9 +118,11 @@ class Worm extends PositionComponent {
   /// Xóa mọi effect có [itemId] nằm trong [ids]. Gọi [onItemEffectRemoved] cho từng cái.
   void removeItemEffects(Iterable<String> ids) {
     final set = ids.toSet();
-    final toRemove =
-        _itemEffects.where((e) => set.contains(e.itemId)).toList();
+    final toRemove = _itemEffects.where((e) => set.contains(e.itemId)).toList();
     for (final e in toRemove) {
+      if (e.itemId == ItemType.dizzy.effectTypeId) {
+        _isPoisonedReverse = false;
+      }
       onItemEffectRemoved(e.itemId);
       _itemEffects.remove(e);
     }
@@ -119,10 +130,14 @@ class Worm extends PositionComponent {
 
   /// Xóa các effect có [endTime] != null và endTime <= currentTime; gọi [onItemEffectRemoved] trước khi xóa.
   void removeExpiredItemEffects(double currentTime) {
-    final toRemove = _itemEffects
-        .where((e) => e.endTime != null && e.endTime! <= currentTime)
-        .toList();
+    final toRemove =
+        _itemEffects
+            .where((e) => e.endTime != null && e.endTime! <= currentTime)
+            .toList();
     for (final e in toRemove) {
+      if (e.itemId == ItemType.dizzy.effectTypeId) {
+        _isPoisonedReverse = false;
+      }
       onItemEffectRemoved(e.itemId);
       _itemEffects.remove(e);
     }
@@ -153,9 +168,11 @@ class Worm extends PositionComponent {
 
   /// Số đốt (đầu + thân + đuôi).
   int get segmentCount => _gridPositions.length;
+
   /// Ô grid đuôi.
   Vector2 get tailGridPosition =>
       _gridPositions.isNotEmpty ? _gridPositions.last : Vector2.zero();
+
   /// Ô grid đầu.
   Vector2 get headGridPosition =>
       _gridPositions.isNotEmpty ? _gridPositions.first : Vector2.zero();
@@ -222,10 +239,7 @@ class Worm extends PositionComponent {
   /// Đổi tọa độ ô grid (0..cột, 0..hàng) sang tọa độ world trong component.
   Vector2 _gridToWorld(Vector2 grid) {
     final half = _segmentSize / 2;
-    return Vector2(
-      grid.x * _segmentSize + half,
-      grid.y * _segmentSize + half,
-    );
+    return Vector2(grid.x * _segmentSize + half, grid.y * _segmentSize + half);
   }
 
   /// Đặt hướng cho bước tiếp theo; không cho quay ngược 180°. Khi dizzy: input bị đảo (kéo lên → đi xuống).
@@ -236,6 +250,13 @@ class Worm extends PositionComponent {
     if (_direction == WormDirection.left && d == WormDirection.right) return;
     if (_direction == WormDirection.right && d == WormDirection.left) return;
     _nextDirection = d;
+  }
+
+  /// Dùng cho state đặc biệt của bot/boss, không chịu rule input đảo chiều.
+  void forceDirection(WormDirection d) {
+    _direction = d;
+    _nextDirection = null;
+    _syncVisuals();
   }
 
   /// Gọi khi ăn lá nhưng đã đạt maxLength (để hiển thị hiệu ứng "Max").
@@ -311,7 +332,8 @@ class Worm extends PositionComponent {
 
   /// Head/body/tail check trước khi vẽ: false = đang nửa chu kỳ ẩn → không vẽ.
   bool get isBlinkVisible =>
-      (!_waitingToStart || _blinkVisible) && (!_freezeEndBlink || _freezeBlinkVisible);
+      (!_waitingToStart || _blinkVisible) &&
+      (!_freezeEndBlink || _freezeBlinkVisible);
 
   /// Tiến độ di chuyển 0..1 giữa hai ô (để lerp vị trí đầu/đuôi mượt).
   void setVisualProgress(double t) {
@@ -337,18 +359,22 @@ class Worm extends PositionComponent {
   void _syncVisuals() {
     if (_gridPositions.isEmpty) return;
 
-    final headPrev = _previousGridPositions.isNotEmpty
-        ? _previousGridPositions.first
-        : _gridPositions.first;
+    final headPrev =
+        _previousGridPositions.isNotEmpty
+            ? _previousGridPositions.first
+            : _gridPositions.first;
     _head.position = _lerpWorld(headPrev, _gridPositions.first);
     _head.direction = _direction;
-    _head.setShowCryFace(_cryEndTimeRemaining != null && _cryEndTimeRemaining! > 0);
+    _head.setShowCryFace(
+      _cryEndTimeRemaining != null && _cryEndTimeRemaining! > 0,
+    );
     _head.angle = 0;
 
     final tailGrid = _gridPositions.last;
-    final tailPrev = _previousGridPositions.length >= _gridPositions.length
-        ? _previousGridPositions.last
-        : tailGrid;
+    final tailPrev =
+        _previousGridPositions.length >= _gridPositions.length
+            ? _previousGridPositions.last
+            : tailGrid;
     _tail.position = _lerpWorld(tailPrev, tailGrid);
     if (_gridPositions.length >= 2) {
       final prev = _gridPositions[_gridPositions.length - 2];
@@ -369,9 +395,10 @@ class Worm extends PositionComponent {
       seg.removeFromParent();
     }
     for (var i = 1; i < _gridPositions.length - 1; i++) {
-      final prev = i < _previousGridPositions.length
-          ? _previousGridPositions[i]
-          : _gridPositions[i];
+      final prev =
+          i < _previousGridPositions.length
+              ? _previousGridPositions[i]
+              : _gridPositions[i];
       final pos = _lerpWorld(prev, _gridPositions[i]);
       final towardHead = _gridPositions[i - 1] - _gridPositions[i];
       final bodyDir = _vectorToDirection(towardHead);
