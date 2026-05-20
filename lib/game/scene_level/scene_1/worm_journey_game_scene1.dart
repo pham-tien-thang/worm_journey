@@ -238,6 +238,15 @@ class WormJourneyGame extends FlameGame
 
   /// Camera Y đang lerp (làm mượt, tránh giật).
   double? _cameraY;
+  double _cameraShakeRemaining = 0;
+  double _cameraShakeDuration = 0;
+  double _cameraShakeAmplitude = 0;
+  double _cameraShakePhase = 0;
+
+  static const double _damageShakeDurationSeconds = 0.12;
+  static const double _damageShakeAmplitudePixels = 4.0;
+  static const double _bombShakeDurationSeconds = 0.24;
+  static const double _bombShakeAmplitudePixels = 10.0;
 
   /// Factory đặt entity tại ô: typeId (từ JSON) → hàm (grid). Mọi loại dùng chung [MapEntityManager.placeAt].
   final Map<String, void Function(Vector2 grid)> _placeEntityAt = {};
@@ -303,6 +312,11 @@ class WormJourneyGame extends FlameGame
 
   /// Bom: phá entity trong bán kính [BuffConfig.bombRadiusTiles] ô quanh đầu rắn.
   void _instantEffectBomb({WormAgent? source, bool damageGreenBoss = true}) {
+    _triggerCameraShake(
+      duration: _bombShakeDurationSeconds,
+      amplitude: _bombShakeAmplitudePixels,
+    );
+    _triggerBombHaptic();
     final sourceAgent = source ?? _playerAgent;
     final head = sourceAgent.worm.headGridPosition;
     final r = BuffConfig.bombRadiusTiles;
@@ -411,7 +425,7 @@ class WormJourneyGame extends FlameGame
         mainWorm.setPoisonedReverse(true);
       }
     }
-    _loseSegmentFor(_playerAgent);
+    _loseSegmentFor(_playerAgent, triggerFeedback: false);
   }
 
   bool get _isPlayerPoisonProtected =>
@@ -1762,6 +1776,34 @@ class WormJourneyGame extends FlameGame
 
   /// Tốc độ làm mượt camera (càng lớn càng bám nhanh). ~6 = mượt, ~15 = bám gần ngay.
   static const double _cameraSmoothSpeed = 8.0;
+  static const double _cameraShakeFrequency = 88.0;
+
+  void _triggerCameraShake({
+    required double duration,
+    required double amplitude,
+  }) {
+    if (duration <= 0 || amplitude <= 0) return;
+    _cameraShakeDuration = max(_cameraShakeDuration, duration);
+    _cameraShakeRemaining = max(_cameraShakeRemaining, duration);
+    _cameraShakeAmplitude = max(_cameraShakeAmplitude, amplitude);
+  }
+
+  void _triggerDamageHaptic() {
+    if (!appSettingsNotifier.hapticsEnabled) return;
+    HapticFeedback.lightImpact();
+  }
+
+  void _triggerBombHaptic() {
+    if (!appSettingsNotifier.hapticsEnabled) return;
+    HapticFeedback.heavyImpact();
+  }
+
+  void _resetCameraShake() {
+    _cameraShakeRemaining = 0;
+    _cameraShakeDuration = 0;
+    _cameraShakeAmplitude = 0;
+    _cameraShakePhase = 0;
+  }
 
   /// Di chuyển camera theo đầu rắn (trục Y), lerp mượt.
   void _updateCameraFollowSnake(double dt) {
@@ -1783,7 +1825,25 @@ class WormJourneyGame extends FlameGame
     final smoothFactor = 1.0 - exp(-_cameraSmoothSpeed * dt);
     _cameraY = current + (targetY - current) * smoothFactor;
 
-    camera.viewfinder.position = Vector2(worldWidth / 2, _cameraY!);
+    var shakeX = 0.0;
+    var shakeY = 0.0;
+    if (_cameraShakeRemaining > 0 && _cameraShakeDuration > 0) {
+      _cameraShakePhase += dt * _cameraShakeFrequency;
+      _cameraShakeRemaining = max(0.0, _cameraShakeRemaining - dt);
+      final fade = _cameraShakeRemaining / _cameraShakeDuration;
+      final amplitude = _cameraShakeAmplitude * fade * fade;
+      shakeX = sin(_cameraShakePhase) * amplitude;
+      shakeY = cos(_cameraShakePhase * 1.37) * amplitude * 0.55;
+      if (_cameraShakeRemaining <= 0) {
+        _cameraShakeDuration = 0;
+        _cameraShakeAmplitude = 0;
+      }
+    }
+
+    camera.viewfinder.position = Vector2(
+      worldWidth / 2 + shakeX,
+      _cameraY! + shakeY,
+    );
   }
 
   void _setGameOver(_GameOverCause cause) {
@@ -2486,6 +2546,7 @@ class WormJourneyGame extends FlameGame
     );
     _paused = false;
     _moveAccumulator = 0;
+    _resetCameraShake();
     _missionCompleteSpawnsPlaced =
         _levelConfig.missionCompleteSpawns.placements.isEmpty;
   }
@@ -2574,6 +2635,7 @@ class WormJourneyGame extends FlameGame
     _paused = false;
     _moveAccumulator = 0;
     _cameraY = null;
+    _resetCameraShake();
     _hasRevivedOnce = false;
     _nextPreyLeafSequenceIndex = 0;
     _missionCompleteSpawnsPlaced =
@@ -2581,7 +2643,14 @@ class WormJourneyGame extends FlameGame
   }
 
   /// Trừ 1 đốt đuôi và để lại dấu X tại vị trí đuôi.
-  void _loseSegmentFor(WormAgent agent) {
+  void _loseSegmentFor(WormAgent agent, {bool triggerFeedback = true}) {
+    if (triggerFeedback) {
+      _triggerCameraShake(
+        duration: _damageShakeDurationSeconds,
+        amplitude: _damageShakeAmplitudePixels,
+      );
+      _triggerDamageHaptic();
+    }
     agent.showCryFace();
     final tailGrid = agent.tailGridPosition.clone();
     agent.removeTail();

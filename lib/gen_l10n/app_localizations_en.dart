@@ -90,6 +90,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get buttonSettings => 'Settings';
 
   @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsEnglish => 'EN';
+
+  @override
+  String get settingsVietnamese => 'VI';
+
+  @override
+  String get settingsSound => 'Sound';
+
+  @override
+  String get settingsSoundOn => 'On';
+
+  @override
+  String get settingsSoundOff => 'Off';
+
+  @override
+  String get settingsHaptics => 'Vibration';
+
+  @override
+  String get settingsHapticsOn => 'On';
+
+  @override
+  String get settingsHapticsOff => 'Off';
+
+  @override
   String get itemCoconutName => 'Coconut';
 
   @override

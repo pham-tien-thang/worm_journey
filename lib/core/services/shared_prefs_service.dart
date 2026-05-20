@@ -1,12 +1,57 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Notifier khi max level/scene unlock thay đổi (chiến thắng cập nhật SharedPrefs).
 /// Màn level selection và scene selection lắng nghe để reload ngay.
 final UnlockNotifier unlockNotifier = UnlockNotifier();
 
+/// Notifier cài đặt app để UI đổi ngôn ngữ/âm thanh ngay khi SharedPreferences đổi.
+final AppSettingsNotifier appSettingsNotifier = AppSettingsNotifier();
+
 class UnlockNotifier extends ChangeNotifier {
   void notifyUnlockChanged() => notifyListeners();
+}
+
+class AppSettingsNotifier extends ChangeNotifier {
+  String? _languageCode;
+  bool _soundEnabled = true;
+  bool _hapticsEnabled = true;
+  bool _initialized = false;
+
+  String? get languageCode => _languageCode;
+  Locale? get locale => _languageCode == null ? null : Locale(_languageCode!);
+  bool get soundEnabled => _soundEnabled;
+  bool get hapticsEnabled => _hapticsEnabled;
+
+  Future<void> init() async {
+    if (_initialized) return;
+    _languageCode = await SharedPrefsService.getLanguageCode();
+    _soundEnabled = await SharedPrefsService.getSoundEnabled();
+    _hapticsEnabled = await SharedPrefsService.getHapticsEnabled();
+    _initialized = true;
+  }
+
+  Future<void> setLanguageCode(String value) async {
+    final normalized = SharedPrefsService.normalizeLanguageCode(value);
+    if (normalized == null || normalized == _languageCode) return;
+    _languageCode = normalized;
+    notifyListeners();
+    await SharedPrefsService.setLanguageCode(normalized);
+  }
+
+  Future<void> setSoundEnabled(bool value) async {
+    if (value == _soundEnabled) return;
+    _soundEnabled = value;
+    notifyListeners();
+    await SharedPrefsService.setSoundEnabled(value);
+  }
+
+  Future<void> setHapticsEnabled(bool value) async {
+    if (value == _hapticsEnabled) return;
+    _hapticsEnabled = value;
+    notifyListeners();
+    await SharedPrefsService.setHapticsEnabled(value);
+  }
 }
 
 /// Service lưu/đọc dữ liệu qua SharedPreferences.
@@ -26,9 +71,50 @@ class SharedPrefsService {
   static const String _maxLevelIndexUnlockKey = 'max_level_index_unlock';
   static const String _wormInitLengthKey = 'worm_init_length';
   static const String _wormMaxLengthKey = 'worm_max_length';
+  static const String _languageCodeKey = 'language_code';
+  static const String _soundEnabledKey = 'sound_enabled';
+  static const String _hapticsEnabledKey = 'haptics_enabled';
   static const String _itemQtyPrefix = 'item_qty_';
   static const String _levelEntryRewardClaimPrefix =
       'level_entry_reward_claimed_';
+
+  static String? normalizeLanguageCode(String? value) {
+    if (value == null) return null;
+    final normalized = value.trim().toLowerCase();
+    return normalized == 'en' || normalized == 'vi' ? normalized : null;
+  }
+
+  static Future<String?> getLanguageCode() async {
+    await init();
+    return normalizeLanguageCode(_prefs!.getString(_languageCodeKey));
+  }
+
+  static Future<void> setLanguageCode(String value) async {
+    await init();
+    final normalized = normalizeLanguageCode(value);
+    if (normalized == null) return;
+    await _prefs!.setString(_languageCodeKey, normalized);
+  }
+
+  static Future<bool> getSoundEnabled() async {
+    await init();
+    return _prefs!.getBool(_soundEnabledKey) ?? true;
+  }
+
+  static Future<void> setSoundEnabled(bool value) async {
+    await init();
+    await _prefs!.setBool(_soundEnabledKey, value);
+  }
+
+  static Future<bool> getHapticsEnabled() async {
+    await init();
+    return _prefs!.getBool(_hapticsEnabledKey) ?? true;
+  }
+
+  static Future<void> setHapticsEnabled(bool value) async {
+    await init();
+    await _prefs!.setBool(_hapticsEnabledKey, value);
+  }
 
   /// Số đốt thân khởi điểm (1 = 1 đầu + 1 thân + 1 đuôi). Mặc định 1.
   static Future<int> getWormInitLength() async {

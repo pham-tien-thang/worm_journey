@@ -6,6 +6,7 @@
     "bomb": 1
   },
   "itemBlock": [
+    "prey_coconut",
     "antidote",
     "dizzy"
   ],
@@ -77,12 +78,6 @@
     ]
   },
   "spawnCycle": [
-    {
-      "objType": "prey_coconut",
-      "intervalSeconds": 10,
-      "maxOnMap": 1,
-      "pauseWhenPresent": true
-    },
     {
       "objType": "speed",
       "intervalSeconds": 15,

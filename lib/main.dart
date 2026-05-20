@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'core/core.dart';
 import 'core/services/coin_service.dart';
+import 'core/services/shared_prefs_service.dart';
 import 'inject/injection.dart';
 
 Future<void> main() async {
@@ -12,6 +13,8 @@ Future<void> main() async {
     overlays: [SystemUiOverlay.bottom],
   );
   initInjection();
+  await SharedPrefsService.init();
+  await appSettingsNotifier.init();
   await CoinService.instance.init();
   runApp(const WormJourneyApp());
 }
