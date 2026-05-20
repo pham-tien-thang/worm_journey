@@ -11,6 +11,10 @@
   ],
   "timeLimitSeconds": 90,
   "timeUrgentThresholdSeconds": 30,
+  "coin": {
+    "firstSpawnDelaySeconds": 10,
+    "spawnDelayAfterEatenSeconds": 10
+  },
   "rule": "none",
   "grid": {
     "colorLight": "0xFFDFF0D2",
@@ -18,7 +22,7 @@
   },
   "outside": {
     "color": "0xFF5C6BC0",
-    "icon": ""
+    "icon": "🧩"
   },
   "map": {
     "obstacles": [],
