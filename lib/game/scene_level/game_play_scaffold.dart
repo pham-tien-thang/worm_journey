@@ -31,6 +31,7 @@ class GamePlayScaffold extends StatefulWidget {
     this.onJoystickCoachFinished,
     this.onExitRequested,
     this.onGameOverEnd,
+    this.onVictoryEnd,
     this.onGameOverWatchAd,
   });
 
@@ -39,6 +40,7 @@ class GamePlayScaffold extends StatefulWidget {
   final VoidCallback? onJoystickCoachFinished;
   final VoidCallback? onExitRequested;
   final VoidCallback? onGameOverEnd;
+  final VoidCallback? onVictoryEnd;
   final VoidCallback? onGameOverWatchAd;
 
   @override
@@ -228,7 +230,7 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold>
                             'Victory':
                                 (ctx, g) => _VictoryOverlayWidget(
                                   game: g as WormJourneyGame,
-                                  onContinue: widget.onGameOverEnd,
+                                  onContinue: widget.onVictoryEnd,
                                 ),
                           },
                         ),
