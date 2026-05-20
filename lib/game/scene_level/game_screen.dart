@@ -21,6 +21,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late final WormJourneyGame _game;
+  bool _showJoystickCoach = false;
 
   @override
   void initState() {
@@ -54,11 +55,20 @@ class _GameScreenState extends State<GameScreen> {
             guideText: guideText,
             onUnderstood: () {
               Navigator.of(context).pop();
-              _game.dismissGuide();
+              if (widget.level == 1) {
+                _game.setPaused(true);
+              }
             },
           ),
     );
-    if (mounted) GamePauseObserver.dialogOpen.value = false;
+    if (!mounted) return;
+    GamePauseObserver.dialogOpen.value = false;
+    if (widget.level == 1) {
+      _game.setPaused(true);
+      setState(() => _showJoystickCoach = true);
+    } else {
+      _game.dismissGuide();
+    }
   }
 
   @override
@@ -107,6 +117,11 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     final content = GamePlayScaffold(
       game: _game,
+      showJoystickCoach: _showJoystickCoach,
+      onJoystickCoachFinished: () {
+        if (mounted) setState(() => _showJoystickCoach = false);
+        _game.dismissGuide();
+      },
       onExitRequested: _handleExitRequest,
       onGameOverEnd: () => context.pop(),
     );

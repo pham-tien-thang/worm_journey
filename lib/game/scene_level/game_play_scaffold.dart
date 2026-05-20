@@ -27,12 +27,16 @@ class GamePlayScaffold extends StatefulWidget {
   const GamePlayScaffold({
     super.key,
     required this.game,
+    this.showJoystickCoach = false,
+    this.onJoystickCoachFinished,
     this.onExitRequested,
     this.onGameOverEnd,
     this.onGameOverWatchAd,
   });
 
   final WormJourneyGame game;
+  final bool showJoystickCoach;
+  final VoidCallback? onJoystickCoachFinished;
   final VoidCallback? onExitRequested;
   final VoidCallback? onGameOverEnd;
   final VoidCallback? onGameOverWatchAd;
@@ -41,10 +45,13 @@ class GamePlayScaffold extends StatefulWidget {
   State<GamePlayScaffold> createState() => _GamePlayScaffoldState();
 }
 
-class _GamePlayScaffoldState extends State<GamePlayScaffold> {
+class _GamePlayScaffoldState extends State<GamePlayScaffold>
+    with SingleTickerProviderStateMixin {
   Map<String, int> _itemQuantities = {};
   bool _blockedSnackBarVisible = false;
+  bool _joystickCoachVisible = false;
   Timer? _blockedSnackBarResetTimer;
+  late final AnimationController _joystickCoachController;
   Offset? _swipeStart;
   Offset? _swipeCurrent;
   WormDirection? _lastSwipeDirection;
@@ -54,13 +61,47 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
   @override
   void initState() {
     super.initState();
+    _joystickCoachController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3200),
+    )..addStatusListener((status) {
+      if (status != AnimationStatus.completed) return;
+      if (mounted) setState(() => _joystickCoachVisible = false);
+      widget.onJoystickCoachFinished?.call();
+    });
     _loadQuantities();
+    if (widget.showJoystickCoach) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startJoystickCoach();
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant GamePlayScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showJoystickCoach && !oldWidget.showJoystickCoach) {
+      _startJoystickCoach();
+    }
   }
 
   @override
   void dispose() {
     _blockedSnackBarResetTimer?.cancel();
+    _joystickCoachController.dispose();
     super.dispose();
+  }
+
+  void _startJoystickCoach() {
+    setState(() => _joystickCoachVisible = true);
+    _joystickCoachController.forward(from: 0);
+  }
+
+  void _stopJoystickCoach() {
+    if (!_joystickCoachVisible) return;
+    _joystickCoachController.stop();
+    setState(() => _joystickCoachVisible = false);
+    widget.onJoystickCoachFinished?.call();
   }
 
   Future<void> _loadQuantities() async {
@@ -123,6 +164,7 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
   }
 
   void _onGamePanStart(DragStartDetails details) {
+    _stopJoystickCoach();
     _swipeStart = details.localPosition;
     _swipeCurrent = details.localPosition;
     _lastSwipeDirection = null;
@@ -211,6 +253,20 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                                 start: _swipeStart!,
                                 current: _swipeCurrent!,
                               ),
+                            ),
+                          ),
+                        ),
+                      if (_joystickCoachVisible)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: AnimatedBuilder(
+                              animation: _joystickCoachController,
+                              builder:
+                                  (context, child) => CustomPaint(
+                                    painter: _JoystickCoachPainter(
+                                      progress: _joystickCoachController.value,
+                                    ),
+                                  ),
                             ),
                           ),
                         ),
@@ -398,6 +454,91 @@ class _FloatingTouchPadPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _FloatingTouchPadPainter oldDelegate) =>
       oldDelegate.start != start || oldDelegate.current != current;
+}
+
+class _JoystickCoachPainter extends CustomPainter {
+  _JoystickCoachPainter({required this.progress});
+
+  final double progress;
+
+  static const Color _accent = Color(0xFFE91E8C);
+  static const Color _light = Color(0xFFFFFFFF);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centerX = max(86.0, size.width - 86);
+    final centerY = min(size.height - 86, max(100.0, size.height - 118));
+    final center = Offset(centerX, centerY);
+
+    for (var i = 0; i < 3; i++) {
+      final phase = (progress * 3 + i / 3) % 1.0;
+      final opacity = (1 - phase) * 0.55;
+      final radius = 34 + phase * 22;
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = _accent.withValues(alpha: opacity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3 - phase * 1.6,
+      );
+    }
+
+    final pull = Curves.easeOutCubic.transform(min(1.0, progress / 0.22));
+    final rotateT = ((progress - 0.22) / 0.66).clamp(0.0, 1.0);
+    final sweep =
+        rotateT < 0.5
+            ? Curves.easeInOut.transform(rotateT * 2)
+            : Curves.easeInOut.transform((1 - rotateT) * 2);
+    final angle = -pi * 0.62 + sweep * pi * 0.95;
+    final knobDistance = 46 * pull;
+    final demoCenter = center + Offset(cos(angle), sin(angle)) * knobDistance;
+
+    canvas.drawCircle(
+      center,
+      34,
+      Paint()
+        ..color = _light.withValues(alpha: 0.34)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      center,
+      34,
+      Paint()
+        ..color = _accent.withValues(alpha: 0.62)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+
+    if (pull > 0) {
+      canvas.drawLine(
+        center,
+        demoCenter,
+        Paint()
+          ..color = _accent.withValues(alpha: 0.35)
+          ..strokeWidth = 8
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+    canvas.drawCircle(
+      demoCenter,
+      18,
+      Paint()
+        ..color = _accent.withValues(alpha: 0.85)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      demoCenter + const Offset(-5, -5),
+      5,
+      Paint()
+        ..color = _light.withValues(alpha: 0.9)
+        ..style = PaintingStyle.fill,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _JoystickCoachPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
 
 class _ItemSlot extends StatelessWidget {
