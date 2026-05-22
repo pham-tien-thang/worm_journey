@@ -4,9 +4,11 @@ class WormBodyConfig {
     required this.assetVertical,
     required this.assetHorizontal,
     this.imageScale = 1.2,
+    this.reverseUpFlipY = false,
   });
 
   final String assetVertical;
   final String assetHorizontal;
   final double imageScale;
+  final bool reverseUpFlipY;
 }

@@ -28,6 +28,7 @@ class GreenBossWormBodyConfig extends WormBodyConfig {
         assetVertical: 'component/worm/boss_green_worm/green_body_all.png',
         assetHorizontal: 'component/worm/boss_green_worm/green_body_all.png',
         imageScale: 1.2,
+        reverseUpFlipY: true,
       );
 }
 

@@ -17,10 +17,10 @@ class WormBodySegment extends PositionComponent {
     required double segmentSize,
     Vector2? position,
   }) : super(
-          position: position ?? Vector2.zero(),
-          size: Vector2.all(segmentSize),
-          anchor: Anchor.center,
-        );
+         position: position ?? Vector2.zero(),
+         size: Vector2.all(segmentSize),
+         anchor: Anchor.center,
+       );
 
   final WormBodyConfig config;
   WormDirection direction;
@@ -39,8 +39,14 @@ class WormBodySegment extends PositionComponent {
 
     final game = findParent<FlameGame>();
     if (game == null) return;
-    _spriteVertical = await Sprite.load(config.assetVertical, images: game.images);
-    _spriteHorizontal = await Sprite.load(config.assetHorizontal, images: game.images);
+    _spriteVertical = await Sprite.load(
+      config.assetVertical,
+      images: game.images,
+    );
+    _spriteHorizontal = await Sprite.load(
+      config.assetHorizontal,
+      images: game.images,
+    );
   }
 
   @override
@@ -56,7 +62,7 @@ class WormBodySegment extends PositionComponent {
 
     canvas.save();
     final bool flipX = direction == WormDirection.left;
-    final bool flipY = direction == WormDirection.up;
+    final bool flipY = direction == WormDirection.up && !config.reverseUpFlipY;
     if (flipX || flipY) {
       canvas.translate(cx, cy);
       if (flipX) canvas.scale(-1.0, 1.0);
@@ -64,12 +70,18 @@ class WormBodySegment extends PositionComponent {
       canvas.translate(-cx, -cy);
     }
     final drawSize = size * config.imageScale;
-    sprite.render(canvas, position: center, size: drawSize, anchor: Anchor.center);
+    sprite.render(
+      canvas,
+      position: center,
+      size: drawSize,
+      anchor: Anchor.center,
+    );
     canvas.restore();
   }
 
   Sprite? get currentSprite {
-    final isVertical = direction == WormDirection.up || direction == WormDirection.down;
+    final isVertical =
+        direction == WormDirection.up || direction == WormDirection.down;
     return isVertical ? _spriteVertical : _spriteHorizontal;
   }
 }
