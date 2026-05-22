@@ -90,6 +90,36 @@ class AppLocalizationsVi extends AppLocalizations {
   String get buttonSettings => 'Cài đặt';
 
   @override
+  String get settingsTitle => 'Cài đặt';
+
+  @override
+  String get settingsLanguage => 'Ngôn ngữ';
+
+  @override
+  String get settingsEnglish => 'EN';
+
+  @override
+  String get settingsVietnamese => 'VI';
+
+  @override
+  String get settingsSound => 'Âm thanh';
+
+  @override
+  String get settingsSoundOn => 'Bật';
+
+  @override
+  String get settingsSoundOff => 'Tắt';
+
+  @override
+  String get settingsHaptics => 'Rung';
+
+  @override
+  String get settingsHapticsOn => 'Bật';
+
+  @override
+  String get settingsHapticsOff => 'Tắt';
+
+  @override
   String get itemCoconutName => 'Quả dừa';
 
   @override

@@ -12,6 +12,7 @@ import '../../core/services/coin_service.dart';
 import '../../core/services/shared_prefs_service.dart';
 import '../../inject/injection.dart';
 import '../../models/item_model.dart';
+import '../../components/worm/worm_direction.dart';
 import '../../widgets/exit_game_dialog.dart';
 import '../../widgets/game_hud.dart';
 import '../../widgets/game_joystick.dart';
@@ -26,6 +27,8 @@ class GamePlayScaffold extends StatefulWidget {
   const GamePlayScaffold({
     super.key,
     required this.game,
+    this.showJoystickCoach = false,
+    this.onJoystickCoachFinished,
     this.onExitRequested,
     this.onGameOverEnd,
     this.onVictoryEnd,
@@ -33,6 +36,8 @@ class GamePlayScaffold extends StatefulWidget {
   });
 
   final WormJourneyGame game;
+  final bool showJoystickCoach;
+  final VoidCallback? onJoystickCoachFinished;
   final VoidCallback? onExitRequested;
   final VoidCallback? onGameOverEnd;
   final VoidCallback? onVictoryEnd;
@@ -42,21 +47,63 @@ class GamePlayScaffold extends StatefulWidget {
   State<GamePlayScaffold> createState() => _GamePlayScaffoldState();
 }
 
-class _GamePlayScaffoldState extends State<GamePlayScaffold> {
+class _GamePlayScaffoldState extends State<GamePlayScaffold>
+    with SingleTickerProviderStateMixin {
   Map<String, int> _itemQuantities = {};
   bool _blockedSnackBarVisible = false;
+  bool _joystickCoachVisible = false;
   Timer? _blockedSnackBarResetTimer;
+  late final AnimationController _joystickCoachController;
+  Offset? _swipeStart;
+  Offset? _swipeCurrent;
+  WormDirection? _lastSwipeDirection;
+
+  static const double _swipeDirectionThreshold = 24.0;
 
   @override
   void initState() {
     super.initState();
+    _joystickCoachController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3200),
+    )..addStatusListener((status) {
+      if (status != AnimationStatus.completed) return;
+      if (mounted) setState(() => _joystickCoachVisible = false);
+      widget.onJoystickCoachFinished?.call();
+    });
     _loadQuantities();
+    if (widget.showJoystickCoach) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startJoystickCoach();
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant GamePlayScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showJoystickCoach && !oldWidget.showJoystickCoach) {
+      _startJoystickCoach();
+    }
   }
 
   @override
   void dispose() {
     _blockedSnackBarResetTimer?.cancel();
+    _joystickCoachController.dispose();
     super.dispose();
+  }
+
+  void _startJoystickCoach() {
+    setState(() => _joystickCoachVisible = true);
+    _joystickCoachController.forward(from: 0);
+  }
+
+  void _stopJoystickCoach() {
+    if (!_joystickCoachVisible) return;
+    _joystickCoachController.stop();
+    setState(() => _joystickCoachVisible = false);
+    widget.onJoystickCoachFinished?.call();
   }
 
   Future<void> _loadQuantities() async {
@@ -110,6 +157,43 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
     return true;
   }
 
+  WormDirection? _directionFromDragDelta(Offset delta) {
+    if (delta.distance < _swipeDirectionThreshold) return null;
+    if (delta.dx.abs() >= delta.dy.abs()) {
+      return delta.dx > 0 ? WormDirection.right : WormDirection.left;
+    }
+    return delta.dy > 0 ? WormDirection.down : WormDirection.up;
+  }
+
+  void _onGamePanStart(DragStartDetails details) {
+    _stopJoystickCoach();
+    _swipeStart = details.localPosition;
+    _swipeCurrent = details.localPosition;
+    _lastSwipeDirection = null;
+    setState(() {});
+  }
+
+  void _onGamePanUpdate(DragUpdateDetails details) {
+    final start = _swipeStart ?? details.localPosition;
+    _swipeCurrent = details.localPosition;
+    final direction = _directionFromDragDelta(details.localPosition - start);
+    setState(() {});
+    if (direction == null || direction == _lastSwipeDirection) return;
+    _lastSwipeDirection = direction;
+    widget.game.setDirection(direction);
+  }
+
+  void _onGamePanEnd(DragEndDetails details) {
+    _resetGamePan();
+  }
+
+  void _resetGamePan() {
+    _swipeStart = null;
+    _swipeCurrent = null;
+    _lastSwipeDirection = null;
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final game = widget.game;
@@ -123,26 +207,33 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      GameWidget(
-                        game: game,
-                        overlayBuilderMap: {
-                          'GameOver':
-                              (ctx, g) => _GameOverOverlayWidget(
-                                game: g as WormJourneyGame,
-                                onGameOverEnd: widget.onGameOverEnd,
-                                onWatchAd: widget.onGameOverWatchAd,
-                              ),
-                          'GameOverNoRevive':
-                              (ctx, g) => _GameOverNoReviveOverlayWidget(
-                                game: g as WormJourneyGame,
-                                onGameOverEnd: widget.onGameOverEnd,
-                              ),
-                          'Victory':
-                              (ctx, g) => _VictoryOverlayWidget(
-                                game: g as WormJourneyGame,
-                                onContinue: widget.onVictoryEnd,
-                              ),
-                        },
+                      GestureDetector(
+                        behavior: HitTestBehavior.deferToChild,
+                        onPanStart: _onGamePanStart,
+                        onPanUpdate: _onGamePanUpdate,
+                        onPanEnd: _onGamePanEnd,
+                        onPanCancel: _resetGamePan,
+                        child: GameWidget(
+                          game: game,
+                          overlayBuilderMap: {
+                            'GameOver':
+                                (ctx, g) => _GameOverOverlayWidget(
+                                  game: g as WormJourneyGame,
+                                  onGameOverEnd: widget.onGameOverEnd,
+                                  onWatchAd: widget.onGameOverWatchAd,
+                                ),
+                            'GameOverNoRevive':
+                                (ctx, g) => _GameOverNoReviveOverlayWidget(
+                                  game: g as WormJourneyGame,
+                                  onGameOverEnd: widget.onGameOverEnd,
+                                ),
+                            'Victory':
+                                (ctx, g) => _VictoryOverlayWidget(
+                                  game: g as WormJourneyGame,
+                                  onContinue: widget.onVictoryEnd,
+                                ),
+                          },
+                        ),
                       ),
                       Positioned(
                         left: 0,
@@ -156,6 +247,31 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
                                   : null,
                         ),
                       ),
+                      if (_swipeStart != null && _swipeCurrent != null)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: CustomPaint(
+                              painter: _FloatingTouchPadPainter(
+                                start: _swipeStart!,
+                                current: _swipeCurrent!,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (_joystickCoachVisible)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: AnimatedBuilder(
+                              animation: _joystickCoachController,
+                              builder:
+                                  (context, child) => CustomPaint(
+                                    painter: _JoystickCoachPainter(
+                                      progress: _joystickCoachController.value,
+                                    ),
+                                  ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -281,6 +397,150 @@ class _GamePlayScaffoldState extends State<GamePlayScaffold> {
       onReceive: () => _onUseItem(item),
     );
   }
+}
+
+class _FloatingTouchPadPainter extends CustomPainter {
+  _FloatingTouchPadPainter({required this.start, required this.current});
+
+  final Offset start;
+  final Offset current;
+
+  static const double _baseRadius = 34.0;
+  static const double _knobRadius = 16.0;
+  static const Color _baseColor = Color(0x55FFFFFF);
+  static const Color _baseStrokeColor = Color(0x99E91E8C);
+  static const Color _knobColor = Color(0xB3E91E8C);
+  static const Color _knobHighlightColor = Color(0xCCFFFFFF);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final delta = current - start;
+    final maxKnobDistance = _baseRadius - _knobRadius * 0.35;
+    final knobOffset =
+        delta.distance <= maxKnobDistance
+            ? delta
+            : Offset.fromDirection(delta.direction, maxKnobDistance);
+    final knobCenter = start + knobOffset;
+
+    canvas.drawCircle(
+      start,
+      _baseRadius,
+      Paint()
+        ..color = _baseColor
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      start,
+      _baseRadius,
+      Paint()
+        ..color = _baseStrokeColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    canvas.drawCircle(
+      knobCenter,
+      _knobRadius,
+      Paint()
+        ..color = _knobColor
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      knobCenter + const Offset(-5, -5),
+      _knobRadius * 0.32,
+      Paint()
+        ..color = _knobHighlightColor
+        ..style = PaintingStyle.fill,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _FloatingTouchPadPainter oldDelegate) =>
+      oldDelegate.start != start || oldDelegate.current != current;
+}
+
+class _JoystickCoachPainter extends CustomPainter {
+  _JoystickCoachPainter({required this.progress});
+
+  final double progress;
+
+  static const Color _accent = Color(0xFFE91E8C);
+  static const Color _light = Color(0xFFFFFFFF);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centerX = max(86.0, size.width - 86);
+    final centerY = min(size.height - 86, max(100.0, size.height - 118));
+    final center = Offset(centerX, centerY);
+
+    for (var i = 0; i < 3; i++) {
+      final phase = (progress * 3 + i / 3) % 1.0;
+      final opacity = (1 - phase) * 0.55;
+      final radius = 34 + phase * 22;
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = _accent.withValues(alpha: opacity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3 - phase * 1.6,
+      );
+    }
+
+    final pull = Curves.easeOutCubic.transform(min(1.0, progress / 0.22));
+    final rotateT = ((progress - 0.22) / 0.66).clamp(0.0, 1.0);
+    final sweep =
+        rotateT < 0.5
+            ? Curves.easeInOut.transform(rotateT * 2)
+            : Curves.easeInOut.transform((1 - rotateT) * 2);
+    final angle = -pi * 0.62 + sweep * pi * 0.95;
+    final knobDistance = 46 * pull;
+    final demoCenter = center + Offset(cos(angle), sin(angle)) * knobDistance;
+
+    canvas.drawCircle(
+      center,
+      34,
+      Paint()
+        ..color = _light.withValues(alpha: 0.34)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      center,
+      34,
+      Paint()
+        ..color = _accent.withValues(alpha: 0.62)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+
+    if (pull > 0) {
+      canvas.drawLine(
+        center,
+        demoCenter,
+        Paint()
+          ..color = _accent.withValues(alpha: 0.35)
+          ..strokeWidth = 8
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+    canvas.drawCircle(
+      demoCenter,
+      18,
+      Paint()
+        ..color = _accent.withValues(alpha: 0.85)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      demoCenter + const Offset(-5, -5),
+      5,
+      Paint()
+        ..color = _light.withValues(alpha: 0.9)
+        ..style = PaintingStyle.fill,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _JoystickCoachPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
 
 class _ItemSlot extends StatelessWidget {

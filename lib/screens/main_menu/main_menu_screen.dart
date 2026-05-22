@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app_router.dart';
-import '../../inject/injection.dart';
+import '../../gen_l10n/app_localizations.dart';
 import '../../widgets/coin_hud.dart';
 import '../../widgets/green_button.dart';
 
@@ -11,7 +11,7 @@ class MainMenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = L10n;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: const Color(0xFF1B3D2E),
       body: Stack(
@@ -33,9 +33,12 @@ class MainMenuScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.only(top: 8, right: 16),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.45),
+                        color: Colors.black.withValues(alpha: 0.45),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: CoinHud(),

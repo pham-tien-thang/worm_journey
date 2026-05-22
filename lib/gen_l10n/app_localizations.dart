@@ -236,6 +236,66 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get buttonSettings;
 
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsLanguage;
+
+  /// No description provided for @settingsEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'EN'**
+  String get settingsEnglish;
+
+  /// No description provided for @settingsVietnamese.
+  ///
+  /// In en, this message translates to:
+  /// **'VI'**
+  String get settingsVietnamese;
+
+  /// No description provided for @settingsSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound'**
+  String get settingsSound;
+
+  /// No description provided for @settingsSoundOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get settingsSoundOn;
+
+  /// No description provided for @settingsSoundOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get settingsSoundOff;
+
+  /// No description provided for @settingsHaptics.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibration'**
+  String get settingsHaptics;
+
+  /// No description provided for @settingsHapticsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get settingsHapticsOn;
+
+  /// No description provided for @settingsHapticsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get settingsHapticsOff;
+
   /// No description provided for @itemCoconutName.
   ///
   /// In en, this message translates to:

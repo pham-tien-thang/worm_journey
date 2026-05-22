@@ -1,18 +1,13 @@
 {
-  "guide_vi": "Ăn 15 🌿.\n\nHạ sâu xanh rồi lấy 🚩 để thắng.\n\n🧪: xoá độc/hiệu ứng và miễn nhiễm độc 3s.\n\n😵‍💫: đảo hướng; dùng khi đang đảo hướng để triệt tiêu.\n\nĐộc: tồn tại 20s.\n\n⚠️ Chạm độc khi bình thường sẽ đảo hướng 8s, chậm và mất 1 đốt.\n\n🥥: có thể tấn công sâu xanh.\n\n💣: gây 2 sát thương boss.",
-  "guide_en": "Eat 15 🌿.\n\nDefeat the green worm, then grab 🚩 to win.\n\n🧪: clears poison/effects and gives 3s poison immunity.\n\n😵‍💫: reverses controls; use it while reversed to cancel the effect.\n\nPoison: lasts 20s.\n\n⚠️ Touching poison while normal reverses controls for 8s, slows you, and removes 1 segment.\n\n🥥: can attack the green worm.\n\n💣: deals 2 boss damage.",
+  "guide_vi": "Ăn 15 🌿.\n\nHạ sâu xanh rồi lấy 🚩 để thắng.\n\n🧪: xoá độc/hiệu ứng và miễn nhiễm độc 3s.\n\n😵‍💫: đảo hướng; dùng khi đang đảo hướng để triệt tiêu.\n\n⏱: cộng 10 giây.\n\nĐộc: tồn tại 20s.\n\n⚠️ Chạm độc khi bình thường sẽ đảo hướng 8s, chậm và mất 1 đốt.\n\n🥥: có thể tấn công sâu xanh.\n\n💣: gây 2 sát thương boss.",
+  "guide_en": "Eat 15 🌿.\n\nDefeat the green worm, then grab 🚩 to win.\n\n🧪: clears poison/effects and gives 3s poison immunity.\n\n😵‍💫: reverses controls; use it while reversed to cancel the effect.\n\n⏱: adds 10 seconds.\n\nPoison: lasts 20s.\n\n⚠️ Touching poison while normal reverses controls for 8s, slows you, and removes 1 segment.\n\n🥥: can attack the green worm.\n\n💣: deals 2 boss damage.",
   "boss": "green_worm_boss",
   "entryItemRewards": {
     "prey_coconut": 1,
-    "snail": 1,
-    "magnet": 1,
-    "bomb": 1,
-    "seed": 1,
-    "antidote": 3,
+    "antidote": 1,
     "speed": 1,
     "clock": 1,
-    "freeze": 1,
-    "dizzy": 3
+    "dizzy": 1
   },
   "itemBlock": [],
   "missions": [
@@ -24,6 +19,10 @@
   ],
   "timeLimitSeconds": 180,
   "timeUrgentThresholdSeconds": 30,
+  "coin": {
+    "firstSpawnDelaySeconds": 10,
+    "spawnDelayAfterEatenSeconds": 10
+  },
   "rule": "none",
   "grid": {
     "colorLight": "0xFFE7E9BD",

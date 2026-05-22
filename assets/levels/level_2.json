@@ -1,16 +1,28 @@
 {
-  "guide_vi": "Không được để sâu dứa ăn 10 🌿.\n\nNếu sâu dứa ăn đủ 10 🌿 thì thua ngay.\n\nBạn ăn 10 🌿 trước sâu dứa để thắng.\n\n🧲 Nam châm đã mở ở màn này: hút các lá gần đầu sâu.\n\n💨 Tăng tốc đã mở ở màn này: sâu của bạn di chuyển nhanh hơn trong thời gian ngắn.\n\n⚠️ Đầu sâu: chú ý sâu dứa rất mạnh !!!",
-  "guide_en": "Do not let Pineapple Worm eat 10 🌿.\n\nIf Pineapple Worm reaches 10 🌿, you lose immediately.\n\nEat 10 🌿 before Pineapple Worm to win.\n\n🧲 Magnet is unlocked in this level: attract leaves near your head.\n\n💨 Speed is unlocked in this level: your worm moves faster for a short duration.\n\n⚠️ Worm head warning: Pineapple Worm is very strong !!!",
+  "guide_vi": "Bạn ăn 10 🌿 trước sâu dứa để thắng.\n\n🧲 Hút các lá gần đầu sâu.\n\n💨 Sâu của bạn di chuyển nhanh hơn trong thời gian ngắn.\n\n⚠️ chú ý sâu dứa rất mạnh !!!",
+  "guide_en": "Eat 10 🌿 before Pineapple Worm to win.\n\n🧲 Attract leaves near your head.\n\n💨 Your worm moves faster for a short duration.\n\n⚠️ Pineapple Worm is very strong !!!",
   "entryItemRewards": {
     "magnet": 1,
     "speed": 1
   },
-  "itemBlock": ["snail", "bomb", "antidote", "clock", "freeze", "dizzy"],
+  "itemBlock": [
+    "snail",
+    "bomb",
+    "antidote",
+    "clock",
+    "freeze",
+    "dizzy",
+    "prey_coconut"
+  ],
   "missions": [
     { "id": "leaves", "typeId": "prey_leaf", "target": 10 }
   ],
   "timeLimitSeconds": 90,
   "timeUrgentThresholdSeconds": 30,
+  "coin": {
+    "firstSpawnDelaySeconds": 10,
+    "spawnDelayAfterEatenSeconds": 10
+  },
   "rule": "none",
   "grid": {
     "colorLight": "0xFFDFF0D2",
@@ -18,14 +30,13 @@
   },
   "outside": {
     "color": "0xFF5C6BC0",
-    "icon": ""
+    "icon": "🧩"
   },
   "map": {
     "obstacles": [],
     "prey": []
   },
   "spawnCycle": [
-    { "objType": "prey_coconut", "intervalSeconds": 10 },
     {
       "objType": "speed",
       "intervalSeconds": 15,

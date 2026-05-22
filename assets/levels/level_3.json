@@ -21,6 +21,10 @@
   ],
   "timeLimitSeconds": 90,
   "timeUrgentThresholdSeconds": 30,
+  "coin": {
+    "firstSpawnDelaySeconds": 10,
+    "spawnDelayAfterEatenSeconds": 10
+  },
   "rule": "none",
   "initialWorm": {
     "positions": [

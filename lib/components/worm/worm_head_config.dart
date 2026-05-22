@@ -18,6 +18,9 @@ class WormHeadConfig {
     this.antennaOffsetDown = 0.18,
     this.circleColor,
     this.circleBorderColor,
+    this.drawHelmetEffect = false,
+    this.downRotationRadians = 0,
+    this.downSkewX = 0,
   });
 
   final String assetVertical;
@@ -34,6 +37,9 @@ class WormHeadConfig {
   final double antennaOffsetDown;
   final Color? circleColor;
   final Color? circleBorderColor;
+  final bool drawHelmetEffect;
+  final double downRotationRadians;
+  final double downSkewX;
 
   bool get hasHelmetAssets =>
       assetHelmetVertical != null &&

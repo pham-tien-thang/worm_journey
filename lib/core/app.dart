@@ -9,6 +9,7 @@ import '../app_router.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../inject/injection.dart';
 import 'app_context.dart';
+import 'services/shared_prefs_service.dart';
 
 class WormJourneyApp extends StatefulWidget {
   const WormJourneyApp({super.key});
@@ -19,8 +20,7 @@ class WormJourneyApp extends StatefulWidget {
 
 class _WormJourneyAppState extends State<WormJourneyApp> {
   Locale? _locale;
-  late final GoRouter _router =
-      createAppRouter(get<AppContext>().navigatorKey);
+  late final GoRouter _router = createAppRouter(get<AppContext>().navigatorKey);
   bool _didPrecacheImages = false;
 
   static Locale _resolveLocale(Locale? locale, Iterable<Locale> supported) {
@@ -45,14 +45,29 @@ class _WormJourneyAppState extends State<WormJourneyApp> {
   @override
   void initState() {
     super.initState();
-    _locale = _deviceResolvedLocale();
+    _locale = appSettingsNotifier.locale ?? _deviceResolvedLocale();
+    appSettingsNotifier.addListener(_handleSettingsChanged);
     // Build đầu có thể chạy khi platform chưa báo đủ locales; build lại sau frame đầu để lấy đúng locale thiết bị (tránh màn main tiếng Anh trong khi màn trong tiếng Việt).
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (appSettingsNotifier.locale != null) return;
       final resolved = _deviceResolvedLocale();
       if (mounted && resolved != _locale) {
         setState(() => _locale = resolved);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    appSettingsNotifier.removeListener(_handleSettingsChanged);
+    super.dispose();
+  }
+
+  void _handleSettingsChanged() {
+    final resolved = appSettingsNotifier.locale ?? _deviceResolvedLocale();
+    if (mounted && resolved != _locale) {
+      setState(() => _locale = resolved);
+    }
   }
 
   @override
@@ -73,25 +88,28 @@ class _WormJourneyAppState extends State<WormJourneyApp> {
       designSize: const Size(393, 852),
       minTextAdapt: true,
       splitScreenMode: true,
-      builder: (_, __) => MaterialApp.router(
-        title: 'Worm Journey',
-        locale: resolvedLocale,
-        localizationsDelegates: [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        localeResolutionCallback: _resolveLocale,
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B5E20)),
-          useMaterial3: true,
-        ),
-        builder: (context, child) => child ?? const SizedBox.shrink(),
-        routerConfig: _router,
-      ),
+      builder:
+          (_, __) => MaterialApp.router(
+            title: 'Worm Journey',
+            locale: resolvedLocale,
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            localeResolutionCallback: _resolveLocale,
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF1B5E20),
+              ),
+              useMaterial3: true,
+            ),
+            builder: (context, child) => child ?? const SizedBox.shrink(),
+            routerConfig: _router,
+          ),
     );
   }
 }
