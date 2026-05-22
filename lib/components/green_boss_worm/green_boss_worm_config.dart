@@ -1,7 +1,6 @@
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart';
 
-import '../pink_worm/pink_worm_config.dart';
+import '../worm/worm_body_config.dart';
 import '../worm/worm_config.dart';
 import '../worm/worm_direction.dart';
 import '../worm/worm_head_config.dart';
@@ -10,27 +9,30 @@ import '../worm/worm_tail_config.dart';
 class GreenBossWormHeadConfig extends WormHeadConfig {
   GreenBossWormHeadConfig()
     : super(
-        assetVertical: 'component/worm/pink_worm/pink_worm_head_vertical.png',
-        assetHorizontal:
-            'component/worm/pink_worm/pink_worm_head_horizontal.png',
-        assetBack: 'component/worm/pink_worm/pink_worm_head_back.png',
-        assetCry: 'component/worm/pink_worm/pink_worm_head_cry.png',
-        imageScale: 1.32,
+        assetVertical: 'component/worm/boss_green_worm/green_head_all.png',
+        assetHorizontal: 'component/worm/boss_green_worm/green_head_all.png',
+        assetBack: 'component/worm/boss_green_worm/green_head_back.png',
+        assetCry: 'component/worm/boss_green_worm/green_head_all.png',
+        imageScale: 1.5,
         antennaOffsetHorizontal: 0.18,
         antennaOffsetUp: 0.1,
         antennaOffsetDown: 0.18,
-        circleColor: const Color(0xFF2DCE89),
-        circleBorderColor: const Color(0xFF0E6B3D),
+        downRotationRadians: -0.12,
+        downSkewX: -0.08,
+      );
+}
+
+class GreenBossWormBodyConfig extends WormBodyConfig {
+  GreenBossWormBodyConfig()
+    : super(
+        assetVertical: 'component/worm/boss_green_worm/green_body_all.png',
+        assetHorizontal: 'component/worm/boss_green_worm/green_body_all.png',
+        imageScale: 1.2,
       );
 }
 
 class GreenBossWormTailConfig extends WormTailConfig {
-  GreenBossWormTailConfig()
-    : super(
-        bodyConfig: PinkWormBodyConfig(),
-        circleColor: const Color(0xFF2DCE89),
-        dotColor: const Color(0xFF0E6B3D),
-      );
+  GreenBossWormTailConfig() : super(bodyConfig: GreenBossWormBodyConfig());
 }
 
 class GreenBossWormConfig extends WormConfig {
@@ -44,7 +46,7 @@ class GreenBossWormConfig extends WormConfig {
     WormDirection? initialDirection,
   }) : super(
          headConfig: GreenBossWormHeadConfig(),
-         bodyConfig: PinkWormBodyConfig(),
+         bodyConfig: GreenBossWormBodyConfig(),
          tailConfig: GreenBossWormTailConfig(),
          segmentSize: segmentSize,
          moveInterval: moveInterval,
